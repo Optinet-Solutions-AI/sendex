@@ -8,6 +8,7 @@ export * from "./queries/clicks.js";
 export * from "./queries/ledger.js";
 export * from "./queries/lists.js";
 export * from "./queries/sending.js";
+export * from "./queries/settings.js";
 export * from "./queries/tenancy.js";
 export * from "./schema/index.js";
 export type { Db } from "./types.js";

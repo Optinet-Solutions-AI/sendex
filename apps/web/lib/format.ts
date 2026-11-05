@@ -1,3 +1,5 @@
+import { formatEur } from "@sendex/core";
+
 /** Display helpers. Dates render in UTC so server and client markup agree. */
 
 const dateTime = new Intl.DateTimeFormat("en-GB", {
@@ -20,4 +22,9 @@ export function formatDateTime(value: Date | string | null | undefined): string 
 
 export function formatNumber(value: number): string {
   return number.format(value);
+}
+
+/** Micro-EUR as a plain decimal ("4988.31", "-0.04") for CSV cells and form values. */
+export function eurDecimal(micro: bigint): string {
+  return formatEur(micro).replace("EUR ", "").replace(/,/g, "");
 }

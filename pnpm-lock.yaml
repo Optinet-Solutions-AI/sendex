@@ -198,6 +198,25 @@ importers:
         specifier: ^3.2.0
         version: 3.2.7(@types/node@24.19.2)(jiti@2.7.0)(lightningcss@1.33.0)(tsx@4.23.15)
 
+  packages/redis-utils:
+    dependencies:
+      hono:
+        specifier: ^4.9.0
+        version: 4.13.16
+      ioredis:
+        specifier: ^5.7.0
+        version: 5.11.1
+    devDependencies:
+      '@types/node':
+        specifier: ^24.3.0
+        version: 24.19.2
+      typescript:
+        specifier: ^5.9.0
+        version: 5.9.3
+      vitest:
+        specifier: ^3.2.0
+        version: 3.2.7(@types/node@24.19.2)(jiti@2.7.0)(lightningcss@1.33.0)(tsx@4.23.15)
+
   packages/ui:
     devDependencies:
       '@types/react':

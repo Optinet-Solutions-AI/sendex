@@ -32,19 +32,28 @@ function messageChain(error: unknown): string {
   return parts.join(" <- ");
 }
 
-/** Assert that a query is rejected by a Postgres unique constraint (SQLSTATE 23505). */
-export async function expectUniqueViolation(promise: Promise<unknown>): Promise<void> {
+/**
+ * Assert that a query is rejected with a Postgres error whose message (or any
+ * `cause` down the chain, since Drizzle wraps driver errors) matches `pattern`.
+ */
+export async function expectDbError(promise: Promise<unknown>, pattern: RegExp): Promise<void> {
   let caught: unknown;
   try {
     await promise;
   } catch (error) {
     caught = error;
   }
-  if (caught === undefined) throw new Error("expected a unique violation, but the query succeeded");
+  if (caught === undefined)
+    throw new Error(`expected an error matching ${pattern}, but the query succeeded`);
   const text = messageChain(caught);
-  if (!/duplicate key value violates unique constraint/i.test(text)) {
-    throw new Error(`expected a unique violation, got: ${text}`);
+  if (!pattern.test(text)) {
+    throw new Error(`expected an error matching ${pattern}, got: ${text}`);
   }
+}
+
+/** Assert that a query is rejected by a Postgres unique constraint (SQLSTATE 23505). */
+export function expectUniqueViolation(promise: Promise<unknown>): Promise<void> {
+  return expectDbError(promise, /duplicate key value violates unique constraint/i);
 }
 
 /** Insert an organisation and return its id. */

@@ -8,6 +8,13 @@
       "when": 1793907770899,
       "tag": "0000_core_and_lists",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1793907977626,
+      "tag": "0001_routes_and_campaigns",
+      "breakpoints": true
     }
   ]
 }

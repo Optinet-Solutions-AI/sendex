@@ -96,6 +96,7 @@ erDiagram
     uuid list_id FK
     uuid organisation_id FK
     integer rank
+    bigint revenue_micro
     uuid route_id FK
     integer sales
     integer sent
@@ -150,6 +151,7 @@ erDiagram
     uuid user_id FK, UK "unique with organisation_id"
   }
   messages {
+    uuid ad_text_id FK
     uuid campaign_id FK
     uuid contact_id FK
     timestamp_with_time_zone created_at
@@ -161,6 +163,7 @@ erDiagram
     uuid id PK
     text idempotency_key UK
     uuid lap_id FK
+    uuid link_id FK
     uuid organisation_id FK
     integer parts
     text provider_message_id
@@ -170,6 +173,12 @@ erDiagram
     text short_code
     message_status status
     text text
+  }
+  organisation_postback_keys {
+    timestamp_with_time_zone created_at
+    uuid organisation_id PK, FK
+    timestamp_with_time_zone rotated_at
+    text secret
   }
   organisations {
     text clerk_org_id UK
@@ -239,6 +248,7 @@ erDiagram
     text name
   }
 
+  ad_texts ||--o{ messages : "ad_text_id"
   campaigns ||--o{ ad_texts : "campaign_id"
   campaigns ||--o{ campaign_links : "campaign_id"
   campaigns ||--o{ campaign_lists : "campaign_id"
@@ -253,6 +263,7 @@ erDiagram
   laps ||--o{ messages : "lap_id"
   laps ||--o{ postbacks : "lap_id"
   links ||--o{ campaign_links : "link_id"
+  links ||--o{ messages : "link_id"
   lists ||--o{ campaign_lists : "list_id"
   lists ||--o{ laps : "list_id"
   lists ||--o{ list_members : "list_id"
@@ -273,6 +284,7 @@ erDiagram
   organisations ||--o{ lists : "organisation_id"
   organisations ||--o{ memberships : "organisation_id"
   organisations ||--o{ messages : "organisation_id"
+  organisations ||--o{ organisation_postback_keys : "organisation_id"
   organisations ||--o{ postbacks : "organisation_id"
   organisations ||--o{ routes : "organisation_id"
   organisations ||--o{ sender_ids : "organisation_id"
@@ -288,4 +300,4 @@ erDiagram
   users ||--o{ memberships : "user_id"
 ```
 
-Generated from the Drizzle schema by `pnpm --filter @sendex/db erd` (23 tables, 47 relationships). Do not edit by hand: regenerate after every schema change. CI runs `pnpm --filter @sendex/db erd:check` and fails when this file is stale.
+Generated from the Drizzle schema by `pnpm --filter @sendex/db erd` (24 tables, 50 relationships). Do not edit by hand: regenerate after every schema change. CI runs `pnpm --filter @sendex/db erd:check` and fails when this file is stale.

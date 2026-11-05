@@ -26,3 +26,39 @@ describe("GET /health", () => {
     expect(await res.json()).toMatchObject({ ok: false, redis: false, database: true });
   });
 });
+
+describe("GET /health queues", () => {
+  it("includes queue depths when a getQueueDepths dep is provided", async () => {
+    const app = createApp({
+      version: "test",
+      checkRedis: async () => true,
+      checkDatabase: async () => true,
+      getQueueDepths: async () => ({
+        send: { waiting: 2, active: 1, failed: 0, delayed: 3 },
+      }),
+    });
+    const res = await app.request("/health");
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({
+      ok: true,
+      version: "test",
+      redis: true,
+      database: true,
+      queues: { send: { waiting: 2, active: 1, failed: 0, delayed: 3 } },
+    });
+  });
+
+  it("reports queues as null without failing health when depths cannot be read", async () => {
+    const app = createApp({
+      version: "test",
+      checkRedis: async () => true,
+      checkDatabase: async () => true,
+      getQueueDepths: async () => {
+        throw new Error("redis gone");
+      },
+    });
+    const res = await app.request("/health");
+    expect(res.status).toBe(200);
+    expect(await res.json()).toMatchObject({ ok: true, queues: null });
+  });
+});

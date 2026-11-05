@@ -2,16 +2,42 @@ import { serve } from "@hono/node-server";
 import { sql } from "drizzle-orm";
 import { Redis } from "ioredis";
 import { createApp } from "./app.js";
+import { createHandlers } from "./handlers.js";
+import { queueDepths } from "./health.js";
+import { log } from "./log.js";
+import {
+  closeQueues,
+  createQueues,
+  createWorkers,
+  QUEUES,
+  type Queues,
+  type WorkerSet,
+  workerSettingsFromEnv,
+} from "./queues.js";
 
 const port = Number(process.env.WORKER_PORT ?? 4000);
 const version = process.env.SENDEX_VERSION ?? "dev";
+const SHUTDOWN_TIMEOUT_MS = Number(process.env.SHUTDOWN_TIMEOUT_MS ?? 30_000);
 
+// BullMQ requires maxRetriesPerRequest: null on the connection it shares.
 const redisUrl = process.env.REDIS_URL;
-const redis = redisUrl ? new Redis(redisUrl, { lazyConnect: true, maxRetriesPerRequest: 1 }) : null;
+const redis = redisUrl ? new Redis(redisUrl, { maxRetriesPerRequest: null }) : null;
+redis?.on("error", (err) => log("error", "redis error", { err }));
+
+let queues: Queues | null = null;
+let workerSet: WorkerSet | null = null;
+
+if (redis) {
+  const settings = workerSettingsFromEnv();
+  queues = createQueues(redis);
+  workerSet = createWorkers(redis, createHandlers(), { settings });
+  log("info", "workers started", { queues: Object.values(QUEUES), ...settings });
+} else {
+  log("warn", "REDIS_URL not set: queues and workers are disabled");
+}
 
 async function checkRedis(): Promise<boolean> {
   if (!redis) return false;
-  if (redis.status === "wait") await redis.connect();
   return (await redis.ping()) === "PONG";
 }
 
@@ -22,18 +48,51 @@ async function checkDatabase(): Promise<boolean> {
   return rows.length === 1;
 }
 
-const app = createApp({ version, checkRedis, checkDatabase });
+const allQueues =
+  queues && workerSet
+    ? [...Object.values(queues), ...Object.values(workerSet.deadLetterQueues)]
+    : null;
 
-const server = serve({ fetch: app.fetch, port }, (info) => {
-  console.log(JSON.stringify({ msg: "worker listening", port: info.port, version }));
+const app = createApp({
+  version,
+  checkRedis,
+  checkDatabase,
+  ...(allQueues ? { getQueueDepths: () => queueDepths(allQueues) } : {}),
 });
 
-function shutdown(signal: string) {
-  console.log(JSON.stringify({ msg: "worker shutting down", signal }));
-  server.close(() => {
-    redis?.disconnect();
+const server = serve({ fetch: app.fetch, port }, (info) => {
+  log("info", "worker listening", { port: info.port, version });
+});
+
+let shuttingDown = false;
+
+/** Stop HTTP, let in-flight jobs finish, close producers, then drop the Redis connection. */
+async function shutdown(signal: string): Promise<void> {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  log("info", "worker shutting down", { signal });
+
+  const forceExit = setTimeout(() => {
+    log("error", "shutdown timed out, exiting", { timeoutMs: SHUTDOWN_TIMEOUT_MS });
+    process.exit(1);
+  }, SHUTDOWN_TIMEOUT_MS);
+  forceExit.unref();
+
+  try {
+    await new Promise<void>((resolve) => {
+      server.close(() => resolve());
+      if ("closeIdleConnections" in server) server.closeIdleConnections();
+    });
+    await workerSet?.close();
+    if (queues) await closeQueues(queues);
+    await redis?.quit();
+    log("info", "worker stopped");
     process.exit(0);
-  });
+  } catch (err) {
+    log("error", "shutdown failed", { err });
+    process.exit(1);
+  }
 }
-process.on("SIGINT", () => shutdown("SIGINT"));
-process.on("SIGTERM", () => shutdown("SIGTERM"));
+
+process.on("SIGINT", () => void shutdown("SIGINT"));
+process.on("SIGTERM", () => void shutdown("SIGTERM"));

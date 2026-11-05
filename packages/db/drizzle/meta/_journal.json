@@ -15,6 +15,13 @@
       "when": 1793907977626,
       "tag": "0001_routes_and_campaigns",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1793908233082,
+      "tag": "0002_tracking_and_ledger",
+      "breakpoints": true
     }
   ]
 }

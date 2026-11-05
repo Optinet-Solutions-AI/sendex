@@ -1,5 +1,6 @@
 import { can } from "@sendex/core";
 import {
+  campaignResults,
   conversionStats,
   db,
   getCampaign,
@@ -11,6 +12,7 @@ import {
 } from "@sendex/db";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { AnalyticsSection } from "../../../../components/campaigns/analytics-section";
 import { CampaignHeader } from "../../../../components/campaigns/campaign-header";
 import { CampaignTabs } from "../../../../components/campaigns/campaign-tabs";
 import { ConversionsSection } from "../../../../components/campaigns/conversions-section";
@@ -22,6 +24,7 @@ import {
   toCampaignView,
   toLinkOption,
   toListOption,
+  toResultsView,
   toRouteView,
   toSidGroupView,
 } from "../../../../lib/campaign-views";
@@ -69,15 +72,19 @@ export default async function CampaignPage({ params }: { params: Promise<{ id: s
         const database = db();
         const detail = await getCampaign(database, ctx.organisationId, id);
         if (!detail) notFound();
-        const [sidGroups, lists, links, routes, audit, conversions] = await Promise.all([
-          listSidGroups(database, ctx.organisationId, detail.country),
-          listsForCountry(database, ctx.organisationId, detail.country),
-          listLinks(database, ctx.organisationId),
-          routesForCountry(database, ctx.organisationId, detail.country),
-          listAuditLog(database, ctx.organisationId, { targetType: "campaign", targetId: id }),
-          conversionStats(database, ctx.organisationId, id),
-        ]);
+        const [sidGroups, lists, links, routes, audit, conversions, resultRows] = await Promise.all(
+          [
+            listSidGroups(database, ctx.organisationId, detail.country),
+            listsForCountry(database, ctx.organisationId, detail.country),
+            listLinks(database, ctx.organisationId),
+            routesForCountry(database, ctx.organisationId, detail.country),
+            listAuditLog(database, ctx.organisationId, { targetType: "campaign", targetId: id }),
+            conversionStats(database, ctx.organisationId, id),
+            campaignResults(database, ctx.organisationId, id),
+          ],
+        );
         const campaign = toCampaignView(detail);
+        const results = resultRows ? toResultsView(resultRows) : null;
         return (
           <section className="space-y-6">
             <nav aria-label="Breadcrumb" className="text-sm text-neutral-500">
@@ -86,7 +93,7 @@ export default async function CampaignPage({ params }: { params: Promise<{ id: s
               </Link>{" "}
               / {campaign.name}
             </nav>
-            <CampaignHeader campaign={campaign} />
+            <CampaignHeader campaign={campaign} {...(results ? { totals: results.totals } : {})} />
             <CampaignTabs
               panels={{
                 Status: (
@@ -102,10 +109,10 @@ export default async function CampaignPage({ params }: { params: Promise<{ id: s
                 Logs: <LogsTab entries={audit.map(toAuditView)} timezone={campaign.timezone} />,
                 Analytics: (
                   <div className="space-y-6">
+                    {results ? (
+                      <AnalyticsSection results={results} timezone={campaign.timezone} />
+                    ) : null}
                     <ConversionsSection stats={conversions} />
-                    <p className="text-sm text-neutral-500">
-                      Click and route ranking charts arrive with the analytics card.
-                    </p>
                   </div>
                 ),
                 "Send Single": (

@@ -114,7 +114,12 @@ export function SendForm({ campaign, sidGroups, lists, links, routes, canSend }:
         sending={sending}
         onSend={send}
       />
-      <LapsTable laps={campaign.laps} timezone={campaign.timezone} />
+      <LapsTable
+        laps={campaign.laps}
+        timezone={campaign.timezone}
+        campaignId={campaign.id}
+        canToggle={canSend}
+      />
     </div>
   );
 }

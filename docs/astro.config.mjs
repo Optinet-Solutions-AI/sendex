@@ -26,6 +26,8 @@ export default defineConfig({
             { label: "Send and scale", slug: "using/send-and-scale" },
             { label: "Schedule and stop", slug: "using/schedule-and-stop" },
             { label: "Read the results", slug: "using/read-the-results" },
+            { label: "Campaign results", slug: "using/campaign-results" },
+            { label: "The campaigns list", slug: "using/campaigns-list" },
             { label: "Balance and billing", slug: "using/balance-and-billing" },
             { label: "Track conversions", slug: "using/track-conversions" },
           ],

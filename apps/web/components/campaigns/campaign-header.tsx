@@ -1,6 +1,6 @@
 import { countryName, flagEmoji } from "@sendex/core";
 import { campaignTotals, formatDateTime, formatMicro, formatPer, formatPercent } from "./format";
-import type { CampaignView } from "./types";
+import type { CampaignView, ResultTotalsView } from "./types";
 import { StatusBadge } from "./ui";
 
 function Stat({ label, value, testId }: { label: string; value: string; testId?: string }) {
@@ -14,9 +14,19 @@ function Stat({ label, value, testId }: { label: string; value: string; testId?:
   );
 }
 
-/** Name, status, country, created date, the totals row and the sending progress bar. */
-export function CampaignHeader({ campaign }: { campaign: CampaignView }) {
-  const totals = campaignTotals(campaign.laps);
+/**
+ * Name, status, country, created date, the totals row and the sending progress bar. With
+ * `totals` from `campaignResults` the row also shows delivered, failed and CPC; without it
+ * the totals are summed from the campaign's laps.
+ */
+export function CampaignHeader({
+  campaign,
+  totals: results,
+}: {
+  campaign: CampaignView;
+  totals?: ResultTotalsView;
+}) {
+  const totals = results ?? campaignTotals(campaign.laps);
   const contacts = campaign.lists.reduce((sum, l) => sum + l.available, 0);
   const planned = campaign.laps.reduce((sum, l) => sum + l.testSize, 0);
   const target = planned > 0 ? planned : contacts;
@@ -35,15 +45,25 @@ export function CampaignHeader({ campaign }: { campaign: CampaignView }) {
           Created {formatDateTime(campaign.createdAt, campaign.timezone)}
         </span>
       </div>
-      <div className="grid grid-cols-4 gap-2 md:grid-cols-8">
+      <div
+        className="grid grid-cols-4 gap-2 md:grid-cols-6 xl:grid-cols-11"
+        data-testid="campaign-totals"
+      >
         <Stat label="Sent" value={String(totals.sent)} testId="total-sent" />
-        <Stat label="Clicks" value={String(totals.clicks)} />
-        <Stat label="CTR" value={formatPercent(totals.ctr)} />
-        <Stat label="Leads" value={String(totals.leads)} />
-        <Stat label="Sales" value={String(totals.sales)} />
-        <Stat label="Cost" value={formatMicro(totals.costMicro)} />
-        <Stat label="CPL" value={formatPer(totals.cplMicro)} />
-        <Stat label="CPS" value={formatPer(totals.cpsMicro)} />
+        {results ? (
+          <Stat label="Delivered" value={String(results.delivered)} testId="total-delivered" />
+        ) : null}
+        {results ? (
+          <Stat label="Failed" value={String(results.failed)} testId="total-failed" />
+        ) : null}
+        <Stat label="Clicks" value={String(totals.clicks)} testId="total-clicks" />
+        <Stat label="CTR" value={formatPercent(totals.ctr)} testId="total-ctr" />
+        <Stat label="Cost" value={formatMicro(totals.costMicro)} testId="total-cost" />
+        <Stat label="CPC" value={formatPer(totals.cpcMicro)} testId="total-cpc" />
+        <Stat label="Leads" value={String(totals.leads)} testId="total-leads" />
+        <Stat label="CPL" value={formatPer(totals.cplMicro)} testId="total-cpl" />
+        <Stat label="Sales" value={String(totals.sales)} testId="total-sales" />
+        <Stat label="CPS" value={formatPer(totals.cpsMicro)} testId="total-cps" />
       </div>
       <div>
         <div className="mb-1 flex justify-between text-xs text-neutral-600">

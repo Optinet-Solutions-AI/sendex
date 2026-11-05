@@ -1,3 +1,4 @@
+export * from "./campaigns.js";
 export * from "./laps.js";
 export * from "./permissions.js";
 export * from "./phone.js";

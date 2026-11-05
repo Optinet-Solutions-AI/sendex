@@ -1,5 +1,6 @@
 import { UserProfile } from "@clerk/nextjs";
 import { can } from "@sendex/core";
+import Link from "next/link";
 import { authMode } from "../../../lib/env";
 import { RequireOrg } from "../require-org";
 
@@ -21,6 +22,14 @@ export default function SettingsPage() {
               ? "You can manage organisation settings, members and balance."
               : "Organisation settings are read only for your role."}
           </p>
+          <div className="mt-4">
+            <Link
+              href="/settings/billing"
+              className="inline-flex h-9 items-center rounded-md border border-neutral-300 bg-white px-4 text-sm font-medium hover:bg-neutral-100"
+            >
+              Billing: low balance alert and daily caps
+            </Link>
+          </div>
           <div className="mt-6">
             {mode === "dev" ? (
               <p className="rounded border border-neutral-200 bg-white p-4 text-sm text-neutral-600">

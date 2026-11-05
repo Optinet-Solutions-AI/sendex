@@ -59,7 +59,8 @@ export async function seedE2ePostback(namePrefix: string): Promise<SeededPostbac
   try {
     const [org] = await sql<{ id: string }[]>`select id from organisations where slug = 'external'`;
     const [list] = await sql<{ id: string }[]>`
-      select id from lists where organisation_id = ${org?.id ?? ""} and country = 'ES' limit 1`;
+      select id from lists where organisation_id = ${org?.id ?? ""} and country = 'ES'
+        and name like 'Roy Boy_ES%' order by name limit 1`;
     const [route] = await sql<{ id: string }[]>`select id from routes where name = '405' limit 1`;
     if (!org || !list || !route) throw new Error("demo seed missing: run pnpm db:seed");
 
@@ -151,7 +152,8 @@ export async function seedE2eResults(namePrefix: string): Promise<SeededResults>
   try {
     const [org] = await sql<{ id: string }[]>`select id from organisations where slug = 'external'`;
     const [list] = await sql<{ id: string }[]>`
-      select id from lists where organisation_id = ${org?.id ?? ""} and country = 'ES' limit 1`;
+      select id from lists where organisation_id = ${org?.id ?? ""} and country = 'ES'
+        and name like 'Roy Boy_ES%' order by name limit 1`;
     const [r405] = await sql<{ id: string }[]>`select id from routes where name = '405' limit 1`;
     const [r403] = await sql<{ id: string }[]>`select id from routes where name = '403' limit 1`;
     const [group] = await sql<{ id: string }[]>`
@@ -312,7 +314,9 @@ export async function cleanupE2eResults(namePrefix: string): Promise<void> {
   if (!url) throw new Error("DATABASE_URL must be set to run the campaign results e2e spec");
   const sql = postgres(url, { max: 1 });
   try {
-    await sql`delete from campaigns where name like ${`${namePrefix}%`}`;
+    // Duplicate names the copy "Copy of <name>": the list spec's search finds it too.
+    await sql`delete from campaigns where name like ${`${namePrefix}%`}
+      or name like ${`Copy of ${namePrefix}%`}`;
     await sql`delete from links where name like ${`${namePrefix}%`}`;
     // The results and list specs share the number prefix and run in parallel: only drop
     // contacts no message refers to any more.
@@ -357,7 +361,8 @@ export async function seedE2eControlCampaign(
   try {
     const [org] = await sql<{ id: string }[]>`select id from organisations where slug = 'external'`;
     const [list] = await sql<{ id: string }[]>`
-      select id from lists where organisation_id = ${org?.id ?? ""} and country = 'ES' limit 1`;
+      select id from lists where organisation_id = ${org?.id ?? ""} and country = 'ES'
+        and name like 'Roy Boy_ES%' order by name limit 1`;
     const [route] = await sql<{ id: string }[]>`select id from routes where name = '405' limit 1`;
     if (!org || !list || !route) throw new Error("demo seed missing: run pnpm db:seed");
     const campaignName = `${namePrefix} ${Date.now()}`;
@@ -398,7 +403,7 @@ export interface SeededDelivery {
 }
 
 /** Numbers the delivery spec creates start with this. */
-export const DELIVERY_E164_PREFIX = "+34697";
+export const DELIVERY_E164_PREFIX = "+34696";
 
 /**
  * A finished campaign of the seeded "external" organisation as the worker leaves it after
@@ -413,7 +418,8 @@ export async function seedE2eDelivery(namePrefix: string): Promise<SeededDeliver
   try {
     const [org] = await sql<{ id: string }[]>`select id from organisations where slug = 'external'`;
     const [list] = await sql<{ id: string }[]>`
-      select id from lists where organisation_id = ${org?.id ?? ""} and country = 'ES' limit 1`;
+      select id from lists where organisation_id = ${org?.id ?? ""} and country = 'ES'
+        and name like 'Roy Boy_ES%' order by name limit 1`;
     const [route] = await sql<{ id: string }[]>`select id from routes where name = '405' limit 1`;
     if (!org || !list || !route) throw new Error("demo seed missing: run pnpm db:seed");
 
@@ -476,7 +482,9 @@ export async function cleanupE2eDelivery(namePrefix: string): Promise<void> {
   try {
     await sql`delete from campaigns where name like ${`${namePrefix}%`}`;
     await sql`delete from links where name = 'E2E offer'`;
-    await sql`delete from contacts where e164 like ${`${DELIVERY_E164_PREFIX}%`}`;
+    // Only drop contacts no message refers to any more (other specs run in parallel).
+    await sql`delete from contacts where e164 like ${`${DELIVERY_E164_PREFIX}%`}
+      and not exists (select 1 from messages m where m.contact_id = contacts.id)`;
   } finally {
     await sql.end();
   }

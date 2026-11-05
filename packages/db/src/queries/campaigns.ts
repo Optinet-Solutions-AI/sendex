@@ -51,8 +51,9 @@ function toNullableDate(value: unknown): Date | null {
 }
 
 /**
- * Members of a list that can still be messaged: not bad, not sent, not flushed and whose
- * number is not suppressed for the organisation. Written with explicit aliases and a literal
+ * Members of a list that can still be messaged: not bad, never sent (or flushed after the last
+ * send, which makes them reusable, as the engine's `alreadySent` filter does) and whose number
+ * is not suppressed for the organisation. Written with explicit aliases and a literal
  * `lists.id` because Drizzle drops table qualifiers in single-table selects; callers must
  * select from `lists` unaliased.
  */
@@ -61,8 +62,7 @@ function availableSql(): SQL<number> {
     join contacts c on c.id = m.contact_id
     where m.list_id = lists.id
       and m.bad = false
-      and m.sent_at is null
-      and m.flushed_at is null
+      and (m.sent_at is null or m.flushed_at > m.sent_at)
       and not exists (select 1 from suppressions s
         where s.organisation_id = m.organisation_id
           and s.e164 = c.e164))::int`.mapWith(Number);

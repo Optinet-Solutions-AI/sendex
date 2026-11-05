@@ -59,8 +59,9 @@ Audit rows (`audit_log`, `target_type = "campaign"`) are written for `campaign.c
 
 ## Available contacts
 
-A list member counts as *available* when it is not `bad`, has no `sent_at`, no `flushed_at`
-and its number is not in the organisation's `suppressions`. `availableSql` in
+A list member counts as *available* when it is not `bad`, was never sent or was flushed after
+its last send (`sent_at is null or flushed_at > sent_at`, the same rule as the engine's
+`alreadySent` filter) and its number is not in the organisation's `suppressions`. `availableSql` in
 `queries/campaigns.ts` is the single definition; `listsForCountry`, `getCampaign` and the
 estimate all use it. The subquery is written with explicit aliases because Drizzle drops
 table qualifiers in single-table selects (the outer table must be `lists`, unaliased).

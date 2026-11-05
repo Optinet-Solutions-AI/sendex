@@ -7,6 +7,7 @@ export * from "./lists.js";
 export * from "./permissions.js";
 export * from "./phone.js";
 export * from "./postbacks.js";
+export * from "./rates.js";
 export * from "./render.js";
 export * from "./send-count.js";
 export * from "./sms-encoding.js";

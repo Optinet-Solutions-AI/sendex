@@ -4,6 +4,7 @@ import * as schema from "./schema/index.js";
 
 export * from "./queries/audit.js";
 export * from "./queries/campaigns.js";
+export * from "./queries/click-stats.js";
 export * from "./queries/clicks.js";
 export * from "./queries/ledger.js";
 export * from "./queries/lists.js";
@@ -35,3 +36,4 @@ export function db(): Database {
 }
 export * from "./queries/postback-keys.js";
 export * from "./queries/postbacks.js";
+export * from "./queries/receipts.js";

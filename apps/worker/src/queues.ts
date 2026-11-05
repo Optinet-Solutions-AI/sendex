@@ -1,6 +1,7 @@
 import {
   type ConnectionOptions,
   type DefaultJobOptions,
+  DelayedError,
   type JobsOptions,
   Queue,
   UnrecoverableError,
@@ -94,6 +95,10 @@ export interface WorkerSettings {
   sendRatePerSecond: number;
   /** Parallel jobs on the dlr, click and postback ingest queues. `INGEST_CONCURRENCY`, default 5. */
   ingestConcurrency: number;
+  /** How often the lap dispatcher looks for queued laps. `LAP_POLL_MS`, default 5000. */
+  lapPollMs: number;
+  /** How long a paused lap waits before checking the campaign again. `PAUSE_RETRY_MS`, default 10000. */
+  pauseRetryMs: number;
 }
 
 type Env = Record<string, string | undefined>;
@@ -113,6 +118,8 @@ export function workerSettingsFromEnv(env: Env = process.env): WorkerSettings {
     sendConcurrency: positiveInt(env, "SEND_CONCURRENCY", 5),
     sendRatePerSecond: positiveInt(env, "SEND_RATE_PER_SECOND", 50),
     ingestConcurrency: positiveInt(env, "INGEST_CONCURRENCY", 5),
+    lapPollMs: positiveInt(env, "LAP_POLL_MS", 5000),
+    pauseRetryMs: positiveInt(env, "PAUSE_RETRY_MS", 10_000),
   };
 }
 
@@ -125,6 +132,12 @@ export interface JobMeta {
   id?: string | undefined;
   name: string;
   attemptsMade: number;
+  /**
+   * Park the job for `ms` and end the current run without counting an attempt (BullMQ
+   * `moveToDelayed` + `DelayedError`). Never returns. Absent when the job cannot be moved,
+   * for example in unit tests that call a handler directly.
+   */
+  delay?: ((ms: number) => Promise<never>) | undefined;
 }
 
 export type JobHandler<K extends QueueKey> = (
@@ -133,19 +146,40 @@ export type JobHandler<K extends QueueKey> = (
 ) => Promise<void>;
 export type JobHandlers = { [K in QueueKey]: JobHandler<K> };
 
+/** The slice of a BullMQ `Job` the processor needs; tests pass a plain object. */
+export interface ProcessableJob {
+  id?: string | undefined;
+  name: string;
+  attemptsMade: number;
+  data: unknown;
+  moveToDelayed?: (timestamp: number, token?: string) => Promise<void>;
+}
+
 /**
  * Wrap a handler so the payload is validated first. An invalid payload cannot become
  * valid on retry, so it fails as unrecoverable and goes straight to the dead-letter queue.
  */
 export function createProcessor<K extends QueueKey>(queue: K, handler: JobHandler<K>) {
-  return async (job: JobMeta & { data: unknown }): Promise<void> => {
+  return async (job: ProcessableJob, token?: string): Promise<void> => {
     let payload: JobPayloads[K];
     try {
       payload = parseJob(queue, job.data);
     } catch (err) {
       throw new UnrecoverableError(err instanceof Error ? err.message : String(err));
     }
-    await handler(payload, job);
+    const moveToDelayed = job.moveToDelayed?.bind(job);
+    const meta: JobMeta = {
+      id: job.id,
+      name: job.name,
+      attemptsMade: job.attemptsMade,
+      delay: moveToDelayed
+        ? async (ms) => {
+            await moveToDelayed(Date.now() + ms, token);
+            throw new DelayedError();
+          }
+        : undefined,
+    };
+    await handler(payload, meta);
   };
 }
 

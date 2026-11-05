@@ -1,5 +1,6 @@
 import { serve } from "@hono/node-server";
 import { createSendingStore, db, type SendingStore } from "@sendex/db";
+import { createRateLimiter, RATE_LIMITS } from "@sendex/redis-utils";
 import { sql } from "drizzle-orm";
 import { Redis } from "ioredis";
 import { createApp } from "./app.js";
@@ -7,6 +8,7 @@ import { createHandlers, createStubHandlers } from "./handlers.js";
 import { queueDepths } from "./health.js";
 import type { ClickBatch } from "./links/ingest.js";
 import { log } from "./log.js";
+import type { PostbackIngestPayload } from "./postbacks/ingest.js";
 import {
   closeQueues,
   createQueues,
@@ -90,6 +92,30 @@ const linksDeps =
       }
     : null;
 
+// Public postback endpoint: one sliding window per organisation (RATE_LIMITS.postback) when
+// Redis is up; without Redis the endpoint still works, just unthrottled.
+const postbackLimiter = redis ? createRateLimiter(redis, { prefix: "sendex:rl" }) : null;
+const postbacksDeps =
+  store && queues
+    ? {
+        db: db(),
+        enqueue: (job: PostbackIngestPayload) =>
+          (queues as Queues).postbackIngest.add("postback", job),
+        ...(postbackLimiter
+          ? {
+              rateLimit: async (organisationId: string) =>
+                (
+                  await postbackLimiter.limit({
+                    key: `postback:${organisationId}`,
+                    max: RATE_LIMITS.postback.max,
+                    windowMs: RATE_LIMITS.postback.windowMs,
+                  })
+                ).allowed,
+            }
+          : {}),
+      }
+    : null;
+
 const app = createApp({
   version,
   checkRedis,
@@ -97,6 +123,7 @@ const app = createApp({
   ...(allQueues ? { getQueueDepths: () => queueDepths(allQueues) } : {}),
   ...(store && progress ? { internal: { secret: internalSecret, store, progress } } : {}),
   ...(linksDeps ? { links: linksDeps } : {}),
+  ...(postbacksDeps ? { postbacks: postbacksDeps } : {}),
 });
 if (!internalSecret) log("warn", "INTERNAL_API_SECRET not set: /internal routes answer 503");
 

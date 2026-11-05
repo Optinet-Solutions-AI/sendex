@@ -15,6 +15,7 @@
     "@sendex/core": "workspace:*",
     "@sendex/db": "workspace:*",
     "@sendex/providers": "workspace:*",
+    "@sendex/redis-utils": "workspace:*",
     "bullmq": "^5.58.0",
     "drizzle-orm": "^0.44.0",
     "hono": "^4.9.0",

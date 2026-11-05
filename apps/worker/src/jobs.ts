@@ -44,6 +44,8 @@ export const postbackEventTypeSchema = z.enum(["registration", "sale"]);
 export type PostbackEventType = z.infer<typeof postbackEventTypeSchema>;
 
 export const postbackIngestJobSchema = z.object({
+  /** The organisation whose postback key signed the event; attribution is scoped to it. */
+  organisationId: nonEmpty,
   /** Unique per event; replays with the same key are ignored downstream. */
   eventKey: nonEmpty,
   type: postbackEventTypeSchema,

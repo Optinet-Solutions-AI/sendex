@@ -55,6 +55,7 @@ describe("job payload schemas", () => {
 
   it("parses a PostbackIngestJob with an optional valueMicro", () => {
     const base = {
+      organisationId: "org_1",
       eventKey: "evt_1",
       type: "registration",
       dynamicId: "dyn_1",

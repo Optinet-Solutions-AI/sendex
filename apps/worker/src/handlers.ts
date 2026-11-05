@@ -2,6 +2,7 @@ import type { Db, SendingStore } from "@sendex/db";
 import type { ProviderRegistry } from "@sendex/providers";
 import { createClickIngestHandler } from "./links/ingest.js";
 import { log as defaultLog, type Logger } from "./log.js";
+import { createPostbackIngestHandler } from "./postbacks/ingest.js";
 import type { JobHandlers } from "./queues.js";
 import { dispatchQueuedLaps, type SendQueueLike } from "./send/dispatcher.js";
 import type { ProgressTracker, SendRedis } from "./send/progress.js";
@@ -25,15 +26,20 @@ export interface HandlerDeps {
 
 /**
  * The real job handlers. `send` runs the send loop (D2-04/05), `scheduledSend` is the lap
- * dispatcher tick; the ingest handlers are still stubs (D2-07 dlr, D2-12 clicks, D2-14
- * postbacks). Payloads may carry phone numbers (DLR receipts, clicks); only log ids and counts.
+ * dispatcher tick; clicks and postbacks are ingested when a db is given (D2-12, D3-03), the
+ * DLR handler is still a stub (D2-07). Payloads may carry phone numbers (DLR receipts, clicks); only log ids and counts.
  */
 export function createHandlers(deps: HandlerDeps): JobHandlers {
   const log = deps.log ?? defaultLog;
   const stubs = createStubHandlers(log);
   return {
     ...stubs,
-    ...(deps.db ? { clickIngest: createClickIngestHandler(deps.db, log) } : {}),
+    ...(deps.db
+      ? {
+          clickIngest: createClickIngestHandler(deps.db, log),
+          postbackIngest: createPostbackIngestHandler(deps.db, log),
+        }
+      : {}),
     async send(job, meta) {
       const result = await sendLap(
         {

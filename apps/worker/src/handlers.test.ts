@@ -39,7 +39,14 @@ describe("createStubHandlers", () => {
       meta,
     );
     await handlers.postbackIngest(
-      { eventKey: "e", type: "sale", dynamicId: "d", valueMicro: 1, params: {} },
+      {
+        organisationId: "org",
+        eventKey: "e",
+        type: "sale",
+        dynamicId: "d",
+        valueMicro: 1,
+        params: {},
+      },
       meta,
     );
     await handlers.scheduledSend({ kind: "dispatch-laps" }, meta);

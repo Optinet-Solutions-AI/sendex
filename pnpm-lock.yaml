@@ -136,6 +136,9 @@ importers:
       '@sendex/providers':
         specifier: workspace:*
         version: link:../../packages/providers
+      '@sendex/redis-utils':
+        specifier: workspace:*
+        version: link:../../packages/redis-utils
       bullmq:
         specifier: ^5.58.0
         version: 5.81.5

@@ -146,7 +146,12 @@ export async function expireStaleMessages(
       .where(
         and(
           eq(messages.status, "sent"),
-          lt(sql`coalesce(${messages.sentAt}, ${messages.createdAt})`, olderThan),
+          // Explicit cast: postgres-js cannot type a Date compared with a raw expression and
+          // sends it as text, which PGlite accepts and Postgres 17 rejects.
+          lt(
+            sql`coalesce(${messages.sentAt}, ${messages.createdAt})`,
+            sql`${olderThan.toISOString()}::timestamptz`,
+          ),
         ),
       )
       .limit(limit);

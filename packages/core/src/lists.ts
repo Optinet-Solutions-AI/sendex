@@ -1,4 +1,8 @@
 import { z } from "zod";
+import { flagEmoji } from "./campaigns.js";
+
+export { flagEmoji };
+
 import {
   type CountryCode,
   type DroppedNumber,
@@ -62,16 +66,6 @@ const COUNTRY_NAMES: Record<ListCountry, string> = {
 };
 
 /** Regional indicator pair for an ISO-2 code, e.g. "GB" -> 🇬🇧. */
-export function flagEmoji(code: string): string {
-  const upper = code.toUpperCase();
-  let out = "";
-  for (const ch of upper) {
-    const offset = ch.charCodeAt(0) - 65;
-    if (offset < 0 || offset > 25) return "";
-    out += String.fromCodePoint(0x1f1e6 + offset);
-  }
-  return out;
-}
 
 /** The countries a list can be uploaded for, in the order the UI shows them. */
 export const countriesList: readonly CountryInfo[] = LIST_COUNTRY_CODES.map((code) => ({

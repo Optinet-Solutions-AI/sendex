@@ -1,7 +1,10 @@
+import { and, desc, eq } from "drizzle-orm";
 import { auditLog } from "../schema/core.js";
 import type { Db } from "../types.js";
 
 export type AuditLogRow = typeof auditLog.$inferSelect;
+/** Alias kept for callers written against the campaigns branch. */
+export type AuditRow = AuditLogRow;
 
 export interface RecordAuditInput {
   actorUserId?: string | null;
@@ -33,4 +36,30 @@ export async function recordAudit(
     .returning();
   if (!row) throw new Error("recordAudit: no row returned");
   return row;
+}
+
+export interface ListAuditInput {
+  targetType: string;
+  targetId: string;
+  limit?: number;
+}
+
+/** Audit entries of one target (e.g. a campaign), newest first. */
+export async function listAuditLog(
+  db: Db,
+  organisationId: string,
+  input: ListAuditInput,
+): Promise<AuditLogRow[]> {
+  return db
+    .select()
+    .from(auditLog)
+    .where(
+      and(
+        eq(auditLog.organisationId, organisationId),
+        eq(auditLog.targetType, input.targetType),
+        eq(auditLog.targetId, input.targetId),
+      ),
+    )
+    .orderBy(desc(auditLog.createdAt))
+    .limit(input.limit ?? 100);
 }

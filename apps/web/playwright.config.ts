@@ -1,7 +1,10 @@
 import { defineConfig, devices } from "@playwright/test";
 
-/** Set `PORT` to run the e2e server somewhere other than 3000 (e.g. next to another dev server). */
-const port = process.env.PORT?.trim() || "3000";
+/** Set `PLAYWRIGHT_PORT` (or `PORT`) to run the e2e server somewhere other than 3000. */
+const port = Number.parseInt(
+  (process.env.PLAYWRIGHT_PORT ?? process.env.PORT ?? "3000").trim() || "3000",
+  10,
+);
 const baseURL = `http://localhost:${port}`;
 const isCI = Boolean(process.env.CI);
 

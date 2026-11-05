@@ -116,6 +116,20 @@ const postbacksDeps =
       }
     : null;
 
+// Public API (D3-17): bearer tokens, one sliding window per token (RATE_LIMITS.publicApi)
+// when Redis is up. Served under WORKER_PUBLIC_URL, which the OpenAPI document names.
+const publicApiDeps =
+  store && progress
+    ? {
+        db: db(),
+        store,
+        progress,
+        version,
+        serverUrl: process.env.WORKER_PUBLIC_URL ?? `http://localhost:${port}`,
+        ...(postbackLimiter ? { rateLimit: { limiter: postbackLimiter } } : {}),
+      }
+    : null;
+
 const app = createApp({
   version,
   checkRedis,
@@ -124,6 +138,7 @@ const app = createApp({
   ...(store && progress ? { internal: { secret: internalSecret, store, progress } } : {}),
   ...(linksDeps ? { links: linksDeps } : {}),
   ...(postbacksDeps ? { postbacks: postbacksDeps } : {}),
+  ...(publicApiDeps ? { publicApi: publicApiDeps } : {}),
 });
 if (!internalSecret) log("warn", "INTERNAL_API_SECRET not set: /internal routes answer 503");
 

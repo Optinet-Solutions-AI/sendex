@@ -2,6 +2,7 @@ import type { Role } from "@sendex/core";
 import { and, eq } from "drizzle-orm";
 import type { Database } from "../index.js";
 import { memberships, organisations, users } from "../schema/index.js";
+import type { Db } from "../types.js";
 
 export type UserRow = typeof users.$inferSelect;
 export type OrganisationRow = typeof organisations.$inferSelect;
@@ -128,4 +129,10 @@ export async function removeMembership(db: Database, key: MembershipKey): Promis
     )
     .returning({ id: memberships.id });
   return deleted.length > 0;
+}
+
+/** Find an organisation by its local id (the public API's `/me`). */
+export async function getOrganisationById(db: Db, id: string): Promise<OrganisationRow | null> {
+  const [row] = await db.select().from(organisations).where(eq(organisations.id, id)).limit(1);
+  return row ?? null;
 }

@@ -2,6 +2,7 @@ import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import * as schema from "./schema/index.js";
 
+export * from "./queries/api-tokens.js";
 export * from "./queries/audit.js";
 export * from "./queries/campaigns.js";
 export * from "./queries/clicks.js";

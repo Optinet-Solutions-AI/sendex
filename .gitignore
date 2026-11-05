@@ -32,3 +32,6 @@ test-results/
 
 # logs
 *.log
+
+# next.js generated
+next-env.d.ts

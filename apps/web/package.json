@@ -10,12 +10,14 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@clerk/nextjs": "^7.9.25",
     "@sendex/core": "workspace:*",
     "@sendex/db": "workspace:*",
     "@sendex/ui": "workspace:*",
     "next": "^15.5.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
+    "svix": "^2.9.1",
     "zod": "^4.1.0"
   },
   "devDependencies": {

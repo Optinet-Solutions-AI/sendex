@@ -33,3 +33,6 @@ test-results/
 
 # logs
 *.log
+
+# agent worktrees
+.claude/worktrees/

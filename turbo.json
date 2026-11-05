@@ -2,6 +2,18 @@
   "$schema": "https://turbo.build/schema.json",
   "ui": "tui",
   "globalEnv": ["NODE_ENV", "CI"],
+  "globalPassThroughEnv": [
+    "BACKUP_DIR",
+    "BACKUP_KEEP",
+    "BACKUP_PREFIX",
+    "PG_DUMP",
+    "PG_RESTORE",
+    "PSQL",
+    "R2_ACCOUNT_ID",
+    "R2_BUCKET",
+    "R2_ACCESS_KEY_ID",
+    "R2_SECRET_ACCESS_KEY"
+  ],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],

@@ -24,7 +24,10 @@ import { mkdir, stat } from "node:fs/promises";
 import path from "node:path";
 
 export function backupFileName(now = new Date()) {
-  const stamp = now.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}Z$/, "Z");
+  const stamp = now
+    .toISOString()
+    .replace(/[-:]/g, "")
+    .replace(/\.\d{3}Z$/, "Z");
   return `sendex-${stamp}.dump`;
 }
 
@@ -121,7 +124,9 @@ async function main() {
   if (env.R2_ACCOUNT_ID && env.R2_BUCKET && env.R2_ACCESS_KEY_ID && env.R2_SECRET_ACCESS_KEY) {
     const key = `${env.BACKUP_PREFIX ?? "postgres/"}${path.basename(file)}`;
     const result = await upload(file, key, env);
-    console.log(`backup: uploaded r2://${env.R2_BUCKET}/${key}; kept ${result.kept}, pruned ${result.pruned}`);
+    console.log(
+      `backup: uploaded r2://${env.R2_BUCKET}/${key}; kept ${result.kept}, pruned ${result.pruned}`,
+    );
   } else {
     console.log("backup: R2_* not set, kept the local file only");
   }

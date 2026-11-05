@@ -196,6 +196,10 @@ export const laps = pgTable(
     costMicro: bigint("cost_micro", { mode: "bigint" }).notNull().default(sql`0`),
     /** Micro-EUR of sale value reported by postbacks attributed to this lap. */
     revenueMicro: bigint("revenue_micro", { mode: "bigint" }).notNull().default(sql`0`),
+    /** Messages this lap wanted to send but a daily cap refused (D3-11). */
+    refused: integer("refused").notNull().default(0),
+    /** Why messages were refused: `daily_message_cap` or `daily_spend_cap`; null when none were. */
+    refusalReason: text("refusal_reason"),
     /** 1 = best route of the test round; null until ranked. */
     rank: integer("rank"),
     startedAt: timestamp("started_at", { withTimezone: true }),

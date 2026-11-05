@@ -96,6 +96,8 @@ erDiagram
     uuid list_id FK
     uuid organisation_id FK
     integer rank
+    text refusal_reason
+    integer refused
     bigint revenue_micro
     uuid route_id FK
     integer sales
@@ -173,6 +175,17 @@ erDiagram
     text short_code
     message_status status
     text text
+  }
+  organisation_alerts {
+    timestamp_with_time_zone acknowledged_at
+    uuid acknowledged_by FK
+    jsonb details
+    uuid id PK
+    text kind UK "unique with organisation_id, period_key"
+    text message
+    uuid organisation_id FK, UK "unique with kind, period_key"
+    text period_key UK "unique with kind, organisation_id"
+    timestamp_with_time_zone raised_at
   }
   organisation_postback_keys {
     timestamp_with_time_zone created_at
@@ -294,6 +307,7 @@ erDiagram
   organisations ||--o{ lists : "organisation_id"
   organisations ||--o{ memberships : "organisation_id"
   organisations ||--o{ messages : "organisation_id"
+  organisations ||--o{ organisation_alerts : "organisation_id"
   organisations ||--o{ organisation_postback_keys : "organisation_id"
   organisations ||--o{ organisation_settings : "organisation_id"
   organisations ||--o{ postbacks : "organisation_id"
@@ -309,6 +323,7 @@ erDiagram
   users ||--o{ audit_log : "actor_user_id"
   users ||--o{ campaigns : "created_by"
   users ||--o{ memberships : "user_id"
+  users ||--o{ organisation_alerts : "acknowledged_by"
 ```
 
-Generated from the Drizzle schema by `pnpm --filter @sendex/db erd` (25 tables, 51 relationships). Do not edit by hand: regenerate after every schema change. CI runs `pnpm --filter @sendex/db erd:check` and fails when this file is stale.
+Generated from the Drizzle schema by `pnpm --filter @sendex/db erd` (26 tables, 53 relationships). Do not edit by hand: regenerate after every schema change. CI runs `pnpm --filter @sendex/db erd:check` and fails when this file is stale.

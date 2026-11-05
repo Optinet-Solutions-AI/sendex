@@ -309,6 +309,51 @@ describe("sendLap", () => {
     expect(store.ledger.filter((e) => e.kind === "debit")).toHaveLength(100);
   });
 
+  it("a parked lap carries on from the next unsent contact once the campaign resumes", async () => {
+    const inner = new FakeProvider();
+    let calls = 0;
+    const pausing: Provider = {
+      name: "fake",
+      async send(batch: readonly OutboundMessage[]): Promise<SubmitOutcome[]> {
+        calls += 1;
+        const out = await inner.send(batch);
+        if (calls === 1) store.campaignStatus = "paused";
+        return out;
+      },
+      parseDeliveryReceipt: (raw) => inner.parseDeliveryReceipt(raw),
+      priceFor: (route, country) => inner.priceFor(route, country),
+      validateSenderId: (senderId, country) => inner.validateSenderId(senderId, country),
+    };
+    const { deps, store } = harness({}, pausing);
+    // Paused after the first batch: the job parks, the lap stays `sending` at 50.
+    expect(await sendLap(deps, job, meta())).toEqual({ outcome: "paused", sent: 50, failed: 0 });
+    expect(store.lap).toMatchObject({ status: "sending", sent: 50 });
+    expect(store.messages).toHaveLength(50);
+
+    // Resume: the parked job runs again and finishes the lap without a duplicate.
+    store.campaignStatus = "sending";
+    expect(await sendLap(deps, job, meta())).toEqual({ outcome: "done", sent: 50, failed: 0 });
+    expect(store.lap).toMatchObject({ status: "done", sent: 100 });
+    expect(store.messages).toHaveLength(100);
+    expect(new Set(store.messages.map((m) => m.contactId)).size).toBe(100);
+    expect(store.ledger.filter((e) => e.kind === "debit")).toHaveLength(100);
+  });
+
+  it("a parked lap whose campaign was stopped (lap cancelled by the web) is a no-op", async () => {
+    const { deps, store } = harness({ campaignStatus: "paused" });
+    expect(await sendLap(deps, job, meta())).toEqual({ outcome: "paused", sent: 0, failed: 0 });
+    // Stop from the campaign page: the db helper cancels the lap outright.
+    store.campaignStatus = "stopped";
+    store.lap.status = "cancelled";
+    expect(await sendLap(deps, job, meta())).toEqual({
+      outcome: "skipped",
+      sent: 0,
+      failed: 0,
+      reason: "cancelled",
+    });
+    expect(store.messages).toHaveLength(0);
+  });
+
   it("is a no-op for a lap that is already done or cancelled", async () => {
     const { deps, store } = harness();
     store.lap.status = "done";

@@ -368,9 +368,10 @@ async function currentPriceMicro(db: Db, routeId: string, country: string, now: 
 
 /**
  * Insert a refund for every debit of the given messages that has not been refunded yet.
- * Derived from the debit rows so the refund always matches what was charged.
+ * Derived from the debit rows so the refund always matches what was charged. Shared with the
+ * campaign control helpers (stop), which cancel queued messages outside the send loop.
  */
-async function refundMessages(
+export async function refundMessages(
   db: Db,
   organisationId: string,
   messageIds: readonly string[],
@@ -714,31 +715,42 @@ export function createSendingStore(db: Db): SendingStore {
     },
 
     claimQueuedLaps(now) {
-      return db
-        .update(laps)
-        .set({ status: "sending" })
-        .where(
-          and(
-            eq(laps.status, "queued"),
-            inArray(
-              laps.campaignId,
-              db
-                .select({ id: campaigns.id })
-                .from(campaigns)
-                .where(
-                  and(
-                    notInArray(campaigns.status, ["paused", "stopped"]),
-                    or(isNull(campaigns.scheduledAt), lte(campaigns.scheduledAt, now)),
+      return db.transaction(async (tx) => {
+        const claimed = await tx
+          .update(laps)
+          .set({ status: "sending" })
+          .where(
+            and(
+              eq(laps.status, "queued"),
+              inArray(
+                laps.campaignId,
+                tx
+                  .select({ id: campaigns.id })
+                  .from(campaigns)
+                  .where(
+                    and(
+                      notInArray(campaigns.status, ["paused", "stopped"]),
+                      or(isNull(campaigns.scheduledAt), lte(campaigns.scheduledAt, now)),
+                    ),
                   ),
-                ),
+              ),
             ),
-          ),
-        )
-        .returning({
-          id: laps.id,
-          organisationId: laps.organisationId,
-          campaignId: laps.campaignId,
-        });
+          )
+          .returning({
+            id: laps.id,
+            organisationId: laps.organisationId,
+            campaignId: laps.campaignId,
+          });
+        // A scheduled campaign whose time has come is now sending (D2-08).
+        const campaignIds = [...new Set(claimed.map((l) => l.campaignId))];
+        if (campaignIds.length > 0) {
+          await tx
+            .update(campaigns)
+            .set({ status: "sending", updatedAt: new Date() })
+            .where(and(inArray(campaigns.id, campaignIds), eq(campaigns.status, "scheduled")));
+        }
+        return claimed;
+      });
     },
 
     listCampaignLaps(organisationId, campaignId) {

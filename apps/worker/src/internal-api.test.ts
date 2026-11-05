@@ -1,4 +1,5 @@
 import type { CampaignLapRow, CreateQueuedLapInput, LapPlanningContext } from "@sendex/db";
+import { createFakeRedis } from "@sendex/redis-utils";
 import { describe, expect, it } from "vitest";
 import { createInternalApi, type InternalApiDeps } from "./internal-api.js";
 import { createLogger } from "./log.js";
@@ -225,5 +226,82 @@ describe("POST /internal/laps", () => {
     });
     expect(empty.status).toBe(422);
     expect(await empty.json()).toMatchObject({ error: "nothing to send", available: 0 });
+  });
+});
+
+describe("/internal/emergency-stop (D2-09)", () => {
+  function withFlags() {
+    const flags = createFakeRedis();
+    const d = deps();
+    return { app: createInternalApi({ ...d.deps, redis: flags }), flags };
+  }
+  const json = { ...auth, "content-type": "application/json" };
+
+  it("answers 503 when the worker has no Redis", async () => {
+    const app = createInternalApi(deps().deps);
+    const res = await app.request("/internal/emergency-stop?organisationId=org-1", {
+      headers: auth,
+    });
+    expect(res.status).toBe(503);
+  });
+
+  it("reports not stopped, raises the flag, reports it, clears it", async () => {
+    const { app, flags } = withFlags();
+    const before = await app.request("/internal/emergency-stop?organisationId=org-1", {
+      headers: auth,
+    });
+    expect(before.status).toBe(200);
+    expect(await before.json()).toEqual({ stopped: false, stop: null });
+
+    const raised = await app.request("/internal/emergency-stop", {
+      method: "POST",
+      headers: json,
+      body: JSON.stringify({ organisationId: "org-1", reason: "bad link", byUserId: "u-1" }),
+    });
+    expect(raised.status).toBe(200);
+    const body = (await raised.json()) as { stopped: boolean; stop: { stoppedAt: string } };
+    expect(body).toMatchObject({ stopped: true, stop: { reason: "bad link", byUserId: "u-1" } });
+    expect(typeof body.stop.stoppedAt).toBe("string");
+    expect(await flags.get("sendex:stop:org-1")).not.toBeNull();
+    expect(await flags.get("sendex:stop:org-2")).toBeNull();
+
+    const during = await app.request("/internal/emergency-stop?organisationId=org-1", {
+      headers: auth,
+    });
+    expect(await during.json()).toEqual({ stopped: true, stop: body.stop });
+
+    const cleared = await app.request("/internal/emergency-stop?organisationId=org-1", {
+      method: "DELETE",
+      headers: auth,
+    });
+    expect(cleared.status).toBe(200);
+    expect(await cleared.json()).toEqual({ stopped: false, stop: null, cleared: true });
+    expect(await flags.get("sendex:stop:org-1")).toBeNull();
+
+    const again = await app.request("/internal/emergency-stop?organisationId=org-1", {
+      method: "DELETE",
+      headers: auth,
+    });
+    expect(await again.json()).toEqual({ stopped: false, stop: null, cleared: false });
+  });
+
+  it("validates the body and the query", async () => {
+    const { app } = withFlags();
+    const noReason = await app.request("/internal/emergency-stop", {
+      method: "POST",
+      headers: json,
+      body: JSON.stringify({ organisationId: "org-1", reason: " ", byUserId: "u-1" }),
+    });
+    expect(noReason.status).toBe(400);
+    const notJson = await app.request("/internal/emergency-stop", {
+      method: "POST",
+      headers: json,
+      body: "nope",
+    });
+    expect(notJson.status).toBe(400);
+    expect((await app.request("/internal/emergency-stop", { headers: auth })).status).toBe(400);
+    expect(
+      (await app.request("/internal/emergency-stop", { method: "DELETE", headers: auth })).status,
+    ).toBe(400);
   });
 });

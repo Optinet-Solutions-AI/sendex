@@ -1,0 +1,13 @@
+name = "sendex-links"
+main = "src/index.ts"
+compatibility_date = "2025-09-01"
+
+# KV namespace for short code -> target lookups. Create with: wrangler kv namespace create LINKS
+# and paste the id here (preview_id for `wrangler dev`).
+# [[kv_namespaces]]
+# binding = "LINKS"
+# id = ""
+# preview_id = ""
+
+[vars]
+SENDEX_VERSION = "dev"

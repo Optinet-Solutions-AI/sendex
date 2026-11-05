@@ -1,0 +1,14 @@
+title = "sendex gitleaks config"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Example and template values"
+paths = [
+  '''\.env\.example$''',
+  '''pnpm-lock\.yaml$''',
+]
+regexes = [
+  '''change-me''',
+]

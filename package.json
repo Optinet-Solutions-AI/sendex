@@ -1,0 +1,30 @@
+{
+  "name": "sendex",
+  "private": true,
+  "version": "0.0.0",
+  "packageManager": "pnpm@10.34.7",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "lint": "biome check .",
+    "lint:fix": "biome check --write .",
+    "format": "biome format --write .",
+    "db:generate": "pnpm --filter @sendex/db generate",
+    "db:migrate": "pnpm --filter @sendex/db migrate",
+    "db:seed": "pnpm --filter @sendex/db seed",
+    "prepare": "lefthook install"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.2.0",
+    "@commitlint/cli": "^19.8.0",
+    "@commitlint/config-conventional": "^19.8.0",
+    "lefthook": "^1.12.0",
+    "turbo": "^2.5.0",
+    "typescript": "^5.9.0"
+  }
+}

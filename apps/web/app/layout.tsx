@@ -1,5 +1,6 @@
 import { ClerkProvider } from "@clerk/nextjs";
 import type { Metadata } from "next";
+import { connection } from "next/server";
 import type { ReactNode } from "react";
 import { authMode, missingClerkEnv } from "../lib/env";
 import "./globals.css";
@@ -10,7 +11,12 @@ export const metadata: Metadata = {
   description: "SMS marketing platform",
 };
 
-export default function RootLayout({ children }: { children: ReactNode }) {
+export default async function RootLayout({ children }: { children: ReactNode }) {
+  // Every HTML response must be rendered per request: the middleware issues a fresh CSP nonce
+  // for each one and Next tags its inline scripts with it. A page prerendered at build time
+  // (the 404 page, for instance) would ship scripts without a nonce and the policy would block
+  // them. See docs/engineering/security-headers.md.
+  await connection();
   const mode = authMode();
   if (mode === "unconfigured") {
     return (

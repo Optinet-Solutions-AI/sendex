@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ACTIONS, type Action, ROLES, type Role, can, isAction, isRole } from "./permissions.js";
+import { ACTIONS, type Action, can, isAction, isRole, ROLES, type Role } from "./permissions.js";
 
 const OWNER_ONLY: Action[] = [
   "settings.manage",

@@ -4,5 +4,6 @@ export * from "./links.js";
 export * from "./lists.js";
 export * from "./permissions.js";
 export * from "./phone.js";
+export * from "./postbacks.js";
 export * from "./send-count.js";
 export * from "./sms-encoding.js";

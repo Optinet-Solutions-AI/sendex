@@ -171,6 +171,16 @@ erDiagram
     message_status status
     text text
   }
+  organisation_settings {
+    timestamp_with_time_zone created_at
+    integer daily_message_cap
+    bigint daily_spend_cap_micro
+    timestamp_with_time_zone low_balance_alerted_at
+    text[] low_balance_emails
+    bigint low_balance_threshold_micro
+    uuid organisation_id PK, FK
+    timestamp_with_time_zone updated_at
+  }
   organisations {
     text clerk_org_id UK
     timestamp_with_time_zone created_at
@@ -273,6 +283,7 @@ erDiagram
   organisations ||--o{ lists : "organisation_id"
   organisations ||--o{ memberships : "organisation_id"
   organisations ||--o{ messages : "organisation_id"
+  organisations ||--o{ organisation_settings : "organisation_id"
   organisations ||--o{ postbacks : "organisation_id"
   organisations ||--o{ routes : "organisation_id"
   organisations ||--o{ sender_ids : "organisation_id"
@@ -288,4 +299,4 @@ erDiagram
   users ||--o{ memberships : "user_id"
 ```
 
-Generated from the Drizzle schema by `pnpm --filter @sendex/db erd` (23 tables, 47 relationships). Do not edit by hand: regenerate after every schema change. CI runs `pnpm --filter @sendex/db erd:check` and fails when this file is stale.
+Generated from the Drizzle schema by `pnpm --filter @sendex/db erd` (24 tables, 48 relationships). Do not edit by hand: regenerate after every schema change. CI runs `pnpm --filter @sendex/db erd:check` and fails when this file is stale.

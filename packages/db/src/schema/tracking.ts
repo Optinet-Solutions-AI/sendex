@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import {
   bigint,
   char,
@@ -85,6 +86,10 @@ export const messages = pgTable(
     index("messages_org_created_idx").on(t.organisationId, t.createdAt),
     index("messages_short_code_idx").on(t.shortCode),
     index("messages_dynamic_id_idx").on(t.dynamicId),
+    /** Delivery receipts look a message up by the carrier's id (D3-01). */
+    index("messages_provider_message_id_idx").on(t.providerMessageId),
+    /** The expiry tick scans `sent` messages by age; nothing else needs this (D3-01). */
+    index("messages_sent_pending_receipt_idx").on(t.sentAt).where(sql`"status" = 'sent'`),
   ],
 );
 

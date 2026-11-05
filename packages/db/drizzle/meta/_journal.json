@@ -43,6 +43,13 @@
       "when": 1793914993234,
       "tag": "0005_caps_and_alerts",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1793916384654,
+      "tag": "0006_delivery_status_indexes",
+      "breakpoints": true
     }
   ]
 }

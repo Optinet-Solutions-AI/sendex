@@ -100,22 +100,24 @@ export interface NewClick {
 }
 
 /**
- * Insert a batch of clicks and add the per-lap counts to `laps.clicks`, in one
- * transaction so the counter never drifts from the rows. Returns the number inserted.
+ * Insert a batch of clicks and refresh `laps.clicks` for the laps touched, in one
+ * transaction so the counter never drifts from the rows. Every redirect is kept as a row;
+ * the counter is the number of distinct messages clicked (a recipient opening the link
+ * three times is one click for CTR), recomputed from the rows so a retried batch cannot
+ * inflate it. Returns the number of rows inserted.
  */
 export async function recordClicks(db: Db, rows: readonly NewClick[]): Promise<number> {
   if (rows.length === 0) return 0;
-  const perLap = new Map<string, number>();
-  for (const row of rows) perLap.set(row.lapId, (perLap.get(row.lapId) ?? 0) + 1);
+  const lapIds = [...new Set(rows.map((row) => row.lapId))];
 
   await db.transaction(async (tx) => {
     await tx.insert(clicks).values([...rows]);
-    for (const [lapId, count] of perLap) {
-      await tx
-        .update(laps)
-        .set({ clicks: sql`${laps.clicks} + ${count}` })
-        .where(eq(laps.id, lapId));
-    }
+    await tx
+      .update(laps)
+      .set({
+        clicks: sql`(select count(distinct ${clicks.messageId}) from ${clicks} where ${clicks.lapId} = ${laps.id})`,
+      })
+      .where(inArray(laps.id, lapIds));
   });
   return rows.length;
 }

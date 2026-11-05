@@ -14,6 +14,7 @@ export type LapSortKey =
   | "sent"
   | "delivered"
   | "failed"
+  | "delivery"
   | "clicks"
   | "ctr"
   | "cost"
@@ -65,6 +66,8 @@ function sortValue(row: LapRow, key: LapSortKey): number | null {
       return row.delivered;
     case "failed":
       return row.failed;
+    case "delivery":
+      return row.deliveryRate;
     case "clicks":
       return row.clicks;
     case "ctr":
@@ -104,6 +107,7 @@ const SORTABLE: ReadonlyArray<{ key: LapSortKey; label: string }> = [
   { key: "sent", label: "Sent" },
   { key: "delivered", label: "Delivered" },
   { key: "failed", label: "Failed" },
+  { key: "delivery", label: "Delivery" },
   { key: "clicks", label: "Clicks" },
   { key: "ctr", label: "CTR" },
   { key: "cost", label: "Cost" },
@@ -258,12 +262,21 @@ export function LapsTable({
                 <td className="px-2 py-1.5 text-right tabular-nums" data-testid="lap-sent">
                   {lap.sent}
                 </td>
-                <td className="px-2 py-1.5 text-right tabular-nums">{lap.delivered}</td>
-                <td className="px-2 py-1.5 text-right tabular-nums">{lap.failed}</td>
+                <td className="px-2 py-1.5 text-right tabular-nums" data-testid="lap-delivered">
+                  {lap.delivered}
+                </td>
+                <td className="px-2 py-1.5 text-right tabular-nums" data-testid="lap-failed">
+                  {lap.failed}
+                </td>
+                <td className="px-2 py-1.5 text-right tabular-nums" data-testid="lap-delivery-rate">
+                  {formatPercent(lap.deliveryRate)}
+                </td>
                 <td className="px-2 py-1.5 text-right tabular-nums" data-testid="lap-clicks">
                   {lap.clicks}
                 </td>
-                <td className="px-2 py-1.5 text-right tabular-nums">{formatPercent(lap.ctr)}</td>
+                <td className="px-2 py-1.5 text-right tabular-nums" data-testid="lap-ctr">
+                  {formatPercent(lap.ctr)}
+                </td>
                 <td className="px-2 py-1.5 text-right tabular-nums">
                   {formatMicro(lap.costMicro)}
                 </td>

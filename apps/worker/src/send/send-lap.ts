@@ -284,7 +284,8 @@ export async function sendLap(
   function build(members: EligibleMember[]): NewMessageInput[] {
     return members.map((m) => {
       const senderId = ctx.senderIds[rotation % ctx.senderIds.length] ?? "";
-      const template = ctx.texts[rotation % ctx.texts.length]?.text ?? "";
+      const adText = ctx.texts[rotation % ctx.texts.length];
+      const template = adText?.text ?? "";
       rotation += 1;
       const shortCode = ctx.link ? newShortCode() : null;
       const text = renderMessageText(template, {
@@ -302,6 +303,8 @@ export async function sendLap(
         parts: analysis.parts,
         shortCode,
         dynamicId: newDynamicId(),
+        adTextId: adText?.id ?? null,
+        linkId: ctx.link?.id ?? null,
       };
     });
   }

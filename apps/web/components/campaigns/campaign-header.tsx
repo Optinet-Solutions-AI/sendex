@@ -46,16 +46,17 @@ export function CampaignHeader({
         </span>
       </div>
       <div
-        className="grid grid-cols-4 gap-2 md:grid-cols-6 xl:grid-cols-11"
+        className="grid grid-cols-4 gap-2 md:grid-cols-6 xl:grid-cols-12"
         data-testid="campaign-totals"
       >
         <Stat label="Sent" value={String(totals.sent)} testId="total-sent" />
-        {results ? (
-          <Stat label="Delivered" value={String(results.delivered)} testId="total-delivered" />
-        ) : null}
-        {results ? (
-          <Stat label="Failed" value={String(results.failed)} testId="total-failed" />
-        ) : null}
+        <Stat label="Delivered" value={String(totals.delivered)} testId="total-delivered" />
+        <Stat label="Failed" value={String(totals.failed)} testId="total-failed" />
+        <Stat
+          label="Delivery"
+          value={formatPercent(totals.deliveryRate)}
+          testId="total-delivery-rate"
+        />
         <Stat label="Clicks" value={String(totals.clicks)} testId="total-clicks" />
         <Stat label="CTR" value={formatPercent(totals.ctr)} testId="total-ctr" />
         <Stat label="Cost" value={formatMicro(totals.costMicro)} testId="total-cost" />

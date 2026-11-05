@@ -27,10 +27,10 @@ Queue names live in `QUEUES` in `apps/worker/src/queues.ts`; never type a queue 
 | Key | Queue name | Payload | Produced by | Handler |
 | --- | --- | --- | --- | --- |
 | `send` | `send` | `SendLapJob` | the lap dispatcher (one job per claimed lap, job id `lap-<lapId>`) | `sendLap()`, D2-04 |
-| `dlr` | `dlr` | `DlrJob` | provider adapters (SMPP `deliver_sm`, HTTP webhooks) | stub, D2-07 |
+| `dlr` | `dlr` | `DlrJob` | `subscribeDeliveryReceipts()` at boot: one job per SMPP `deliver_sm` receipt (HTTP webhooks later) | `createDlrHandler()`, D3-01 (see `sending-engine.md`) |
 | `clickIngest` | `click-ingest` | `ClickIngestJob` | links service batches | stub, D2-12 |
 | `postbackIngest` | `postback-ingest` | `PostbackIngestJob` | postback endpoint | stub, D2-14 |
-| `scheduledSend` | `scheduled-send` | `ScheduledSendJob` | the repeatable dispatcher tick (`upsertJobScheduler`, every `LAP_POLL_MS`) | `dispatchQueuedLaps()`, D2-04 |
+| `scheduledSend` | `scheduled-send` | `ScheduledSendJob` | the repeatable dispatcher tick (`upsertJobScheduler`, every `LAP_POLL_MS`) | `dispatchQueuedLaps()`, D2-04, then the receipt expiry sweep (at most once per `DLR_EXPIRY_POLL_MS`), D3-01 |
 
 Each queue has a dead-letter twin named `<queue>-dead` (`send-dead`, `click-ingest-dead`, ...).
 BullMQ forbids `:` in queue names, so the dash replaces the `<queue>:dead` convention from the card.
@@ -44,7 +44,7 @@ they throw `Invalid "<queue>" job payload: ...` with the Zod issues.
 
 ```ts
 SendLapJob         { organisationId, campaignId, lapId, idempotencyKey }   // idempotencyKey = "lap:<lapId>"
-DlrJob             { provider, raw }                       // raw: whatever the provider got
+DlrJob             { provider, raw }                       // provider: registry name (routes.provider); raw: the JSON-safe receipt the provider parses again
 ClickIngestJob     { clicks: [{ shortCode, clickedAt, ip, userAgent }, ...] }  // at least one
 PostbackIngestJob  { eventKey, type: "registration" | "sale", dynamicId, valueMicro?, params }
 ScheduledSendJob   { kind: "dispatch-laps" }               // the dispatcher tick; carries no ids

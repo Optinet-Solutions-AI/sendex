@@ -1,6 +1,7 @@
 import { can } from "@sendex/core";
 import {
   campaignResults,
+  clickStats,
   conversionStats,
   db,
   getCampaign,
@@ -16,6 +17,7 @@ import { AnalyticsSection } from "../../../../components/campaigns/analytics-sec
 import { CampaignControls } from "../../../../components/campaigns/campaign-controls";
 import { CampaignHeader } from "../../../../components/campaigns/campaign-header";
 import { CampaignTabs } from "../../../../components/campaigns/campaign-tabs";
+import { ClicksSection } from "../../../../components/campaigns/clicks-section";
 import { ConversionsSection } from "../../../../components/campaigns/conversions-section";
 import { formatDateTime } from "../../../../components/campaigns/format";
 import { SendForm } from "../../../../components/campaigns/send-form";
@@ -73,8 +75,8 @@ export default async function CampaignPage({ params }: { params: Promise<{ id: s
         const database = db();
         const detail = await getCampaign(database, ctx.organisationId, id);
         if (!detail) notFound();
-        const [sidGroups, lists, links, routes, audit, conversions, resultRows] = await Promise.all(
-          [
+        const [sidGroups, lists, links, routes, audit, conversions, resultRows, clicks] =
+          await Promise.all([
             listSidGroups(database, ctx.organisationId, detail.country),
             listsForCountry(database, ctx.organisationId, detail.country),
             listLinks(database, ctx.organisationId),
@@ -82,8 +84,8 @@ export default async function CampaignPage({ params }: { params: Promise<{ id: s
             listAuditLog(database, ctx.organisationId, { targetType: "campaign", targetId: id }),
             conversionStats(database, ctx.organisationId, id),
             campaignResults(database, ctx.organisationId, id),
-          ],
-        );
+            clickStats(database, ctx.organisationId, id),
+          ]);
         const campaign = toCampaignView(detail);
         const results = resultRows ? toResultsView(resultRows) : null;
         return (
@@ -118,6 +120,7 @@ export default async function CampaignPage({ params }: { params: Promise<{ id: s
                     {results ? (
                       <AnalyticsSection results={results} timezone={campaign.timezone} />
                     ) : null}
+                    <ClicksSection stats={clicks} />
                     <ConversionsSection stats={conversions} />
                   </div>
                 ),

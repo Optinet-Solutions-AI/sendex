@@ -388,3 +388,96 @@ export async function cleanupE2eControlCampaigns(namePrefix: string): Promise<vo
     await sql.end();
   }
 }
+
+export interface SeededDelivery {
+  campaignId: string;
+  campaignName: string;
+  senderId: string;
+  adText: string;
+  linkName: string;
+}
+
+/** Numbers the delivery spec creates start with this. */
+export const DELIVERY_E164_PREFIX = "+34697";
+
+/**
+ * A finished campaign of the seeded "external" organisation as the worker leaves it after
+ * delivery receipts and clicks (D3-01, D2-13): one lap of 100 sent, 95 delivered, 5 failed,
+ * 5 clicking recipients, plus two delivered messages with clicks behind the per-sender,
+ * per-text and per-link breakdowns (the first clicked twice, the second never). Test-only.
+ */
+export async function seedE2eDelivery(namePrefix: string): Promise<SeededDelivery> {
+  const url = process.env.DATABASE_URL;
+  if (!url) throw new Error("DATABASE_URL must be set to run the delivery e2e spec");
+  const sql = postgres(url, { max: 1 });
+  try {
+    const [org] = await sql<{ id: string }[]>`select id from organisations where slug = 'external'`;
+    const [list] = await sql<{ id: string }[]>`
+      select id from lists where organisation_id = ${org?.id ?? ""} and country = 'ES' limit 1`;
+    const [route] = await sql<{ id: string }[]>`select id from routes where name = '405' limit 1`;
+    if (!org || !list || !route) throw new Error("demo seed missing: run pnpm db:seed");
+
+    const campaignName = `${namePrefix} ${Date.now()}`;
+    const [campaign] = await sql<{ id: string }[]>`
+      insert into campaigns (organisation_id, name, country, timezone, status)
+      values (${org.id}, ${campaignName}, 'ES', 'Europe/Madrid', 'completed') returning id`;
+    if (!campaign) throw new Error("campaign insert failed");
+    const adText = "E2E delivery text";
+    const [text] = await sql<{ id: string }[]>`
+      insert into ad_texts (organisation_id, campaign_id, text, encoding)
+      values (${org.id}, ${campaign.id}, ${adText}, 'GSM_7BIT') returning id`;
+    const linkName = "E2E offer";
+    const [link] = await sql<{ id: string }[]>`
+      insert into links (organisation_id, name, url)
+      values (${org.id}, ${linkName}, 'https://dest.example/?d={{dynamic}}') returning id`;
+    const [lap] = await sql<{ id: string }[]>`
+      insert into laps (organisation_id, campaign_id, list_id, route_id, test_size, status,
+        sent, delivered, failed, clicks, cost_micro, started_at, finished_at)
+      values (${org.id}, ${campaign.id}, ${list.id}, ${route.id}, 100, 'done',
+        100, 95, 5, 5, 2500000, now() - interval '1 hour', now()) returning id`;
+    if (!text || !link || !lap) throw new Error("delivery seed failed");
+
+    const senderId = "E2EDLR";
+    const base = Date.now() % 1_000_000;
+    for (const [i, clicks] of [2, 0].entries()) {
+      const e164 = `${DELIVERY_E164_PREFIX}${String((base + i) % 1_000_000).padStart(6, "0")}`;
+      const [contact] = await sql<{ id: string }[]>`
+        insert into contacts (organisation_id, e164, country) values (${org.id}, ${e164}, 'ES')
+        on conflict (organisation_id, e164) do update set country = 'ES' returning id`;
+      if (!contact) throw new Error("contact insert failed");
+      const [message] = await sql<{ id: string }[]>`
+        insert into messages (organisation_id, campaign_id, lap_id, contact_id, e164, sender_id,
+          text, encoding, parts, route_id, status, provider_message_id, short_code, dynamic_id,
+          ad_text_id, link_id, idempotency_key, sent_at, delivered_at)
+        values (${org.id}, ${campaign.id}, ${lap.id}, ${contact.id}, ${e164}, ${senderId},
+          ${adText}, 'GSM_7BIT', 1, ${route.id}, 'delivered', ${`e2e-dlr-${base}-${i}`},
+          ${`e2e${String(base + i).padStart(5, "0")}`}, ${crypto.randomUUID()}, ${text.id},
+          ${link.id}, ${`e2e-dlr:${lap.id}:${contact.id}`}, now() - interval '50 minutes',
+          now() - interval '49 minutes') returning id`;
+      if (!message) throw new Error("message insert failed");
+      for (let n = 0; n < clicks; n += 1) {
+        await sql`
+          insert into clicks (organisation_id, message_id, campaign_id, lap_id, at, device)
+          values (${org.id}, ${message.id}, ${campaign.id}, ${lap.id},
+            now() - interval '40 minutes', 'mobile')`;
+      }
+    }
+    return { campaignId: campaign.id, campaignName, senderId, adText, linkName };
+  } finally {
+    await sql.end();
+  }
+}
+
+/** Remove everything `seedE2eDelivery` created for campaigns whose name starts with `namePrefix`. */
+export async function cleanupE2eDelivery(namePrefix: string): Promise<void> {
+  const url = process.env.DATABASE_URL;
+  if (!url) throw new Error("DATABASE_URL must be set to run the delivery e2e spec");
+  const sql = postgres(url, { max: 1 });
+  try {
+    await sql`delete from campaigns where name like ${`${namePrefix}%`}`;
+    await sql`delete from links where name = 'E2E offer'`;
+    await sql`delete from contacts where e164 like ${`${DELIVERY_E164_PREFIX}%`}`;
+  } finally {
+    await sql.end();
+  }
+}

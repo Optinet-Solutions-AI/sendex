@@ -106,6 +106,10 @@ export interface NewMessageInput {
   parts: number;
   shortCode: string | null;
   dynamicId: string;
+  /** The ad text the message was rendered from, for per-text click and conversion stats. */
+  adTextId?: string | null | undefined;
+  /** The tracked link in the text, for per-link click stats. */
+  linkId?: string | null | undefined;
 }
 
 export interface QueuedMessage {
@@ -563,6 +567,8 @@ export function createSendingStore(db: Db): SendingStore {
               parts: m.parts,
               shortCode: m.shortCode,
               dynamicId: m.dynamicId,
+              adTextId: m.adTextId ?? null,
+              linkId: m.linkId ?? null,
               status: "queued" as const,
               idempotencyKey: `${lap.id}:${m.contactId}`,
             })),

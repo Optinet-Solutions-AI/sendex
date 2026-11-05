@@ -1,0 +1,2 @@
+CREATE INDEX "messages_provider_message_id_idx" ON "messages" USING btree ("provider_message_id");--> statement-breakpoint
+CREATE INDEX "messages_sent_pending_receipt_idx" ON "messages" USING btree ("sent_at") WHERE "status" = 'sent';

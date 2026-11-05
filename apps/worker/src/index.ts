@@ -5,6 +5,7 @@ import { sql } from "drizzle-orm";
 import { Redis } from "ioredis";
 import { createAlertChecksStore, createRedisThrottle } from "./alerts/checks.js";
 import { createApp } from "./app.js";
+import { connectSmppProviders, subscribeDeliveryReceipts } from "./dlr/subscribe.js";
 import { createHandlers, createStubHandlers } from "./handlers.js";
 import { queueDepths } from "./health.js";
 import type { ClickBatch } from "./links/ingest.js";
@@ -28,6 +29,9 @@ const version = process.env.SENDEX_VERSION ?? "dev";
 const SHUTDOWN_TIMEOUT_MS = Number(process.env.SHUTDOWN_TIMEOUT_MS ?? 30_000);
 const linksBaseUrl = process.env.LINKS_BASE_URL ?? "http://localhost:8787";
 const internalSecret = process.env.INTERNAL_API_SECRET;
+// Receipt expiry (D3-01): a `sent` message with no receipt after this long is expired.
+const dlrExpiryMs = Number(process.env.DLR_EXPIRY_MS ?? 24 * 60 * 60 * 1000);
+const dlrExpiryPollMs = Number(process.env.DLR_EXPIRY_POLL_MS ?? 60_000);
 
 // BullMQ requires maxRetriesPerRequest: null on the connection it shares.
 const redisUrl = process.env.REDIS_URL;
@@ -43,22 +47,35 @@ let workerSet: WorkerSet | null = null;
 if (redis) {
   const settings = workerSettingsFromEnv();
   queues = createQueues(redis);
+  const providers = createDefaultProviderRegistry();
   const handlers =
     store && progress
       ? createHandlers({
           db: db(),
           store,
-          providers: createDefaultProviderRegistry(),
+          providers,
           redis,
           progress,
           sendQueue: queues.send,
           send: { linksBaseUrl, pauseRetryMs: settings.pauseRetryMs },
           caps: createCapsStore(db()),
           alerts: { store: createAlertChecksStore(db()), throttle: createRedisThrottle(redis) },
+          expiry: { windowMs: dlrExpiryMs, everyMs: dlrExpiryPollMs },
         })
       : createStubHandlers();
   workerSet = createWorkers(redis, handlers, { settings });
   log("info", "workers started", { queues: Object.values(QUEUES), ...settings });
+  // Delivery receipts arrive on the bound SMPP session, not per job: enqueue them on `dlr`.
+  const dlrQueue = queues.dlr;
+  const receipts = subscribeDeliveryReceipts({
+    registry: providers,
+    enqueue: (job) => dlrQueue.add("receipt", job),
+    log,
+  });
+  if (receipts.providers.length > 0) {
+    log("info", "delivery receipts subscribed", { providers: receipts.providers });
+    connectSmppProviders(providers, log);
+  }
   if (store) {
     scheduleLapDispatcher(queues.scheduledSend, settings.lapPollMs)
       .then(() => log("info", "lap dispatcher scheduled", { everyMs: settings.lapPollMs }))

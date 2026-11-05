@@ -1,4 +1,6 @@
 @import "tailwindcss";
+/* Shared primitives live in the workspace package; Tailwind must scan their class names. */
+@source "../../../packages/ui/src";
 
 :root {
   --background: #f6f7f9;

@@ -1,4 +1,5 @@
 import { OrganizationSwitcher, UserButton } from "@clerk/nextjs";
+import { ToastProvider } from "@sendex/ui";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { authMode, devAuthConfig } from "../../lib/env";
@@ -51,7 +52,9 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
             </>
           )}
         </header>
-        <main className="flex-1 p-6">{children}</main>
+        <main className="flex-1 p-6">
+          <ToastProvider>{children}</ToastProvider>
+        </main>
       </div>
     </div>
   );

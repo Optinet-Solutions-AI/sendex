@@ -7,6 +7,7 @@ import type { ReactNode } from "react";
 import { isAuthError, requireOrg } from "../../lib/auth";
 import { authMode, devAuthConfig } from "../../lib/env";
 import { DevAuthBanner } from "./dev-auth-banner";
+import { EmergencyStopBanner } from "./emergency-stop-banner";
 
 /** The balance in the header must never be stale; the shell is rendered per request. */
 export const dynamic = "force-dynamic";
@@ -21,6 +22,7 @@ interface NavItem {
 const NAV: readonly NavItem[] = [
   { href: "/", label: "Dashboard" },
   { href: "/campaigns", label: "Campaigns" },
+  { href: "/campaigns/scheduled", label: "Scheduled" },
   { href: "/lists", label: "Lists" },
   { href: "/billing", label: "Billing" },
   { href: "/reports/postbacks", label: "Reports" },
@@ -30,6 +32,7 @@ const NAV: readonly NavItem[] = [
 
 interface Shell {
   role: Role;
+  organisationId: string;
   balanceMicro: bigint;
 }
 
@@ -41,7 +44,7 @@ async function shellContext(): Promise<Shell | null> {
   try {
     const ctx = await requireOrg();
     const balanceMicro = await getBalanceMicro(db(), ctx.organisationId);
-    return { role: ctx.role, balanceMicro };
+    return { role: ctx.role, organisationId: ctx.organisationId, balanceMicro };
   } catch (error) {
     if (isAuthError(error)) return null;
     throw error;
@@ -106,6 +109,7 @@ export default async function DashboardLayout({ children }: { children: ReactNod
             </>
           )}
         </header>
+        {shell ? <EmergencyStopBanner organisationId={shell.organisationId} /> : null}
         <main className="flex-1 p-6">
           <ToastProvider>{children}</ToastProvider>
         </main>

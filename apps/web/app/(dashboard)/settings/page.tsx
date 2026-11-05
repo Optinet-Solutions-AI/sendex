@@ -29,6 +29,15 @@ export default function SettingsPage() {
             >
               Billing: low balance alert and daily caps
             </Link>
+            {can(ctx.role, "emergency.stop") ? (
+              <Link
+                href="/settings/emergency-stop"
+                data-testid="emergency-stop-link"
+                className="ml-2 inline-flex h-9 items-center rounded-md border border-red-300 bg-white px-4 text-sm font-medium text-red-700 hover:bg-red-50"
+              >
+                Emergency stop
+              </Link>
+            ) : null}
           </div>
           <div className="mt-6">
             {mode === "dev" ? (

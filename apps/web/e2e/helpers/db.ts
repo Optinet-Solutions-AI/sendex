@@ -115,3 +115,57 @@ export async function cleanupE2ePostbacks(namePrefix: string): Promise<void> {
     await sql.end();
   }
 }
+
+export interface SeededControlCampaign {
+  campaignId: string;
+  campaignName: string;
+  lapId: string;
+}
+
+/**
+ * A campaign of the seeded "external" organisation with one queued lap on the seeded ES list
+ * and route 405, either `sending` (as the campaign page leaves it after Send) or `scheduled`
+ * for `scheduledAt`. The worker is not running under Playwright, so the lap stays queued and
+ * the pause / resume / stop / reschedule spec only exercises the web side. Test-only.
+ */
+export async function seedE2eControlCampaign(
+  namePrefix: string,
+  options: { status: "sending" } | { status: "scheduled"; scheduledAt: Date },
+): Promise<SeededControlCampaign> {
+  const url = process.env.DATABASE_URL;
+  if (!url) throw new Error("DATABASE_URL must be set to run the campaign control e2e spec");
+  const sql = postgres(url, { max: 1 });
+  try {
+    const [org] = await sql<{ id: string }[]>`select id from organisations where slug = 'external'`;
+    const [list] = await sql<{ id: string }[]>`
+      select id from lists where organisation_id = ${org?.id ?? ""} and country = 'ES' limit 1`;
+    const [route] = await sql<{ id: string }[]>`select id from routes where name = '405' limit 1`;
+    if (!org || !list || !route) throw new Error("demo seed missing: run pnpm db:seed");
+    const campaignName = `${namePrefix} ${Date.now()}`;
+    const scheduledAt = options.status === "scheduled" ? options.scheduledAt : null;
+    const [campaign] = await sql<{ id: string }[]>`
+      insert into campaigns (organisation_id, name, country, timezone, status, scheduled_at)
+      values (${org.id}, ${campaignName}, 'ES', 'Europe/Madrid', ${options.status}, ${scheduledAt})
+      returning id`;
+    if (!campaign) throw new Error("campaign insert failed");
+    const [lap] = await sql<{ id: string }[]>`
+      insert into laps (organisation_id, campaign_id, list_id, route_id, test_size, status)
+      values (${org.id}, ${campaign.id}, ${list.id}, ${route.id}, 10, 'queued') returning id`;
+    if (!lap) throw new Error("lap insert failed");
+    return { campaignId: campaign.id, campaignName, lapId: lap.id };
+  } finally {
+    await sql.end();
+  }
+}
+
+/** Remove the campaigns `seedE2eControlCampaign` created (laps cascade; audit rows stay). */
+export async function cleanupE2eControlCampaigns(namePrefix: string): Promise<void> {
+  const url = process.env.DATABASE_URL;
+  if (!url) throw new Error("DATABASE_URL must be set to run the campaign control e2e spec");
+  const sql = postgres(url, { max: 1 });
+  try {
+    await sql`delete from campaigns where name like ${`${namePrefix}%`}`;
+  } finally {
+    await sql.end();
+  }
+}

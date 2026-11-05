@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const clerk = vi.hoisted(() => ({
   auth: vi.fn(),
@@ -82,6 +82,64 @@ beforeEach(() => {
     fullName: "Chris Example",
   });
   clerk.getOrganization.mockResolvedValue({ name: "External", slug: "external" });
+});
+
+afterEach(() => {
+  vi.unstubAllEnvs();
+});
+
+describe("development auth stub", () => {
+  it("signs every request in as the seeded owner when SENDEX_DEV_AUTH=1 outside production", async () => {
+    vi.stubEnv("NODE_ENV", "development");
+    vi.stubEnv("SENDEX_DEV_AUTH", "1");
+    vi.stubEnv("SENDEX_DEV_ORG_SLUG", "");
+    vi.stubEnv("SENDEX_DEV_ROLE", "");
+    const ctx = await requireOrg();
+    expect(ctx).toEqual({
+      userId: "u_dev_user_external",
+      clerkUserId: "dev_user_external",
+      organisationId: "o_dev_org_external",
+      clerkOrgId: "dev_org_external",
+      role: "owner",
+    });
+    expect(store.orgs.get("dev_org_external")?.slug).toBe("external");
+    expect(store.memberships.get("o_dev_org_external:u_dev_user_external")?.role).toBe("owner");
+    expect(clerk.auth).not.toHaveBeenCalled();
+    expect(clerk.currentUser).not.toHaveBeenCalled();
+    expect(clerk.getOrganization).not.toHaveBeenCalled();
+  });
+
+  it("honours SENDEX_DEV_ROLE so requireAction can be exercised per role", async () => {
+    vi.stubEnv("NODE_ENV", "development");
+    vi.stubEnv("SENDEX_DEV_AUTH", "1");
+    vi.stubEnv("SENDEX_DEV_ROLE", "viewer");
+    const err = await requireAction("campaign.send").catch((e: unknown) => e);
+    expect((err as AuthError).code).toBe("forbidden");
+    expect(clerk.auth).not.toHaveBeenCalled();
+  });
+
+  it("is ignored in production: SENDEX_DEV_AUTH=1 still goes through Clerk", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("SENDEX_DEV_AUTH", "1");
+    clerk.auth.mockResolvedValue({ userId: null, orgId: null, orgRole: null });
+    const err = await requireOrg().catch((e: unknown) => e);
+    expect((err as AuthError).status).toBe(401);
+    expect(clerk.auth).toHaveBeenCalledTimes(1);
+    expect(store.users.has("dev_user_external")).toBe(false);
+    expect(store.orgs.has("dev_org_external")).toBe(false);
+  });
+
+  it("is ignored when Clerk keys are present, even outside production", async () => {
+    vi.stubEnv("NODE_ENV", "development");
+    vi.stubEnv("SENDEX_DEV_AUTH", "1");
+    vi.stubEnv("NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY", "pk_test_x");
+    vi.stubEnv("CLERK_SECRET_KEY", "sk_test_y");
+    signedIn();
+    const ctx = await requireOrg();
+    expect(ctx.clerkUserId).toBe("user_1");
+    expect(clerk.auth).toHaveBeenCalledTimes(1);
+    expect(store.users.has("dev_user_external")).toBe(false);
+  });
 });
 
 describe("requireOrg", () => {

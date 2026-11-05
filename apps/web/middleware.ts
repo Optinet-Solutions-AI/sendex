@@ -1,6 +1,6 @@
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 import { type NextMiddleware, NextResponse } from "next/server";
-import { isClerkConfigured } from "./lib/env";
+import { type AuthMode, authMode } from "./lib/env";
 
 /** Routes anyone may reach without a session. Everything else requires one. */
 const isPublicRoute = createRouteMatcher([
@@ -10,20 +10,29 @@ const isPublicRoute = createRouteMatcher([
   "/health",
 ]);
 
-function buildMiddleware(): NextMiddleware {
-  if (!isClerkConfigured()) {
-    // The root layout renders a setup page explaining which keys to set; do not crash here.
-    return () => NextResponse.next();
+/** Clerk's hosted pages have nothing to show under the development stub. */
+const isClerkPage = createRouteMatcher(["/sign-in(.*)", "/sign-up(.*)"]);
+
+export function buildMiddleware(mode: AuthMode): NextMiddleware {
+  switch (mode) {
+    case "unconfigured":
+      // The root layout renders a setup page explaining which keys to set; do not crash here.
+      return () => NextResponse.next();
+    case "dev":
+      // Every request is the seeded user (see lib/dev-auth.ts); there is nothing to sign in to.
+      return (req) =>
+        isClerkPage(req) ? NextResponse.redirect(new URL("/", req.url)) : NextResponse.next();
+    case "clerk":
+      return clerkMiddleware(
+        async (auth, req) => {
+          if (!isPublicRoute(req)) await auth.protect();
+        },
+        { signInUrl: "/sign-in", signUpUrl: "/sign-up" },
+      );
   }
-  return clerkMiddleware(
-    async (auth, req) => {
-      if (!isPublicRoute(req)) await auth.protect();
-    },
-    { signInUrl: "/sign-in", signUpUrl: "/sign-up" },
-  );
 }
 
-export default buildMiddleware();
+export default buildMiddleware(authMode());
 
 export const config = {
   matcher: [

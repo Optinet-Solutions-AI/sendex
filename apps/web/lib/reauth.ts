@@ -1,5 +1,6 @@
 import { auth, clerkClient } from "@clerk/nextjs/server";
 import { AuthError } from "./auth";
+import { authMode } from "./env";
 
 export const DEFAULT_REAUTH_MAX_AGE_SECONDS = 300;
 
@@ -35,10 +36,13 @@ export function isRecentAuth(input: RecentAuthInput): boolean {
  * or re-verified their first factor within `maxAgeSeconds`. Throws `AuthError` 401 without a
  * session and 403 `reauth_required` when the proof is stale; the caller then asks Clerk's
  * `useReverification()` on the client to re-prompt and retries.
+ *
+ * Under the development auth stub there is no Clerk session to check, so it passes.
  */
 export async function assertRecentAuth(
   maxAgeSeconds = DEFAULT_REAUTH_MAX_AGE_SECONDS,
 ): Promise<void> {
+  if (authMode() === "dev") return;
   const session = await auth();
   if (!session.userId || !session.sessionId) {
     throw new AuthError(401, "unauthenticated", "Sign in to continue.");

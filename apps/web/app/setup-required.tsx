@@ -23,6 +23,15 @@ export function SetupRequired({ missing }: { missing: readonly ClerkEnvVar[] }) 
         <code className="font-mono text-xs">CLERK_WEBHOOK_SECRET</code> if you want user and
         organisation changes synced to the database.
       </p>
+      <p className="mt-4 text-sm text-neutral-600">
+        No Clerk application yet? For local development only, set{" "}
+        <code className="rounded bg-neutral-200 px-1 font-mono text-xs">SENDEX_DEV_AUTH=1</code> to
+        sign every request in as a seeded owner of the <em>external</em> organisation (see{" "}
+        <code className="font-mono text-xs">SENDEX_DEV_ORG_SLUG</code> and{" "}
+        <code className="font-mono text-xs">SENDEX_DEV_ROLE</code> in{" "}
+        <code className="font-mono text-xs">.env.example</code>). The stub is ignored in production
+        builds.
+      </p>
     </main>
   );
 }

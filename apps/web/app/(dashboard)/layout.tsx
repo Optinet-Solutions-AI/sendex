@@ -1,6 +1,8 @@
 import { OrganizationSwitcher, UserButton } from "@clerk/nextjs";
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { authMode, devAuthConfig } from "../../lib/env";
+import { DevAuthBanner } from "./dev-auth-banner";
 
 const NAV = [
   { href: "/", label: "Dashboard" },
@@ -9,8 +11,12 @@ const NAV = [
   { href: "/settings", label: "Settings" },
 ] as const;
 
-/** Minimal admin shell: left nav, top bar with organisation switcher and user menu. */
+/**
+ * Minimal admin shell: left nav, top bar with organisation switcher and user menu. Under the
+ * development auth stub the top bar shows an amber banner instead of the Clerk widgets.
+ */
 export default function DashboardLayout({ children }: { children: ReactNode }) {
+  const mode = authMode();
   return (
     <div className="flex min-h-screen">
       <aside className="flex w-56 shrink-0 flex-col border-r border-neutral-200 bg-white">
@@ -36,8 +42,14 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
       </aside>
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="flex h-14 items-center justify-between border-b border-neutral-200 bg-white px-6">
-          <OrganizationSwitcher afterSelectOrganizationUrl="/" afterCreateOrganizationUrl="/" />
-          <UserButton />
+          {mode === "dev" ? (
+            <DevAuthBanner config={devAuthConfig()} />
+          ) : (
+            <>
+              <OrganizationSwitcher afterSelectOrganizationUrl="/" afterCreateOrganizationUrl="/" />
+              <UserButton />
+            </>
+          )}
         </header>
         <main className="flex-1 p-6">{children}</main>
       </div>

@@ -11,6 +11,8 @@ import {
   upsertMembership,
 } from "@sendex/db";
 import { roleFromClerk } from "./clerk-roles";
+import { devOrgContext } from "./dev-auth";
+import { authMode } from "./env";
 
 export type AuthErrorStatus = 401 | 403;
 export type AuthErrorCode = "unauthenticated" | "no_organisation" | "forbidden" | "reauth_required";
@@ -69,8 +71,12 @@ async function resolveOrganisation(database: Database, clerkOrgId: string) {
 /**
  * Resolve the signed-in user and their active organisation, creating the local rows on first
  * sight. Throws `AuthError` 401 without a session and 403 without an active organisation.
+ *
+ * In `authMode() === "dev"` (no Clerk keys, `SENDEX_DEV_AUTH=1`, never in production) the
+ * seeded development user and organisation are returned instead; see `dev-auth.ts`.
  */
 export async function requireOrg(): Promise<OrgContext> {
+  if (authMode() === "dev") return devOrgContext();
   const session = await auth();
   if (!session.userId) {
     throw new AuthError(401, "unauthenticated", "Sign in to continue.");

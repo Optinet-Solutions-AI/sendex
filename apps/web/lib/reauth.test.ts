@@ -62,6 +62,24 @@ describe("assertRecentAuth", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.useRealTimers();
+    vi.unstubAllEnvs();
+  });
+
+  it("passes without touching Clerk under the development auth stub", async () => {
+    vi.stubEnv("NODE_ENV", "development");
+    vi.stubEnv("SENDEX_DEV_AUTH", "1");
+    await expect(assertRecentAuth()).resolves.toBeUndefined();
+    expect(clerk.auth).not.toHaveBeenCalled();
+    expect(clerk.getSession).not.toHaveBeenCalled();
+  });
+
+  it("still asks Clerk in production even with SENDEX_DEV_AUTH=1", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("SENDEX_DEV_AUTH", "1");
+    clerk.auth.mockResolvedValue({ userId: null, sessionId: null, factorVerificationAge: null });
+    const err = await assertRecentAuth().catch((e: unknown) => e);
+    expect((err as AuthError).status).toBe(401);
+    expect(clerk.auth).toHaveBeenCalledTimes(1);
   });
 
   it("throws 401 without a session", async () => {

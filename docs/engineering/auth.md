@@ -34,6 +34,41 @@ The middleware (`apps/web/middleware.ts`) protects every route except `/sign-in`
 `/api/webhooks/*` and `/health`. When the Clerk keys are missing the middleware passes requests
 through and the root layout renders a setup page listing the variables to set.
 
+## Auth modes
+
+`authMode()` in `apps/web/lib/env.ts` is the single place that decides how a request is
+authenticated; the middleware, the layouts, `requireOrg()` and `assertRecentAuth()` all read it.
+
+| Mode           | When                                                                             |
+| -------------- | -------------------------------------------------------------------------------- |
+| `clerk`        | `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` and `CLERK_SECRET_KEY` are set. Always wins. |
+| `dev`          | No Clerk keys, `SENDEX_DEV_AUTH=1` and `NODE_ENV` is not `production`.           |
+| `unconfigured` | Neither. The root layout renders the setup page.                                 |
+
+### Development auth stub
+
+Until a Clerk application exists (and for Playwright, which has no browser session to hand),
+`SENDEX_DEV_AUTH=1` signs every request in as a seeded user. `requireOrg()` calls
+`devOrgContext()` (`apps/web/lib/dev-auth.ts`), which goes through the same tenancy helpers as
+the Clerk sync (`ensureUser`, `ensureOrganisation`, `upsertMembership`) so the rest of the app
+sees an ordinary organisation:
+
+| Variable              | Default    | Effect                                                   |
+| --------------------- | ---------- | -------------------------------------------------------- |
+| `SENDEX_DEV_AUTH`     | unset      | `1` enables the stub (any other value is ignored)        |
+| `SENDEX_DEV_ORG_SLUG` | `external` | organisation slug; rows use `dev_org_<slug>` as Clerk id |
+| `SENDEX_DEV_ROLE`     | `owner`    | `owner`, `campaign_manager` or `viewer`                  |
+
+The seeded user is `dev_user_<slug>` (`dev-<slug>@sendex.local`). In this mode the middleware
+passes requests through and redirects `/sign-in` and `/sign-up` to `/`, the root layout skips
+`ClerkProvider`, the dashboard top bar shows an amber "Development login: external as owner"
+banner instead of the organisation switcher and user menu, `/settings` shows a note instead of
+Clerk's `UserProfile`, and `assertRecentAuth()` passes.
+
+The stub cannot be enabled in production: `authMode()` returns `unconfigured` for
+`NODE_ENV=production` whatever `SENDEX_DEV_AUTH` says, and `clerk` whenever the keys are
+present. Both rules are covered by unit tests (`env.test.ts`, `auth.test.ts`).
+
 ## Roles and permissions
 
 Roles live in `packages/core/src/permissions.ts` and in the `member_role` enum in the schema.

@@ -57,13 +57,13 @@ export async function getBalanceMicro(db: Db, organisationId: string): Promise<b
 
 export interface DateRange {
   /** Inclusive. */
-  from?: Date;
+  from?: Date | undefined;
   /** Exclusive. */
-  to?: Date;
+  to?: Date | undefined;
 }
 
 export interface ListLedgerOptions extends DateRange {
-  kind?: LedgerKind;
+  kind?: LedgerKind | undefined;
   /** 1-based. */
   page: number;
   pageSize: number;

@@ -75,12 +75,12 @@ export async function listAuditLog(
 // ---------------------------------------------------------------------------
 
 export interface ListAuditEntriesOptions {
-  action?: string;
-  actorUserId?: string;
+  action?: string | undefined;
+  actorUserId?: string | undefined;
   /** Inclusive. */
-  from?: Date;
+  from?: Date | undefined;
   /** Exclusive. */
-  to?: Date;
+  to?: Date | undefined;
   /** 1-based. */
   page: number;
   pageSize: number;

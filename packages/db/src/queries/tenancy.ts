@@ -47,6 +47,15 @@ export async function getOrganisationByClerkId(
   return row ?? null;
 }
 
+/** Find an organisation by its unique slug (used by the seed and the development auth stub). */
+export async function getOrganisationBySlug(
+  db: Database,
+  slug: string,
+): Promise<OrganisationRow | null> {
+  const [row] = await db.select().from(organisations).where(eq(organisations.slug, slug)).limit(1);
+  return row ?? null;
+}
+
 /** Create or refresh the local user for a Clerk user id. Idempotent. */
 export async function ensureUser(db: Database, input: EnsureUserInput): Promise<UserRow> {
   const [row] = await db

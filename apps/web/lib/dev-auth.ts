@@ -1,4 +1,11 @@
-import { type Database, db, ensureOrganisation, ensureUser, upsertMembership } from "@sendex/db";
+import {
+  type Database,
+  db,
+  ensureOrganisation,
+  ensureUser,
+  getOrganisationBySlug,
+  upsertMembership,
+} from "@sendex/db";
 import type { OrgContext } from "./auth";
 import { type DevAuthConfig, devAuthConfig } from "./env";
 
@@ -25,7 +32,13 @@ function nameFromSlug(slug: string): string {
     .join(" ");
 }
 
-/** Ensure the seeded user, organisation and membership exist and return their context. */
+/**
+ * Ensure the seeded user, organisation and membership exist and return their context.
+ *
+ * The organisation is looked up by slug first: `pnpm db:seed` creates the demo organisations
+ * with their own Clerk ids and the slug is unique, so the stub joins that row rather than
+ * inserting `dev_org_<slug>` next to it. Only when no organisation owns the slug is one created.
+ */
 export async function devOrgContext(
   config: DevAuthConfig = devAuthConfig(),
   database: Database = db(),
@@ -36,11 +49,13 @@ export async function devOrgContext(
     email: `dev-${config.orgSlug}@sendex.local`,
     name: "Development user",
   });
-  const organisation = await ensureOrganisation(database, {
-    clerkOrgId,
-    name: nameFromSlug(config.orgSlug),
-    slug: config.orgSlug,
-  });
+  const organisation =
+    (await getOrganisationBySlug(database, config.orgSlug)) ??
+    (await ensureOrganisation(database, {
+      clerkOrgId,
+      name: nameFromSlug(config.orgSlug),
+      slug: config.orgSlug,
+    }));
   await upsertMembership(database, {
     organisationId: organisation.id,
     userId: user.id,
@@ -50,7 +65,7 @@ export async function devOrgContext(
     userId: user.id,
     clerkUserId,
     organisationId: organisation.id,
-    clerkOrgId,
+    clerkOrgId: organisation.clerkOrgId,
     role: config.role,
   };
 }

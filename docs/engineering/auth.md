@@ -59,7 +59,11 @@ sees an ordinary organisation:
 | `SENDEX_DEV_ORG_SLUG` | `external` | organisation slug; rows use `dev_org_<slug>` as Clerk id |
 | `SENDEX_DEV_ROLE`     | `owner`    | `owner`, `campaign_manager` or `viewer`                  |
 
-The seeded user is `dev_user_<slug>` (`dev-<slug>@sendex.local`). In this mode the middleware
+The seeded user is `dev_user_<slug>` (`dev-<slug>@sendex.local`). The organisation is looked
+up by slug first (`getOrganisationBySlug`): if `pnpm db:seed` has already created it with its
+own Clerk id the stub joins that row, otherwise it creates one as `dev_org_<slug>`. Each
+request re-applies the membership, so changing `SENDEX_DEV_ROLE` takes effect on the next
+page load. In this mode the middleware
 passes requests through and redirects `/sign-in` and `/sign-up` to `/`, the root layout skips
 `ClerkProvider`, the dashboard top bar shows an amber "Development login: external as owner"
 banner instead of the organisation switcher and user menu, `/settings` shows a note instead of

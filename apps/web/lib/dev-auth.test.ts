@@ -28,6 +28,8 @@ const store = vi.hoisted(() => {
       users.set(input.clerkUserId, { ...row, email: input.email });
       return row;
     },
+    getOrganisationBySlug: async (_db: unknown, slug: string) =>
+      [...orgs.values()].find((o) => o.slug === slug) ?? null,
     ensureOrganisation: async (
       _db: unknown,
       input: { clerkOrgId: string; name: string; slug: string },
@@ -105,6 +107,24 @@ describe("devOrgContext", () => {
     expect(store.memberships.size).toBe(1);
     expect(store.calls.ensureUser).toBe(2);
     expect(store.calls.upsertMembership).toBe(2);
+  });
+
+  it("adopts an organisation that already owns the slug instead of creating a second one", async () => {
+    // `pnpm db:seed` creates External with its own clerk id; the slug is unique, so the stub
+    // must sign in to that row rather than insert dev_org_external alongside it.
+    store.orgs.set("seed_org_external", {
+      id: "o_seeded",
+      clerkOrgId: "seed_org_external",
+      name: "External",
+      slug: "external",
+    });
+    const ctx = await devOrgContext({ orgSlug: "external", role: "owner" });
+    expect(ctx.organisationId).toBe("o_seeded");
+    expect(ctx.clerkOrgId).toBe("seed_org_external");
+    expect(ctx.clerkUserId).toBe("dev_user_external");
+    expect(store.orgs.size).toBe(1);
+    expect(store.calls.ensureOrganisation).toBe(0);
+    expect(store.memberships.get("o_seeded:u_dev_user_external")?.role).toBe("owner");
   });
 
   it("accepts an explicit database handle", async () => {

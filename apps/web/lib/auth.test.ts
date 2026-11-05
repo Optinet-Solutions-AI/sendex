@@ -31,6 +31,8 @@ const store = vi.hoisted(() => {
     getUserByClerkId: async (_db: unknown, clerkUserId: string) => users.get(clerkUserId) ?? null,
     getOrganisationByClerkId: async (_db: unknown, clerkOrgId: string) =>
       orgs.get(clerkOrgId) ?? null,
+    getOrganisationBySlug: async (_db: unknown, slug: string) =>
+      [...orgs.values()].find((o) => o.slug === slug) ?? null,
     ensureUser: async (_db: unknown, input: { clerkUserId: string; email: string }) => {
       const row = { id: `u_${input.clerkUserId}`, ...input };
       users.set(input.clerkUserId, row);

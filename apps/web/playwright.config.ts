@@ -1,6 +1,8 @@
 import { defineConfig, devices } from "@playwright/test";
 
-const baseURL = "http://localhost:3000";
+/** Override with PLAYWRIGHT_PORT when 3000 is taken (e.g. by another worktree's dev server). */
+const port = Number.parseInt(process.env.PLAYWRIGHT_PORT ?? "3000", 10);
+const baseURL = `http://localhost:${port}`;
 const isCI = Boolean(process.env.CI);
 
 /**
@@ -21,7 +23,7 @@ export default defineConfig({
   },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
   webServer: {
-    command: "pnpm dev",
+    command: `pnpm exec next dev --port ${port}`,
     url: `${baseURL}/health`,
     reuseExistingServer: !isCI,
     timeout: 120_000,

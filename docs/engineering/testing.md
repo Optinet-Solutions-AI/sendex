@@ -38,7 +38,8 @@ DATABASE_URL=postgresql://sendex:sendex@127.0.0.1:5432/sendex pnpm test:e2e
 
 `pnpm test:e2e` at the root is `pnpm --filter @sendex/web test:e2e`. If a dev server is
 already running on port 3000 it is reused outside CI; make sure it was started with
-`SENDEX_DEV_AUTH=1`. Open the report with
+`SENDEX_DEV_AUTH=1`. When 3000 belongs to something else (another worktree's dev server, for
+instance) set `PLAYWRIGHT_PORT=3100`: the config then starts or reuses a server on that port. Open the report with
 `pnpm --filter @sendex/web exec playwright show-report`.
 
 Each new screen gets a spec covering its happy path (AGENTS.md, "Adding a screen"). The e2e

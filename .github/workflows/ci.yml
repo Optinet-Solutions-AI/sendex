@@ -29,9 +29,10 @@ jobs:
       - run: pnpm install --frozen-lockfile
 
       - name: Secret scan
-        uses: gitleaks/gitleaks-action@v2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        # The gitleaks GitHub Action needs a paid licence for organisations; the CLI does not.
+        run: |
+          docker run --rm -v "$PWD:/repo" ghcr.io/gitleaks/gitleaks:latest \
+            git /repo --no-banner --redact --config /repo/.gitleaks.toml
 
       - name: Commit messages
         if: github.event_name == 'pull_request'

@@ -1,15 +1,22 @@
-import { getTableColumns, getTableName } from "drizzle-orm";
+import { getTableColumns, getTableName, isTable, type Table } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import * as schema from "./schema/index.js";
 
-const TENANT_EXEMPT = new Set(["organisations", "users"]);
+/** Platform-level tables that are not owned by a tenant. */
+const TENANT_EXEMPT = new Set(["organisations", "users", "route_prices"]);
+
+const tables: Table[] = [];
+for (const value of Object.values<unknown>(schema)) {
+  if (isTable(value)) tables.push(value);
+}
 
 describe("schema conventions", () => {
+  it("finds the tables", () => {
+    expect(tables.length).toBeGreaterThan(4);
+  });
+
   it("every tenant table carries organisation_id", () => {
-    for (const value of Object.values(schema)) {
-      if (typeof value !== "object" || value === null || !("$inferSelect" in (value as object)))
-        continue;
-      const table = value as Parameters<typeof getTableName>[0];
+    for (const table of tables) {
       const name = getTableName(table);
       if (TENANT_EXEMPT.has(name)) continue;
       const cols = getTableColumns(table);

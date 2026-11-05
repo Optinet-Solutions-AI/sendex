@@ -1,3 +1,4 @@
+import os from "node:os";
 import { serve } from "@hono/node-server";
 import { createCapsStore, createSendingStore, db, type SendingStore } from "@sendex/db";
 import { createRateLimiter, RATE_LIMITS } from "@sendex/redis-utils";
@@ -5,7 +6,7 @@ import { sql } from "drizzle-orm";
 import { Redis } from "ioredis";
 import { createAlertChecksStore, createRedisThrottle } from "./alerts/checks.js";
 import { createApp } from "./app.js";
-import { connectSmppProviders, subscribeDeliveryReceipts } from "./dlr/subscribe.js";
+import { subscribeDeliveryReceipts } from "./dlr/subscribe.js";
 import { createHandlers, createStubHandlers } from "./handlers.js";
 import { queueDepths } from "./health.js";
 import type { ClickBatch } from "./links/ingest.js";
@@ -23,6 +24,7 @@ import {
 import { scheduleLapDispatcher } from "./send/dispatcher.js";
 import { createProgressTracker } from "./send/progress.js";
 import { createDefaultProviderRegistry } from "./send/providers.js";
+import { bindSmppAsLeader, type SmppLeadership } from "./send/smpp-leader.js";
 
 const port = Number(process.env.WORKER_PORT ?? 4000);
 const version = process.env.SENDEX_VERSION ?? "dev";
@@ -43,6 +45,7 @@ const progress = redis ? createProgressTracker(redis) : null;
 
 let queues: Queues | null = null;
 let workerSet: WorkerSet | null = null;
+let smppLeadership: SmppLeadership | null = null;
 
 if (redis) {
   const settings = workerSettingsFromEnv();
@@ -74,7 +77,17 @@ if (redis) {
   });
   if (receipts.providers.length > 0) {
     log("info", "delivery receipts subscribed", { providers: receipts.providers });
-    connectSmppProviders(providers, log);
+    // One bind per provider across all machines (D2-16): the lock holder binds and sends, the
+    // others keep their send worker paused and retry. A lost lock shuts the process down so
+    // the platform restarts it with a fresh session.
+    smppLeadership = bindSmppAsLeader({
+      registry: providers,
+      redis,
+      holderId: process.env.FLY_MACHINE_ID ?? `${os.hostname()}:${process.pid}`,
+      log,
+      sendWorker: workerSet.workers.send,
+      onLost: () => void shutdown("smpp leadership lost"),
+    });
   }
   if (store) {
     scheduleLapDispatcher(queues.scheduledSend, settings.lapPollMs)
@@ -187,6 +200,8 @@ async function shutdown(signal: string): Promise<void> {
       server.close(() => resolve());
       if ("closeIdleConnections" in server) server.closeIdleConnections();
     });
+    // Release the SMPP lock before anything else so the next machine takes over quickly.
+    await smppLeadership?.close();
     await workerSet?.close();
     if (queues) await closeQueues(queues);
     await redis?.quit();

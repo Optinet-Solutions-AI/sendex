@@ -32,6 +32,9 @@ importers:
 
   apps/links:
     dependencies:
+      '@sendex/core':
+        specifier: workspace:*
+        version: link:../../packages/core
       hono:
         specifier: ^4.9.0
         version: 4.13.16

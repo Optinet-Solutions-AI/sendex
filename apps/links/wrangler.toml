@@ -2,12 +2,36 @@ name = "sendex-links"
 main = "src/index.ts"
 compatibility_date = "2025-09-01"
 
-# KV namespace for short code -> target lookups. Create with: wrangler kv namespace create LINKS
-# and paste the id here (preview_id for `wrangler dev`).
-# [[kv_namespaces]]
-# binding = "LINKS"
-# id = ""
-# preview_id = ""
+# See docs/engineering/links-and-clicks.md for the full setup (domains, WAF, rate limit).
 
+# Non-secret configuration. INTERNAL_API_SECRET is a secret, never a var:
+#   wrangler secret put INTERNAL_API_SECRET
+# It must equal the worker's INTERNAL_API_SECRET (same value in Fly.io secrets).
 [vars]
 SENDEX_VERSION = "dev"
+# Origin of apps/worker; the redirect falls back to `${WORKER_URL}/internal/links/:code`
+# on a KV miss and posts clicks to `${WORKER_URL}/internal/clicks` when no queue is bound.
+WORKER_URL = "http://localhost:4000"
+
+# KV namespace for short code -> link lookups (key `code:<shortCode>`, 30 day TTL).
+# Create with:  wrangler kv namespace create LINKS
+#               wrangler kv namespace create LINKS --preview
+# and paste the ids below. Until then the service resolves every code through the worker.
+[[kv_namespaces]]
+binding = "LINKS"
+id = "REPLACE_WITH_KV_NAMESPACE_ID"
+preview_id = "REPLACE_WITH_KV_PREVIEW_ID"
+
+# Click records. Create the queue with:  wrangler queues create sendex-clicks
+# then uncomment both blocks. Without the producer binding the redirect posts each click
+# straight to the worker over HTTP (batch of one), so the queue is an optimisation, not a need.
+# [[queues.producers]]
+# binding = "CLICKS"
+# queue = "sendex-clicks"
+#
+# [[queues.consumers]]
+# queue = "sendex-clicks"
+# max_batch_size = 100
+# max_batch_timeout = 5
+# max_retries = 5
+# dead_letter_queue = "sendex-clicks-dead"

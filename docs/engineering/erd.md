@@ -14,6 +14,18 @@ erDiagram
     integer position
     text text
   }
+  api_tokens {
+    timestamp_with_time_zone created_at
+    uuid created_by FK
+    uuid id PK
+    timestamp_with_time_zone last_used_at
+    text name
+    uuid organisation_id FK
+    text prefix
+    timestamp_with_time_zone revoked_at
+    text[] scopes
+    text token_hash UK
+  }
   audit_log {
     text action
     uuid actor_user_id FK
@@ -293,6 +305,7 @@ erDiagram
   messages ||--o{ clicks : "message_id"
   messages ||--o{ postbacks : "message_id"
   organisations ||--o{ ad_texts : "organisation_id"
+  organisations ||--o{ api_tokens : "organisation_id"
   organisations ||--o{ audit_log : "organisation_id"
   organisations ||--o{ campaign_links : "organisation_id"
   organisations ||--o{ campaign_lists : "organisation_id"
@@ -320,10 +333,11 @@ erDiagram
   routes ||--o{ route_prices : "route_id"
   sid_groups ||--o{ campaign_sid_group : "sid_group_id"
   sid_groups ||--o{ sender_ids : "sid_group_id"
+  users ||--o{ api_tokens : "created_by"
   users ||--o{ audit_log : "actor_user_id"
   users ||--o{ campaigns : "created_by"
   users ||--o{ memberships : "user_id"
   users ||--o{ organisation_alerts : "acknowledged_by"
 ```
 
-Generated from the Drizzle schema by `pnpm --filter @sendex/db erd` (26 tables, 53 relationships). Do not edit by hand: regenerate after every schema change. CI runs `pnpm --filter @sendex/db erd:check` and fails when this file is stale.
+Generated from the Drizzle schema by `pnpm --filter @sendex/db erd` (27 tables, 55 relationships). Do not edit by hand: regenerate after every schema change. CI runs `pnpm --filter @sendex/db erd:check` and fails when this file is stale.

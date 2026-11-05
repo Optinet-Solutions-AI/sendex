@@ -12,6 +12,8 @@
   },
   "dependencies": {
     "@hono/node-server": "^1.19.0",
+    "@hono/zod-openapi": "1.6.3",
+    "@scalar/hono-api-reference": "0.12.18",
     "@sendex/core": "workspace:*",
     "@sendex/db": "workspace:*",
     "@sendex/providers": "workspace:*",

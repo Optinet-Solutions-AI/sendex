@@ -22,7 +22,7 @@ export default function SettingsPage() {
               ? "You can manage organisation settings, members and balance."
               : "Organisation settings are read only for your role."}
           </p>
-          <div className="mt-4">
+          <div className="mt-4 flex flex-wrap gap-2">
             <Link
               href="/settings/billing"
               className="inline-flex h-9 items-center rounded-md border border-neutral-300 bg-white px-4 text-sm font-medium hover:bg-neutral-100"
@@ -36,6 +36,14 @@ export default function SettingsPage() {
                 className="ml-2 inline-flex h-9 items-center rounded-md border border-red-300 bg-white px-4 text-sm font-medium text-red-700 hover:bg-red-50"
               >
                 Emergency stop
+              </Link>
+            ) : null}
+            {can(ctx.role, "settings.manage") ? (
+              <Link
+                href="/settings/api-tokens"
+                className="inline-flex h-9 items-center rounded-md border border-neutral-300 bg-white px-4 text-sm font-medium hover:bg-neutral-100"
+              >
+                API tokens
               </Link>
             ) : null}
           </div>

@@ -50,6 +50,13 @@
       "when": 1793916384654,
       "tag": "0006_delivery_status_indexes",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1793916523725,
+      "tag": "0007_api_tokens",
+      "breakpoints": true
     }
   ]
 }

@@ -3,6 +3,7 @@ import type { QueueDepths } from "./health.js";
 import { createInternalApi, type InternalApiDeps } from "./internal-api.js";
 import { createInternalLinksRoutes, type InternalLinksDeps } from "./links/internal-routes.js";
 import { createPostbackRoutes, type PostbackRoutesDeps } from "./postbacks/routes.js";
+import { createPublicApi, type PublicApiDeps } from "./public-api/routes.js";
 
 export interface HealthDeps {
   version: string;
@@ -19,9 +20,11 @@ export interface AppDeps extends HealthDeps {
   links?: InternalLinksDeps;
   /** Optional: mounts the public `/postback/:orgKey` endpoint (signed conversion events). */
   postbacks?: PostbackRoutesDeps;
+  /** Optional: mounts the public `/api/v1/*` routes, `/api/openapi.json` and `/api/docs`. */
+  publicApi?: PublicApiDeps;
 }
 
-/** The HTTP surface of the worker: health, the internal API, postbacks; the public API later. */
+/** The HTTP surface of the worker: health, the internal API, postbacks and the public API. */
 export function createApp(deps: AppDeps) {
   const app = new Hono();
 
@@ -39,6 +42,7 @@ export function createApp(deps: AppDeps) {
   if (deps.internal) app.route("/", createInternalApi(deps.internal));
   if (deps.links) app.route("/", createInternalLinksRoutes(deps.links));
   if (deps.postbacks) app.route("/", createPostbackRoutes(deps.postbacks));
+  if (deps.publicApi) app.route("/", createPublicApi(deps.publicApi));
 
   return app;
 }

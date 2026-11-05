@@ -1,4 +1,5 @@
-import type { LapContext } from "@sendex/db";
+import type { DailyCaps } from "@sendex/core";
+import type { DailyUsage, LapContext } from "@sendex/db";
 import {
   createProviderRegistry,
   FakeProvider,
@@ -11,6 +12,7 @@ import { describe, expect, it } from "vitest";
 import type { SendLapJob } from "../jobs.js";
 import { createLogger } from "../log.js";
 import type { JobMeta } from "../queues.js";
+import { createFakeCapsStore } from "./caps.fake.js";
 import { createProgressTracker, progressKeys } from "./progress.js";
 import { fakeRedis } from "./redis.fake.js";
 import { type SendLapDeps, sendLap } from "./send-lap.js";
@@ -347,5 +349,133 @@ describe("sendLap", () => {
     await expect(sendLap(deps, { ...job, campaignId: "other" }, meta())).rejects.toBeInstanceOf(
       UnrecoverableError,
     );
+  });
+});
+
+describe("sendLap with daily caps (D3-11)", () => {
+  const NOW = new Date("2026-11-06T13:30:00Z");
+
+  function capped(
+    caps: Partial<DailyCaps>,
+    storeOptions: Partial<FakeStoreOptions> = {},
+    usage?: () => DailyUsage,
+  ) {
+    const h = harness(
+      {
+        ctx: context({ lap: { ...context().lap, testSize: 600 } }),
+        members: members(650),
+        balanceMicro: 100_000_000n,
+        ...storeOptions,
+      },
+      new FakeProvider(),
+    );
+    const capsStore = createFakeCapsStore({
+      caps,
+      usage:
+        usage ??
+        (() => ({
+          messages: h.store.messages.filter((m) => m.status !== "cancelled").length,
+          spentMicro: -h.store.ledger
+            .filter((e) => e.kind !== "deposit")
+            .reduce((sum, e) => sum + e.amountMicro, 0n),
+        })),
+    });
+    h.deps.caps = capsStore;
+    h.deps.now = () => NOW;
+    return { ...h, capsStore };
+  }
+
+  it("sends up to the daily message cap, refuses the rest and pauses the campaign", async () => {
+    const { deps, store, redis, capsStore } = capped({ dailyMessageCap: 500 });
+    const result = await sendLap(deps, job, meta());
+
+    expect(result).toEqual({
+      outcome: "done",
+      sent: 500,
+      failed: 0,
+      refused: 100,
+      reason: "daily message cap",
+    });
+    expect(store.messages).toHaveLength(500);
+    expect(store.lap).toMatchObject({ status: "done", sent: 500, failed: 0 });
+    expect(store.calls.filter((c) => c === "claimAndCreateMessages")).toHaveLength(10);
+    // The refusal is on the lap, the campaign is paused (not stopped) and audited, one alert for the day.
+    expect(capsStore.refusals).toEqual([
+      { lapId: IDS.lap, organisationId: IDS.org, refused: 100, reason: "daily_message_cap" },
+    ]);
+    expect(capsStore.pauses).toEqual([
+      {
+        campaignId: IDS.campaign,
+        organisationId: IDS.org,
+        reason: "daily_message_cap",
+        details: { lapId: IDS.lap, refused: 100, cap: 500 },
+      },
+    ]);
+    expect(capsStore.alerts).toHaveLength(1);
+    expect(capsStore.alerts[0]).toMatchObject({
+      kind: "daily_message_cap",
+      periodKey: "2026-11-06",
+      message: "Daily message cap of 500 reached: 100 messages refused.",
+      details: { cap: 500, refused: 100, lapId: IDS.lap, campaignId: IDS.campaign },
+    });
+    // The lap finished with the refusal in its audit details and its progress total lowered.
+    expect(store.audits.at(-1)).toMatchObject({
+      action: "lap.finish",
+      details: {
+        sent: 500,
+        failed: 0,
+        planned: 600,
+        refused: 100,
+        refusalReason: "daily_message_cap",
+      },
+    });
+    expect(redis.data.get(progressKeys.lap(IDS.lap).total)).toBe("500");
+  });
+
+  it("trims a batch to the remaining allowance before refusing", async () => {
+    const { deps, store, capsStore } = capped({ dailyMessageCap: 520 });
+    const result = await sendLap(deps, job, meta());
+    expect(result).toMatchObject({ outcome: "done", sent: 520, refused: 80 });
+    expect(store.calls.filter((c) => c === "claimAndCreateMessages")).toHaveLength(11);
+    expect(capsStore.refusals[0]?.refused).toBe(80);
+  });
+
+  it("enforces the daily spend cap from the estimated batch cost", async () => {
+    // EUR 1.00 at 0.025 per message = 40 messages.
+    const { deps, store, capsStore } = capped({ dailySpendCapMicro: 1_000_000n });
+    const result = await sendLap(deps, job, meta());
+    expect(result).toEqual({
+      outcome: "done",
+      sent: 40,
+      failed: 0,
+      refused: 560,
+      reason: "daily spend cap",
+    });
+    expect(store.lap.costMicro).toBe(1_000_000n);
+    expect(capsStore.alerts[0]).toMatchObject({
+      kind: "daily_spend_cap",
+      message: "Daily spend cap of EUR 1.00 reached: 560 messages refused.",
+    });
+  });
+
+  it("refuses a lap outright when the cap was already reached today", async () => {
+    const { deps, store, capsStore } = capped({ dailyMessageCap: 500 }, {}, () => ({
+      messages: 500,
+      spentMicro: 0n,
+    }));
+    const result = await sendLap(deps, job, meta());
+    expect(result).toMatchObject({ outcome: "done", sent: 0, refused: 600 });
+    expect(store.messages).toHaveLength(0);
+    expect(store.lap.status).toBe("done");
+    expect(capsStore.pauses).toHaveLength(1);
+  });
+
+  it("leaves a lap alone when no cap is set", async () => {
+    const { deps, store, capsStore } = capped({});
+    const result = await sendLap(deps, job, meta());
+    expect(result).toEqual({ outcome: "done", sent: 600, failed: 0 });
+    expect(store.lap.status).toBe("done");
+    expect(capsStore.refusals).toEqual([]);
+    expect(capsStore.alerts).toEqual([]);
   });
 });

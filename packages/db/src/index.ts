@@ -33,3 +33,5 @@ export function db(): Database {
   shared ??= createDb();
   return shared;
 }
+export * from "./queries/postback-keys.js";
+export * from "./queries/postbacks.js";

@@ -194,6 +194,8 @@ export const laps = pgTable(
     sales: integer("sales").notNull().default(0),
     /** Micro-EUR debited for this lap so far. */
     costMicro: bigint("cost_micro", { mode: "bigint" }).notNull().default(sql`0`),
+    /** Micro-EUR of sale value reported by postbacks attributed to this lap. */
+    revenueMicro: bigint("revenue_micro", { mode: "bigint" }).notNull().default(sql`0`),
     /** 1 = best route of the test round; null until ranked. */
     rank: integer("rank"),
     startedAt: timestamp("started_at", { withTimezone: true }),

@@ -23,6 +23,7 @@ const NAV: readonly NavItem[] = [
   { href: "/campaigns", label: "Campaigns" },
   { href: "/lists", label: "Lists" },
   { href: "/billing", label: "Billing" },
+  { href: "/reports/postbacks", label: "Reports" },
   { href: "/settings", label: "Settings" },
   { href: "/audit", label: "Audit log", action: "audit.view" },
 ];

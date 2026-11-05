@@ -27,6 +27,7 @@ export default defineConfig({
             { label: "Schedule and stop", slug: "using/schedule-and-stop" },
             { label: "Read the results", slug: "using/read-the-results" },
             { label: "Balance and billing", slug: "using/balance-and-billing" },
+            { label: "Track conversions", slug: "using/track-conversions" },
           ],
         },
         {
@@ -36,6 +37,7 @@ export default defineConfig({
             { label: "Services and queues", slug: "engineering/services-and-queues" },
             { label: "Adding a provider", slug: "engineering/adding-a-provider" },
             { label: "Billing", slug: "engineering/billing" },
+            { label: "Postbacks", slug: "engineering/postbacks" },
             {
               label: "Runbooks",
               items: [{ label: "Local setup", slug: "engineering/runbooks/local-setup" }],

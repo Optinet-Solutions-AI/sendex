@@ -1,5 +1,6 @@
 import { can } from "@sendex/core";
 import {
+  conversionStats,
   db,
   getCampaign,
   listAuditLog,
@@ -12,6 +13,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CampaignHeader } from "../../../../components/campaigns/campaign-header";
 import { CampaignTabs } from "../../../../components/campaigns/campaign-tabs";
+import { ConversionsSection } from "../../../../components/campaigns/conversions-section";
 import { formatDateTime } from "../../../../components/campaigns/format";
 import { SendForm } from "../../../../components/campaigns/send-form";
 import type { AuditView } from "../../../../components/campaigns/types";
@@ -67,12 +69,13 @@ export default async function CampaignPage({ params }: { params: Promise<{ id: s
         const database = db();
         const detail = await getCampaign(database, ctx.organisationId, id);
         if (!detail) notFound();
-        const [sidGroups, lists, links, routes, audit] = await Promise.all([
+        const [sidGroups, lists, links, routes, audit, conversions] = await Promise.all([
           listSidGroups(database, ctx.organisationId, detail.country),
           listsForCountry(database, ctx.organisationId, detail.country),
           listLinks(database, ctx.organisationId),
           routesForCountry(database, ctx.organisationId, detail.country),
           listAuditLog(database, ctx.organisationId, { targetType: "campaign", targetId: id }),
+          conversionStats(database, ctx.organisationId, id),
         ]);
         const campaign = toCampaignView(detail);
         return (
@@ -98,9 +101,12 @@ export default async function CampaignPage({ params }: { params: Promise<{ id: s
                 ),
                 Logs: <LogsTab entries={audit.map(toAuditView)} timezone={campaign.timezone} />,
                 Analytics: (
-                  <p className="text-sm text-neutral-500">
-                    Analytics (clicks, conversions and route ranking charts) arrive on Day 3.
-                  </p>
+                  <div className="space-y-6">
+                    <ConversionsSection stats={conversions} />
+                    <p className="text-sm text-neutral-500">
+                      Click and route ranking charts arrive with the analytics card.
+                    </p>
+                  </div>
                 ),
                 "Send Single": (
                   <p className="text-sm text-neutral-500">

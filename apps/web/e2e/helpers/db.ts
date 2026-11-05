@@ -501,3 +501,44 @@ export async function cleanupE2eApiTokens(namePrefix: string): Promise<void> {
     await sql.end();
   }
 }
+
+/** Cancel every queued lap of the seeded organisation (leftovers of other specs). Test-only. */
+export async function cancelQueuedLaps(): Promise<void> {
+  const url = process.env.DATABASE_URL;
+  if (!url) throw new Error("DATABASE_URL must be set to run the full-flow e2e spec");
+  const sql = postgres(url, { max: 1 });
+  try {
+    await sql`update laps set status = 'cancelled', finished_at = now() where status = 'queued'`;
+  } finally {
+    await sql.end();
+  }
+}
+
+/** The short code of one sent message of the campaign, for a simulated click. */
+export async function firstShortCode(campaignId: string): Promise<string> {
+  const url = process.env.DATABASE_URL;
+  if (!url) throw new Error("DATABASE_URL must be set to run the full-flow e2e spec");
+  const sql = postgres(url, { max: 1 });
+  try {
+    const [row] = await sql<{ short_code: string }[]>`
+      select short_code from messages
+      where campaign_id = ${campaignId} and short_code is not null and status = 'sent'
+      order by created_at limit 1`;
+    if (!row) throw new Error("no sent message with a short code for the campaign");
+    return row.short_code;
+  } finally {
+    await sql.end();
+  }
+}
+
+/** Remove the campaigns the full-flow spec created (messages, laps and clicks cascade). */
+export async function cleanupE2eFlow(namePrefix: string): Promise<void> {
+  const url = process.env.DATABASE_URL;
+  if (!url) throw new Error("DATABASE_URL must be set to run the full-flow e2e spec");
+  const sql = postgres(url, { max: 1 });
+  try {
+    await sql`delete from campaigns where name like ${`${namePrefix}%`}`;
+  } finally {
+    await sql.end();
+  }
+}

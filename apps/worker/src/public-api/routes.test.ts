@@ -338,20 +338,23 @@ describe("campaigns", () => {
       headers: bearer(sender.token),
     });
     expect(status.status).toBe(200);
-    expect(await status.json()).toMatchObject({
+    const statusBody = (await status.json()) as {
+      progress: { laps: Array<{ lapId: string }> };
+    };
+    expect(statusBody).toMatchObject({
       id: campaignId,
       status: "sending",
-      progress: {
-        sent: 3,
-        failed: 1,
-        total: 10,
-        laps: [
-          { lapId, status: "queued", sent: 3, failed: 1, total: 5 },
-          { lapId: otherLapId, status: "queued", sent: 0, failed: 0, total: 5 },
-        ],
-      },
+      progress: { sent: 3, failed: 1, total: 10 },
       counters: { sent: 0, delivered: 0, failed: 0, clicks: 0, leads: 0, sales: 0 },
     });
+    // Laps queued in one transaction share created_at, so their order is by id: compare as a set.
+    expect(statusBody.progress.laps).toHaveLength(2);
+    expect(statusBody.progress.laps).toEqual(
+      expect.arrayContaining([
+        { lapId, status: "queued", sent: 3, failed: 1, total: 5 },
+        { lapId: otherLapId, status: "queued", sent: 0, failed: 0, total: 5 },
+      ]),
+    );
   });
 
   it("answers 422 when the campaign is not ready to send, without auditing", async () => {

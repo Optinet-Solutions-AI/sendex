@@ -272,6 +272,40 @@ export async function seedE2eResults(namePrefix: string): Promise<SeededResults>
   }
 }
 
+export interface SeededAlert {
+  id: string;
+  kind: string;
+  periodKey: string;
+  message: string;
+}
+
+/** Period keys of alerts the caps spec seeds start with this, so cleanup can find them. */
+export const E2E_ALERT_PERIOD_PREFIX = "e2e-";
+
+/**
+ * An open alert of the seeded "external" organisation, as the worker's `raiseAlert` would
+ * store it when a daily cap refuses a lap (D3-11). The worker is not running under
+ * Playwright, so the row goes in directly; acknowledging it exercises the real action.
+ */
+export async function seedE2eAlert(input: { kind: string; message: string }): Promise<SeededAlert> {
+  const url = process.env.DATABASE_URL;
+  if (!url) throw new Error("DATABASE_URL must be set to run the caps e2e spec");
+  const sql = postgres(url, { max: 1 });
+  try {
+    const [org] = await sql<{ id: string }[]>`select id from organisations where slug = 'external'`;
+    if (!org) throw new Error("demo seed missing: run pnpm db:seed");
+    const periodKey = `${E2E_ALERT_PERIOD_PREFIX}${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
+    const [row] = await sql<{ id: string }[]>`
+      insert into organisation_alerts (organisation_id, kind, period_key, message, details)
+      values (${org.id}, ${input.kind}, ${periodKey}, ${input.message}, ${sql.json({ seededBy: "e2e" })})
+      returning id`;
+    if (!row) throw new Error("alert insert failed");
+    return { id: row.id, kind: input.kind, periodKey, message: input.message };
+  } finally {
+    await sql.end();
+  }
+}
+
 /** Remove everything `seedE2eResults` created for campaigns whose name starts with `namePrefix`. */
 export async function cleanupE2eResults(namePrefix: string): Promise<void> {
   const url = process.env.DATABASE_URL;
@@ -284,6 +318,18 @@ export async function cleanupE2eResults(namePrefix: string): Promise<void> {
     // contacts no message refers to any more.
     await sql`delete from contacts where e164 like ${`${RESULTS_E164_PREFIX}%`}
       and not exists (select 1 from messages m where m.contact_id = contacts.id)`;
+  } finally {
+    await sql.end();
+  }
+}
+
+/** Remove every alert `seedE2eAlert` created. */
+export async function cleanupE2eAlerts(): Promise<void> {
+  const url = process.env.DATABASE_URL;
+  if (!url) throw new Error("DATABASE_URL must be set to run the caps e2e spec");
+  const sql = postgres(url, { max: 1 });
+  try {
+    await sql`delete from organisation_alerts where period_key like ${`${E2E_ALERT_PERIOD_PREFIX}%`}`;
   } finally {
     await sql.end();
   }

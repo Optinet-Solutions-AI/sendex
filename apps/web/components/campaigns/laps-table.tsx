@@ -147,6 +147,13 @@ function SortHeader({
   );
 }
 
+/** "daily_message_cap" -> "daily cap" on the lap row (D3-11); other reasons as stored. */
+function refusalLabel(reason: string | null): string {
+  if (reason === "daily_message_cap") return "daily cap";
+  if (reason === "daily_spend_cap") return "daily spend cap";
+  return reason ?? "cap";
+}
+
 /**
  * The laps of a campaign with every SMS Edge column, sortable by rank (default) or any
  * counter, and a per-lap on/off switch. Off cancels a queued or sending lap; on re-queues a
@@ -237,6 +244,15 @@ export function LapsTable({
                 <td className="px-2 py-1.5">{lap.listName}</td>
                 <td className="px-2 py-1.5">
                   <StatusBadge status={lap.status} />
+                  {lap.refused > 0 ? (
+                    <span
+                      data-testid="lap-refused"
+                      title="A daily cap refused these messages; raise the cap under Settings, Billing and resume the campaign."
+                      className="mt-1 block whitespace-nowrap text-xs text-orange-800"
+                    >
+                      refused: {refusalLabel(lap.refusalReason)} ({lap.refused})
+                    </span>
+                  ) : null}
                 </td>
                 <td className="px-2 py-1.5 text-right tabular-nums">{lap.testSize}</td>
                 <td className="px-2 py-1.5 text-right tabular-nums" data-testid="lap-sent">

@@ -1,6 +1,16 @@
 import { randomUUID } from "node:crypto";
-import { analyseSmsText, renderMessageText } from "@sendex/core";
+import {
+  analyseSmsText,
+  type CapReason,
+  capDecision,
+  capReasonLabel,
+  formatEur,
+  renderMessageText,
+  startOfUtcDay,
+  utcDayKey,
+} from "@sendex/core";
 import type {
+  CapsStore,
   EligibilityInput,
   EligibleMember,
   LapContext,
@@ -39,6 +49,10 @@ export interface SendLapDeps {
   pauseRetryMs?: number;
   shortCode?: () => string;
   dynamicId?: () => string;
+  /** Daily caps (D3-11). Absent means no cap is enforced (unit tests of the loop itself). */
+  caps?: CapsStore;
+  /** The clock, for the UTC day the caps apply to. Default `new Date()`. */
+  now?: () => Date;
 }
 
 export type SendLapOutcome = "done" | "cancelled" | "paused" | "skipped";
@@ -49,9 +63,16 @@ export interface SendLapResult {
   sent: number;
   failed: number;
   reason?: string;
+  /** Messages the lap wanted to send but a daily cap refused (D3-11). */
+  refused?: number;
 }
 
-type Guard = { kind: "go" } | { kind: "stop"; reason: string } | { kind: "pause" };
+type Guard =
+  | { kind: "go"; limit?: number }
+  | { kind: "stop"; reason: string }
+  | { kind: "pause" }
+  /** A daily cap leaves no room today; `cap` is the value that binds. */
+  | { kind: "refuse"; reason: CapReason; cap: number | bigint };
 
 /** A sample rendering used to estimate parts before any member is known. */
 function estimateMaxParts(ctx: LapContext, linksBaseUrl: string): number {
@@ -94,6 +115,7 @@ export async function sendLap(
   const linksBaseUrl = deps.linksBaseUrl.replace(/\/+$/, "");
   const newShortCode = deps.shortCode ?? generateShortCode;
   const newDynamicId = deps.dynamicId ?? randomUUID;
+  const now = deps.now ?? (() => new Date());
   const fields = { jobId: meta.id, lapId: job.lapId, campaignId: job.campaignId };
 
   const loaded = await store.loadLapContext(job.lapId);
@@ -109,6 +131,8 @@ export async function sendLap(
 
   let runSent = 0;
   let runFailed = 0;
+  /** Set once the route price is known; until then the guard skips the caps. */
+  let pricing: { priceMicro: bigint; maxParts: number } | null = null;
 
   async function cancel(reason: string, details?: Record<string, unknown>): Promise<SendLapResult> {
     await store.cancelLap({ lapId: ctx.lap.id, organisationId: ctx.lap.organisationId, reason });
@@ -116,12 +140,38 @@ export async function sendLap(
     return { outcome: "cancelled", sent: runSent, failed: runFailed, reason };
   }
 
-  async function guard(): Promise<Guard> {
+  /**
+   * Re-read the campaign status and the emergency stop flag; with `wanted > 0` also ask the
+   * daily caps (D3-11) how many of the next `wanted` messages may still go today.
+   */
+  async function guard(wanted = 0): Promise<Guard> {
     const status = await store.getCampaignStatus(ctx.lap.campaignId);
     if (status === "stopped") return { kind: "stop", reason: "campaign stopped" };
     if (status === "paused") return { kind: "pause" };
     if ((await deps.redis.get(progressKeys.stop(ctx.lap.organisationId))) !== null) {
       return { kind: "stop", reason: "emergency stop" };
+    }
+    if (wanted > 0 && deps.caps && pricing) {
+      const caps = await deps.caps.getDailyCaps(ctx.lap.organisationId);
+      if (caps.dailyMessageCap === null && caps.dailySpendCapMicro === null) {
+        return { kind: "go" };
+      }
+      const usage = await deps.caps.getDailyUsage(ctx.lap.organisationId, startOfUtcDay(now()));
+      const decision = capDecision({
+        sentToday: usage.messages,
+        spentTodayMicro: usage.spentMicro,
+        batchSize: wanted,
+        batchCostMicro: BigInt(wanted) * BigInt(pricing.maxParts) * pricing.priceMicro,
+        caps,
+      });
+      if (decision.action === "refuse") {
+        const cap =
+          decision.reason === "daily_message_cap"
+            ? (caps.dailyMessageCap ?? 0)
+            : (caps.dailySpendCapMicro ?? 0n);
+        return { kind: "refuse", reason: decision.reason, cap };
+      }
+      if (decision.action === "trim") return { kind: "go", limit: decision.allowed };
     }
     return { kind: "go" };
   }
@@ -145,12 +195,53 @@ export async function sendLap(
   if (ctx.texts.length === 0) return cancel("campaign has no active text");
   if (ctx.senderIds.length === 0) return cancel("campaign has no active sender id");
   const priceMicro = ctx.priceMicro;
+  pricing = { priceMicro, maxParts: estimateMaxParts(ctx, linksBaseUrl) };
 
   const existing = await store.countLapMessages(ctx.lap.id);
   let remaining = Math.max(0, ctx.lap.testSize - existing);
+  let refused = 0;
+  let refusalReason: CapReason | null = null;
+
+  /**
+   * A daily cap leaves no room: the rest of the lap is refused (recorded on the lap row), an
+   * alert is raised once per day, and the campaign is paused, not stopped, so the owner can
+   * raise the cap and resume. The lap then finishes with what it sent.
+   */
+  async function refuse(caps: CapsStore, g: Extract<Guard, { kind: "refuse" }>): Promise<void> {
+    refused = remaining;
+    refusalReason = g.reason;
+    const capValue = typeof g.cap === "bigint" ? g.cap.toString() : g.cap;
+    const capText = typeof g.cap === "bigint" ? formatEur(g.cap) : String(g.cap);
+    const label = capReasonLabel(g.reason);
+    const message = `${label.charAt(0).toUpperCase()}${label.slice(1)} of ${capText} reached: ${refused} messages refused.`;
+    await caps.recordLapRefusal({
+      lapId: ctx.lap.id,
+      organisationId: ctx.lap.organisationId,
+      refused,
+      reason: g.reason,
+    });
+    await caps.raiseAlert(ctx.lap.organisationId, {
+      kind: g.reason,
+      periodKey: utcDayKey(now()),
+      message,
+      details: { cap: capValue, refused, lapId: ctx.lap.id, campaignId: ctx.lap.campaignId },
+    });
+    await caps.pauseCampaign({
+      campaignId: ctx.lap.campaignId,
+      organisationId: ctx.lap.organisationId,
+      reason: g.reason,
+      details: { lapId: ctx.lap.id, refused, cap: capValue },
+    });
+    log("warn", "daily cap reached, rest of the lap refused and campaign paused", {
+      ...fields,
+      reason: g.reason,
+      cap: capValue,
+      refused,
+    });
+  }
 
   if (existing === 0 && remaining > 0) {
-    const estimate = BigInt(remaining) * BigInt(estimateMaxParts(ctx, linksBaseUrl)) * priceMicro;
+    const estimate = BigInt(remaining) * BigInt(pricing.maxParts) * priceMicro;
     const balance = await store.getBalanceMicro(ctx.lap.organisationId);
     if (balance < estimate) {
       return cancel("insufficient balance", {
@@ -236,13 +327,18 @@ export async function sendLap(
   }
 
   while (remaining > 0) {
-    const g = await guard();
+    const wanted = Math.min(batchSize, remaining);
+    const g = await guard(wanted);
     if (g.kind === "stop") return cancel(g.reason);
     if (g.kind === "pause") return pause();
+    if (g.kind === "refuse") {
+      if (deps.caps) await refuse(deps.caps, g);
+      break;
+    }
     const created = await store.claimAndCreateMessages({
       lap: ctx.lap,
       eligibility,
-      limit: Math.min(batchSize, remaining),
+      limit: Math.min(wanted, g.limit ?? wanted),
       priceMicro,
       build,
     });
@@ -264,9 +360,19 @@ export async function sendLap(
       failed: ctx.lap.failed + runFailed,
       planned: ctx.lap.testSize,
       skipped,
+      ...(refusalReason ? { refused, refusalReason } : {}),
     },
   });
   await store.rankCampaignLaps(ctx.lap.campaignId);
-  log("info", "lap done", { ...fields, sent: runSent, failed: runFailed, skipped });
+  log("info", "lap done", { ...fields, sent: runSent, failed: runFailed, skipped, refused });
+  if (refusalReason) {
+    return {
+      outcome: "done",
+      sent: runSent,
+      failed: runFailed,
+      refused,
+      reason: capReasonLabel(refusalReason),
+    };
+  }
   return { outcome: "done", sent: runSent, failed: runFailed };
 }

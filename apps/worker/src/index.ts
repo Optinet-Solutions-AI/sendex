@@ -1,8 +1,9 @@
 import { serve } from "@hono/node-server";
-import { createSendingStore, db, type SendingStore } from "@sendex/db";
+import { createCapsStore, createSendingStore, db, type SendingStore } from "@sendex/db";
 import { createRateLimiter, RATE_LIMITS } from "@sendex/redis-utils";
 import { sql } from "drizzle-orm";
 import { Redis } from "ioredis";
+import { createAlertChecksStore, createRedisThrottle } from "./alerts/checks.js";
 import { createApp } from "./app.js";
 import { createHandlers, createStubHandlers } from "./handlers.js";
 import { queueDepths } from "./health.js";
@@ -52,6 +53,8 @@ if (redis) {
           progress,
           sendQueue: queues.send,
           send: { linksBaseUrl, pauseRetryMs: settings.pauseRetryMs },
+          caps: createCapsStore(db()),
+          alerts: { store: createAlertChecksStore(db()), throttle: createRedisThrottle(redis) },
         })
       : createStubHandlers();
   workerSet = createWorkers(redis, handlers, { settings });

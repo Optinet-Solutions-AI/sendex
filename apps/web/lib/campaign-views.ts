@@ -81,6 +81,8 @@ export function toLapView(lap: LapSummary): LapView {
     sales: lap.sales,
     costMicro: Number(lap.costMicro),
     rank: lap.rank,
+    refused: lap.refused,
+    refusalReason: lap.refusalReason,
     startedAt: iso(lap.startedAt),
     finishedAt: iso(lap.finishedAt),
     createdAt: lap.createdAt.toISOString(),

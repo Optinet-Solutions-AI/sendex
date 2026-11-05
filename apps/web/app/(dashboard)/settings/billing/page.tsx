@@ -32,6 +32,13 @@ export default async function BillingSettingsPage() {
         send or spend per day. The alert fires once per dip and arms again when the balance
         recovers.
       </p>
+      <p className="mt-2 text-sm text-neutral-600" data-testid="caps-explainer">
+        The daily caps count messages created and money debited since midnight UTC, across every
+        campaign of the organisation. When a cap is reached the sending engine sends what still
+        fits, refuses the rest of the lap (the lap row shows the refused count), pauses the campaign
+        and raises an alert in the dashboard banner. Raise the cap here, or wait for the next UTC
+        day, then resume the campaign. Every change to these settings is written to the audit log.
+      </p>
       {settings.lowBalanceAlertedAt ? (
         <p className="mt-2 text-sm text-amber-800" data-testid="alert-state">
           Low balance alert last sent {formatDateTime(settings.lowBalanceAlertedAt)}; it will fire

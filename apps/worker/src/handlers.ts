@@ -1,5 +1,6 @@
-import type { Db, SendingStore } from "@sendex/db";
+import type { CapsStore, Db, SendingStore } from "@sendex/db";
 import type { ProviderRegistry } from "@sendex/providers";
+import { type AlertChecksStore, type CheckThrottle, runAlertChecks } from "./alerts/checks.js";
 import { createClickIngestHandler } from "./links/ingest.js";
 import { log as defaultLog, type Logger } from "./log.js";
 import { createPostbackIngestHandler } from "./postbacks/ingest.js";
@@ -22,6 +23,10 @@ export interface HandlerDeps {
     batchSize?: number;
     pauseRetryMs?: number;
   };
+  /** Daily caps for the send loop (D3-11); without it no cap is enforced. */
+  caps?: CapsStore;
+  /** Spike and low balance checks run from the dispatcher tick (D3-11). */
+  alerts?: { store: AlertChecksStore; throttle: CheckThrottle };
 }
 
 /**
@@ -49,6 +54,7 @@ export function createHandlers(deps: HandlerDeps): JobHandlers {
           progress: deps.progress,
           log,
           ...deps.send,
+          ...(deps.caps ? { caps: deps.caps } : {}),
         },
         job,
         meta,
@@ -62,6 +68,17 @@ export function createHandlers(deps: HandlerDeps): JobHandlers {
         log,
       });
       if (result.claimed > 0) log("info", "laps dispatched", { jobId: meta.id, ...result });
+      if (deps.alerts) {
+        // Spike and low balance checks ride on the tick; a failure here must not fail the dispatch.
+        try {
+          const checks = await runAlertChecks({ ...deps.alerts, log });
+          if (checks.spikesRaised + checks.lowBalanceRaised + checks.rearmed > 0) {
+            log("info", "alert checks", { jobId: meta.id, ...checks });
+          }
+        } catch (err) {
+          log("error", "alert checks failed", { jobId: meta.id, err });
+        }
+      }
     },
   };
 }

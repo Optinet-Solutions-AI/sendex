@@ -109,10 +109,11 @@ describe("ingestClicks", () => {
       device: "desktop",
       operator: null,
     });
-    await expect(lapClicks()).resolves.toBe(2);
+    // Two clicks on one message: two rows, one click for the lap (D2-13).
+    await expect(lapClicks()).resolves.toBe(1);
   });
 
-  it("adds to the lap counter on a later batch and tolerates all-unknown batches", async () => {
+  it("keeps the lap counter at one per message on a later batch and tolerates all-unknown batches", async () => {
     await ingestClicks(t.db, {
       clicks: [
         {
@@ -135,7 +136,7 @@ describe("ingestClicks", () => {
         ],
       }),
     ).resolves.toEqual({ inserted: 0, unknown: 1 });
-    await expect(lapClicks()).resolves.toBe(3);
+    await expect(lapClicks()).resolves.toBe(1);
   });
 
   it("drops a country that is not two letters", async () => {
@@ -163,17 +164,18 @@ describe("createClickIngestHandler", () => {
     expectTypeOf(createClickIngestHandler(t.db)).toMatchTypeOf<JobHandler<"clickIngest">>();
   });
 
-  it("ingests the job and logs counts only, never the records", async () => {
+  it("ingests the job, counts a first click on its lap and logs counts only, never the records", async () => {
     const lines: Array<{ level: LogLevel; msg: string; fields?: LogFields }> = [];
     const handler = createClickIngestHandler(t.db, (level, msg, fields) => {
       lines.push(fields === undefined ? { level, msg } : { level, msg, fields });
     });
-    const before = await lapClicks();
+    // A message nobody has clicked yet, on its own lap.
+    const fresh = await seedTrackedMessage(t.db, { shortCode: "bcdefghj" });
     await expect(
       handler({
         clicks: [
           {
-            shortCode: seed.shortCode,
+            shortCode: fresh.shortCode,
             clickedAt: "2026-11-06T13:00:00.000Z",
             ip: "203.0.113.77",
             userAgent: IPHONE,
@@ -187,7 +189,11 @@ describe("createClickIngestHandler", () => {
         ],
       }),
     ).resolves.toBeUndefined();
-    await expect(lapClicks()).resolves.toBe((before ?? 0) + 1);
+    const [freshLap] = await t.db
+      .select({ clicks: laps.clicks })
+      .from(laps)
+      .where(eq(laps.id, fresh.lapId));
+    expect(freshLap?.clicks).toBe(1);
     expect(lines).toEqual([
       { level: "info", msg: "clicks ingested", fields: { received: 2, inserted: 1, unknown: 1 } },
     ]);

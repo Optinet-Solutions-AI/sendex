@@ -6,7 +6,8 @@ progress and queue extra laps. Code lives in `apps/worker/src/send/` and
 `packages/db/src/queries/sending.ts`.
 
 Cards: D2-04 (send loop), D2-05 (contact reuse and opt-out), D2-06 (progress), D2-07
-(Finish List and budget sends). See also `services-and-queues.md` for the queue plumbing.
+(Finish List and budget sends), D3-01 (delivery receipts and expiry). See also
+`services-and-queues.md` for the queue plumbing.
 
 ## The contract with the web app
 
@@ -67,12 +68,65 @@ queued ──dispatcher──▶ sending ──send loop──▶ done
 | Provider accepted | `sent` (+ `provider_message_id`, `sent_at`); `list_members.sent_at` set | none |
 | Provider failed | `failed` (+ `error_code`) | `refund`, key `refund:<messageId>` |
 | Lap stopped while queued | `cancelled` | `refund`, key `refund:<messageId>` |
-| Delivery receipt (D2-07 dlr, later) | `delivered` / `expired` | none |
+| Delivery receipt `DELIVRD` (D3-01) | `delivered` (+ `delivered_at`) | none |
+| Delivery receipt `UNDELIV` / `REJECTD` / ... | `failed` (+ `error_code` from the carrier) | none |
+| Delivery receipt `EXPIRED` | `expired` (+ `error_code`) | none |
+| No receipt 24 h after `sent_at` | `expired` (`error_code NO_RECEIPT`) | none |
 
 Refunds are derived from the debit rows (`INSERT ... SELECT -amount_micro ... ON CONFLICT DO
 NOTHING`), so a refund always matches what was charged and can never be written twice.
 `laps.sent`, `laps.failed` and `laps.cost_micro` are incremented in the same transaction as
-the outcomes; `cost_micro` counts accepted messages only.
+the outcomes; `cost_micro` counts accepted messages only. A message the carrier accepted is
+not refunded when a receipt later says it was not delivered: the carrier charged for the
+attempt.
+
+### Delivery receipts (D3-01)
+
+Receipts arrive on the provider's bound session, not per job. At boot `index.ts` calls
+`subscribeDeliveryReceipts()` (`src/dlr/subscribe.ts`), which attaches a listener to every
+`SmppProvider` in the registry (`onDeliveryReceipt`) and enqueues each receipt as a `DlrJob`
+`{ provider, raw }` on the `dlr` queue. `provider` is the registry name, i.e. the
+`routes.provider` value, and `raw` is the JSON-safe slice of the `deliver_sm` the provider
+can parse again (`short_message` text, `receipted_message_id`, `message_state`); addresses are
+left out so no phone number goes through Redis. `connectSmppProviders()` binds the session at
+boot so receipts for messages sent before a restart flow at once. A receipt that cannot be
+enqueued is logged and lost (the session already acknowledged it); the expiry sweep covers it.
+
+The `dlr` handler (`src/dlr/handler.ts`, `createDlrHandler`) resolves the provider, calls
+`parseDeliveryReceipt(raw)` and applies the result with `applyDeliveryReceipt()`
+(`packages/db/src/queries/receipts.ts`): the message with that `provider_message_id` on a route
+of that provider is updated and its lap counter bumped in one transaction.
+
+| Message status | Receipt | Result |
+| --- | --- | --- |
+| `sent` | `delivered` | `delivered`, `delivered_at = receipt.at`, `laps.delivered + 1` |
+| `sent` | `failed` / `expired` | that status, `error_code = receipt.errorCode`, `laps.failed + 1` |
+| `delivered`, `failed`, `expired`, `cancelled` | any | ignored: final statuses never change, so a second receipt for the same message, a `failed` after a `delivered`, or a `delivered` arriving after the 24 h expiry all count nothing |
+| no match | any | the job throws and is retried (2 s, 4 s); on its last attempt it logs `receipt matched no message, dropped` and completes |
+
+The retry covers the normal race: the SMSC answers a `submit_sm` within milliseconds and the
+batch outcome (which stores `provider_message_id`) is written after the whole batch of 50 has
+been submitted, so the first receipts of a batch can arrive before their message is `sent`.
+Receipts for the second and later parts of a multi-part message carry ids we do not store
+(`SmppProvider` keeps the first part's id as `providerMessageId`) and are dropped the same way;
+the first part's receipt decides the status. An unknown provider name or a receipt the provider
+cannot parse fails with `UnrecoverableError` and goes to `dlr-dead` for inspection. The handler
+logs ids and statuses only.
+
+`laps.sent` counts what the carrier accepted and is never changed by a receipt. `laps.failed`
+counts every message that will not be delivered: rejected at submit, carrier `UNDELIV` and the
+like, carrier `EXPIRED`, and expired here. Delivery rate is `delivered / sent`;
+`sent - delivered - failed` is still pending.
+
+### Expiry
+
+A `sent` message with no receipt after `DLR_EXPIRY_MS` (24 h) becomes `expired` with
+`error_code NO_RECEIPT` and counts as failed on its lap. `createExpiryTick()`
+(`src/send/expiry.ts`) runs `expireStaleMessages(db, now - window, { limit: 10000 })` from the
+`scheduled-send` handler, at most once per `DLR_EXPIRY_POLL_MS` (60 s) per process; a failure
+of the sweep is logged and never fails the dispatcher tick. The sweep runs across
+organisations: it is worker maintenance, not a tenant action. The partial index
+`messages_sent_pending_receipt_idx` (`sent_at WHERE status = 'sent'`) keeps it cheap.
 
 ### Rendering
 
@@ -86,7 +140,9 @@ from the number of messages already created). Placeholders in the text:
 | `{{domain}}` | `${LINKS_BASE_URL}/<shortCode>`; empty when the campaign has no active link |
 
 The short code is 8 characters from an unambiguous alphabet (`SHORT_CODE_ALPHABET` in
-`packages/core`), generated per message and stored in `messages.short_code`.
+`packages/core`), generated per message and stored in `messages.short_code`. The message also
+records the ad text it was rendered from (`ad_text_id`) and the link it carries (`link_id`),
+which the per-text and per-link click and conversion breakdowns group by.
 `messages.dynamic_id` is a fresh UUID; the links service substitutes it for `{{dynamic}}` in
 the link URL at redirect time. Encoding and parts come from `analyseSmsText` on the rendered
 text, so the price reflects the real length.
@@ -197,6 +253,8 @@ such a route is cancelled with `unknown provider "smpp"` rather than retried for
 | `LINKS_BASE_URL` | `http://localhost:8787` | base of the `{{domain}}` short links |
 | `INTERNAL_API_SECRET` | none (routes answer 503) | shared secret for `/internal/*` |
 | `DATABASE_URL` | none | without it the send and dispatch handlers are stubs that only log |
+| `DLR_EXPIRY_MS` | 86400000 (24 h) | a `sent` message with no receipt after this long is expired |
+| `DLR_EXPIRY_POLL_MS` | 60000 | minimum time between two expiry sweeps per process |
 
 ## Tests
 
@@ -213,3 +271,13 @@ such a route is cancelled with `unknown provider "smpp"` rather than retried for
   the balance down by 90 x 0.025, 90 members marked, the lap done and ranked, a second
   dispatcher run enqueuing nothing and a re-run of the job creating nothing.
 - `apps/worker/src/internal-api.test.ts`, `dispatcher.test.ts`, `progress.test.ts`.
+- `packages/db/src/queries/receipts.test.ts` (PGlite): every status rule above, provider and
+  organisation scoping, expiry with its limit, a late receipt after expiry.
+- `apps/worker/src/dlr/handler.test.ts`, `subscribe.test.ts`, `send/expiry.test.ts`: the
+  handler's log fields and retry-then-drop, the receipt payload round trip through JSON
+  (no phone number), the throttled sweep.
+- `apps/worker/src/dlr/delivery.integration.test.ts` (PGlite + the SMPP simulator, no Redis):
+  a lap of 100 through `SmppProvider` with five numbers ending in 98 (the simulator reports
+  `UNDELIV` for them); the 100 receipts are replayed through the handler and the lap shows
+  100 sent, 95 delivered, 5 failed; a second replay changes nothing. Then five clicks (one
+  recipient three times) give `laps.clicks = 5` and a 5.00 % CTR.

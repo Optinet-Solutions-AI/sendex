@@ -4,7 +4,8 @@ Every SMS carries a short link on a throwaway domain. `apps/links` (Hono on Clou
 Workers) serves the redirect and captures the click; the worker resolves codes it does not
 know yet and stores the clicks. ADR 0003 explains why this runs at the edge.
 
-Cards: D2-11 (redirect), D2-12 (click capture). Pure logic in `packages/core/src/links.ts`.
+Cards: D2-11 (redirect), D2-12 (click capture), D2-13 (click counts and CTR). Pure logic in
+`packages/core/src/links.ts` and `packages/core/src/rates.ts`.
 
 ## Flow
 
@@ -18,7 +19,8 @@ phone  --GET /abcdefgh-->  apps/links (Cloudflare)
                              |   CLICKS queue bound?  yes -> queue.send(click)
                              |                        no  -> POST worker /internal/clicks {clicks:[click]}
 apps/worker  POST /internal/clicks -> Zod -> BullMQ click-ingest -> createClickIngestHandler
-                             -> messages by short_code -> insert clicks rows, laps.clicks += n
+                             -> messages by short_code -> insert clicks rows,
+                                laps.clicks = count(distinct message_id) of the lap
 ```
 
 1. The send loop (D2-04) generates a code per message with `generateShortCode()` from
@@ -89,8 +91,38 @@ that is not two letters becomes null, and a missing `device` is classified on th
   previewers, curl, python-requests, headless Chrome, ...) is redirected and not recorded.
 - A click whose code matches no message is dropped at ingest (`unknown` in the handler log).
 
-Delivery is at-least-once: a retried batch can insert a click twice. The dashboard reads
-`laps.clicks`, which moves with the rows, so a duplicate inflates both consistently.
+Delivery is at-least-once: a retried batch can insert a click twice. That inflates the
+`clicks` table only; `laps.clicks` is recomputed from the rows as the number of distinct
+messages clicked (below), so a duplicate never changes a CTR.
+
+## Counters, CTR and CPC (D2-13)
+
+Every redirect served is a row in `clicks` (the raw count, shown as "All redirects" on the
+Analytics tab). For rates, **a message counts once**: a recipient who opens the link three
+times is one click. `recordClicks()` (`packages/db/src/queries/clicks.ts`) inserts the batch
+and, in the same transaction, sets `laps.clicks` to `count(distinct message_id)` over the lap's
+rows, so the counter is exact however often a batch is replayed. The send loop's lap ranking
+(`rankLaps`) and the campaign list read that counter.
+
+| Rate | Definition | Where |
+| --- | --- | --- |
+| CTR | `clicks / sent`, with `sent` = messages the carrier accepted (`laps.sent`, or `sent_at IS NOT NULL` per message) | `ctr()` in `packages/core/src/rates.ts` |
+| CPC | `cost_micro / clicks`, null without clicks | `cpc()` |
+| Delivery rate | `delivered / sent` | `deliveryRate()` |
+
+So 127 clicks on 2,394 sent is a 5.30 % CTR (`formatPercent`). CTR is on sent, not delivered:
+a route that accepts everything and delivers half shows a low CTR, which is the point of the
+comparison (see docs/using/campaign-results.md).
+
+`clickStats(db, organisationId, campaignId)` (`packages/db/src/queries/click-stats.ts`) gives
+sent, delivered, clicks, raw clicks, cost, CTR, CPC and delivery rate for the campaign, per
+lap (route), per sender id, per ad text and per link. Lap rows read the lap counters; the
+breakdowns group `messages` by `sender_id`, `ad_text_id` and `link_id` (filled by the send
+loop since D3-01), joined to the distinct clickers, with the lap cost allocated evenly over
+the lap's accepted messages as `conversionStats` does. It is computed on read, so it is
+current while a campaign is still sending. The campaign page's Analytics tab renders it
+(`ClicksSection`); the header and the lap table derive the same rates from the lap counters
+through `campaignTotals()`.
 
 ## Queue
 
@@ -169,4 +201,8 @@ the user agent and leaves country and operator null, so nothing breaks, but geo 
   execution context and a stubbed `fetch`: hit, miss with fallback and caching, 404s, HEAD, bots,
   the queue consumer.
 - `apps/worker/src/links/*.test.ts` and `packages/db/src/queries/clicks.test.ts`: PGlite with the
-  real migrations: lookup, batch insert with the lap counter, the two routes and the auth.
+  real migrations: lookup, batch insert with the lap counter (one per message, replay-safe), the
+  two routes and the auth.
+- `packages/db/src/queries/click-stats.test.ts`: totals, per lap, per sender id, per ad text and
+  per link, cost allocation, rows for messages without a text or link.
+- `packages/core/src/rates.test.ts`: the 5.30 % case, CPC, delivery rate, formatting.

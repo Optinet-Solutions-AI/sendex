@@ -1,3 +1,4 @@
+import { cpc, ctr, deliveryRate } from "@sendex/core";
 import { formatInTimeZone } from "date-fns-tz";
 
 const MICRO = 1_000_000;
@@ -45,6 +46,8 @@ export function formatPeriod(
 
 export interface LapCounters {
   sent: number;
+  delivered: number;
+  failed: number;
   clicks: number;
   leads: number;
   sales: number;
@@ -53,6 +56,11 @@ export interface LapCounters {
 
 export interface CampaignTotals {
   sent: number;
+  delivered: number;
+  /** Rejected at submit, reported undelivered, or expired without a receipt. */
+  failed: number;
+  /** Delivered per message sent. */
+  deliveryRate: number;
   clicks: number;
   ctr: number;
   leads: number;
@@ -67,15 +75,22 @@ function per(costMicro: number, count: number): number | null {
   return count > 0 ? Math.round(costMicro / count) : null;
 }
 
-/** Totals of a campaign (or a single lap) from lap counters. */
+/**
+ * Totals of a campaign (or a single lap) from lap counters. Rates come from
+ * `@sendex/core` so the header, the lap table and the analytics tables agree.
+ */
 export function campaignTotals(laps: readonly LapCounters[]): CampaignTotals {
   let sent = 0;
+  let delivered = 0;
+  let failed = 0;
   let clicks = 0;
   let leads = 0;
   let sales = 0;
   let costMicro = 0;
   for (const lap of laps) {
     sent += lap.sent;
+    delivered += lap.delivered;
+    failed += lap.failed;
     clicks += lap.clicks;
     leads += lap.leads;
     sales += lap.sales;
@@ -83,12 +98,15 @@ export function campaignTotals(laps: readonly LapCounters[]): CampaignTotals {
   }
   return {
     sent,
+    delivered,
+    failed,
+    deliveryRate: deliveryRate(delivered, sent),
     clicks,
-    ctr: sent > 0 ? clicks / sent : 0,
+    ctr: ctr(clicks, sent),
     leads,
     sales,
     costMicro,
-    cpcMicro: per(costMicro, clicks),
+    cpcMicro: cpc(costMicro, clicks),
     cplMicro: per(costMicro, leads),
     cpsMicro: per(costMicro, sales),
   };

@@ -27,6 +27,9 @@ export function LapsTable({ laps, timezone }: { laps: LapView[]; timezone: strin
               <th className="px-2 py-2">Status</th>
               <th className="px-2 py-2 text-right">Size</th>
               <th className="px-2 py-2 text-right">Sent</th>
+              <th className="px-2 py-2 text-right">Delivered</th>
+              <th className="px-2 py-2 text-right">Failed</th>
+              <th className="px-2 py-2 text-right">Delivery</th>
               <th className="px-2 py-2 text-right">Clicks</th>
               <th className="px-2 py-2 text-right">CTR</th>
               <th className="px-2 py-2 text-right">Cost</th>
@@ -61,8 +64,21 @@ export function LapsTable({ laps, timezone }: { laps: LapView[]; timezone: strin
                   </td>
                   <td className="px-2 py-1.5 text-right">{lap.testSize}</td>
                   <td className="px-2 py-1.5 text-right">{lap.sent}</td>
-                  <td className="px-2 py-1.5 text-right">{lap.clicks}</td>
-                  <td className="px-2 py-1.5 text-right">{formatPercent(t.ctr)}</td>
+                  <td className="px-2 py-1.5 text-right" data-testid="lap-delivered">
+                    {lap.delivered}
+                  </td>
+                  <td className="px-2 py-1.5 text-right" data-testid="lap-failed">
+                    {lap.failed}
+                  </td>
+                  <td className="px-2 py-1.5 text-right" data-testid="lap-delivery-rate">
+                    {formatPercent(t.deliveryRate)}
+                  </td>
+                  <td className="px-2 py-1.5 text-right" data-testid="lap-clicks">
+                    {lap.clicks}
+                  </td>
+                  <td className="px-2 py-1.5 text-right" data-testid="lap-ctr">
+                    {formatPercent(t.ctr)}
+                  </td>
                   <td className="px-2 py-1.5 text-right">{formatMicro(lap.costMicro)}</td>
                   <td className="px-2 py-1.5 text-right">{formatPer(t.cpcMicro)}</td>
                   <td className="px-2 py-1.5 text-right">{lap.leads}</td>

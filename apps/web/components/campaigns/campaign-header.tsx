@@ -35,10 +35,18 @@ export function CampaignHeader({ campaign }: { campaign: CampaignView }) {
           Created {formatDateTime(campaign.createdAt, campaign.timezone)}
         </span>
       </div>
-      <div className="grid grid-cols-4 gap-2 md:grid-cols-8">
+      <div className="grid grid-cols-4 gap-2 md:grid-cols-6 xl:grid-cols-12">
         <Stat label="Sent" value={String(totals.sent)} testId="total-sent" />
-        <Stat label="Clicks" value={String(totals.clicks)} />
-        <Stat label="CTR" value={formatPercent(totals.ctr)} />
+        <Stat label="Delivered" value={String(totals.delivered)} testId="total-delivered" />
+        <Stat label="Failed" value={String(totals.failed)} testId="total-failed" />
+        <Stat
+          label="Delivery"
+          value={formatPercent(totals.deliveryRate)}
+          testId="total-delivery-rate"
+        />
+        <Stat label="Clicks" value={String(totals.clicks)} testId="total-clicks" />
+        <Stat label="CTR" value={formatPercent(totals.ctr)} testId="total-ctr" />
+        <Stat label="CPC" value={formatPer(totals.cpcMicro)} testId="total-cpc" />
         <Stat label="Leads" value={String(totals.leads)} />
         <Stat label="Sales" value={String(totals.sales)} />
         <Stat label="Cost" value={formatMicro(totals.costMicro)} />

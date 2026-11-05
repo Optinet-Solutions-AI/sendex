@@ -1,5 +1,6 @@
 import { can } from "@sendex/core";
 import {
+  clickStats,
   conversionStats,
   db,
   getCampaign,
@@ -13,6 +14,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CampaignHeader } from "../../../../components/campaigns/campaign-header";
 import { CampaignTabs } from "../../../../components/campaigns/campaign-tabs";
+import { ClicksSection } from "../../../../components/campaigns/clicks-section";
 import { ConversionsSection } from "../../../../components/campaigns/conversions-section";
 import { formatDateTime } from "../../../../components/campaigns/format";
 import { SendForm } from "../../../../components/campaigns/send-form";
@@ -69,13 +71,14 @@ export default async function CampaignPage({ params }: { params: Promise<{ id: s
         const database = db();
         const detail = await getCampaign(database, ctx.organisationId, id);
         if (!detail) notFound();
-        const [sidGroups, lists, links, routes, audit, conversions] = await Promise.all([
+        const [sidGroups, lists, links, routes, audit, conversions, clicks] = await Promise.all([
           listSidGroups(database, ctx.organisationId, detail.country),
           listsForCountry(database, ctx.organisationId, detail.country),
           listLinks(database, ctx.organisationId),
           routesForCountry(database, ctx.organisationId, detail.country),
           listAuditLog(database, ctx.organisationId, { targetType: "campaign", targetId: id }),
           conversionStats(database, ctx.organisationId, id),
+          clickStats(database, ctx.organisationId, id),
         ]);
         const campaign = toCampaignView(detail);
         return (
@@ -102,9 +105,10 @@ export default async function CampaignPage({ params }: { params: Promise<{ id: s
                 Logs: <LogsTab entries={audit.map(toAuditView)} timezone={campaign.timezone} />,
                 Analytics: (
                   <div className="space-y-6">
+                    <ClicksSection stats={clicks} />
                     <ConversionsSection stats={conversions} />
                     <p className="text-sm text-neutral-500">
-                      Click and route ranking charts arrive with the analytics card.
+                      Route ranking charts arrive with the analytics card.
                     </p>
                   </div>
                 ),

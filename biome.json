@@ -15,7 +15,8 @@
       "!**/coverage",
       "!**/drizzle/meta",
       "!**/*.md",
-      "!**/*.astro"
+      "!**/*.astro",
+      "!**/.claude"
     ]
   },
   "formatter": {

@@ -1,23 +1,13 @@
 import { createDb } from "./index.js";
-import { organisations } from "./schema/index.js";
+import { seedDemo } from "./seed/demo-data.js";
 
 /**
- * Idempotent seed: two organisations (External, Internal). Lists, campaigns and
- * demo numbers are added by later cards (D1-13) once their tables exist.
+ * Idempotent demo seed, run with `pnpm db:seed` against DATABASE_URL.
+ * The data itself lives in ./seed/demo-data.ts so tests can run it on PGlite.
  */
 const db = createDb();
-
-const orgs = [
-  { clerkOrgId: "seed_org_external", name: "External", slug: "external" },
-  { clerkOrgId: "seed_org_internal", name: "Internal", slug: "internal" },
-];
-
-for (const o of orgs) {
-  await db
-    .insert(organisations)
-    .values(o)
-    .onConflictDoNothing({ target: organisations.clerkOrgId });
-}
-
-console.log("seeded organisations:", orgs.map((o) => o.name).join(", "));
+const summary = await seedDemo(db);
+console.log(
+  `seeded organisations ${Object.keys(summary.organisations).join(", ")}; ${summary.contacts} contacts; ${summary.routes} routes`,
+);
 process.exit(0);

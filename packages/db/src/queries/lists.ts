@@ -1,3 +1,4 @@
+import type { ListSortKey, SortDirection } from "@sendex/core";
 import { and, asc, desc, eq, ilike, inArray, isNull, type SQL, sql } from "drizzle-orm";
 import type { PgColumn } from "drizzle-orm/pg-core";
 import { contacts, listMembers, lists, suppressions } from "../schema/lists.js";
@@ -18,22 +19,6 @@ const sentCountSql =
   sql<number>`(select count(*) from ${listMembers} m where m.list_id = ${lists}."id" and m.sent_at is not null)`.mapWith(
     toNumber,
   );
-
-export const LIST_SORT_KEYS = [
-  "name",
-  "numbersCount",
-  "country",
-  "sent",
-  "lastSentAt",
-  "lastUploadAt",
-  "createdAt",
-] as const;
-export type ListSortKey = (typeof LIST_SORT_KEYS)[number];
-export type SortDirection = "asc" | "desc";
-
-export function isListSortKey(value: unknown): value is ListSortKey {
-  return typeof value === "string" && (LIST_SORT_KEYS as readonly string[]).includes(value);
-}
 
 export interface ListListsOptions {
   search?: string;

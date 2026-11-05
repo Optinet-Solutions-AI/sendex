@@ -1,15 +1,70 @@
 import { describe, expect, it } from "vitest";
 import {
+  addUploadSummary,
   applyMapping,
   ColumnMappingSchema,
+  cleanUploadRows,
   countDrops,
   countriesList,
   countryByCode,
   detectColumns,
   emptyDropCounts,
+  emptyUploadSummary,
   flagEmoji,
+  totalDropped,
   UploadSettingsSchema,
 } from "./lists.js";
+import { cleanBatch } from "./phone.js";
+
+describe("cleanUploadRows", () => {
+  const rows = [
+    { phone: "+34 612 345 678", firstName: "Ana" },
+    { phone: "612345678", email: "dup@example.com" },
+    { phone: "912345678" },
+    { phone: "900123456" },
+    { phone: "junk" },
+    { phone: "+33612345678", custom1: "FR" },
+  ];
+
+  it("keeps the contact fields of kept numbers and agrees with cleanBatch", () => {
+    const out = cleanUploadRows(rows, { defaultCountry: "ES", removeLandlines: true });
+    expect(out.kept).toEqual([
+      { e164: "+34612345678", country: "ES", firstName: "Ana" },
+      { e164: "+33612345678", country: "FR", custom1: "FR" },
+    ]);
+    const batch = cleanBatch(
+      rows.map((r) => r.phone),
+      { defaultCountry: "ES", removeLandlines: true, dedupe: true },
+    );
+    expect(out.kept.map((k) => k.e164)).toEqual(batch.kept.map((k) => k.e164));
+    expect(out.summary).toEqual({
+      rows: 6,
+      imported: 0,
+      skippedExisting: 0,
+      duplicates: batch.duplicates,
+      dropped: countDrops(batch.dropped),
+    });
+    expect(out.summary.dropped.landline).toBe(1);
+    expect(out.summary.dropped.toll_free).toBe(1);
+    expect(out.summary.dropped.unparseable).toBe(1);
+  });
+
+  it("keeps landlines when the logical check is off", () => {
+    const out = cleanUploadRows(rows, { defaultCountry: "ES", removeLandlines: false });
+    expect(out.kept.map((k) => k.e164)).toContain("+34912345678");
+    expect(out.summary.dropped.landline).toBe(0);
+  });
+
+  it("sums summaries", () => {
+    const a = cleanUploadRows(rows.slice(0, 3), { defaultCountry: "ES", removeLandlines: true });
+    const b = cleanUploadRows(rows.slice(3), { defaultCountry: "ES", removeLandlines: true });
+    const total = addUploadSummary(a.summary, b.summary);
+    expect(total.rows).toBe(6);
+    expect(total.dropped.landline).toBe(1);
+    expect(totalDropped(total)).toBe(3);
+    expect(emptyUploadSummary().rows).toBe(0);
+  });
+});
 
 describe("countriesList", () => {
   it("lists the eighteen supported countries with ISO-2 codes, names and flags", () => {

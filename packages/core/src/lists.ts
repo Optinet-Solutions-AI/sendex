@@ -1,5 +1,11 @@
 import { z } from "zod";
-import { type CountryCode, type DroppedNumber, type DropReason, normalisePhone } from "./phone.js";
+import {
+  type CountryCode,
+  type DroppedNumber,
+  type DropReason,
+  logicalCheck,
+  normalisePhone,
+} from "./phone.js";
 
 /**
  * List upload: the countries a list can be for, the upload settings form, the CSV column
@@ -91,6 +97,23 @@ export const UploadTargetSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("new"), ...NewListSchema.shape }),
 ]);
 export type UploadTarget = z.infer<typeof UploadTargetSchema>;
+
+/** Columns the lists table can be sorted by; the db query maps them to SQL. */
+export const LIST_SORT_KEYS = [
+  "name",
+  "numbersCount",
+  "country",
+  "sent",
+  "lastSentAt",
+  "lastUploadAt",
+  "createdAt",
+] as const;
+export type ListSortKey = (typeof LIST_SORT_KEYS)[number];
+export type SortDirection = "asc" | "desc";
+
+export function isListSortKey(value: unknown): value is ListSortKey {
+  return typeof value === "string" && (LIST_SORT_KEYS as readonly string[]).includes(value);
+}
 
 export const DUPLICATE_MODES = ["allow", "skip_existing"] as const;
 export type DuplicateMode = (typeof DUPLICATE_MODES)[number];
@@ -377,4 +400,65 @@ export function addUploadSummary(a: UploadSummary, b: UploadSummary): UploadSumm
 
 export function totalDropped(summary: UploadSummary): number {
   return DROP_REASONS.reduce((n, reason) => n + summary.dropped[reason], 0);
+}
+
+/** An upload row after cleaning: normalised number plus the contact fields that came with it. */
+export interface CleanedRow extends Omit<UploadRow, "phone"> {
+  e164: string;
+  country: CountryCode;
+}
+
+export interface CleanUploadRowsOptions {
+  defaultCountry: CountryCode;
+  removeLandlines: boolean;
+}
+
+export interface CleanUploadRowsResult {
+  kept: CleanedRow[];
+  summary: UploadSummary;
+}
+
+/**
+ * `cleanBatch` for upload rows: same normalisation, logical check and in-batch dedupe, but
+ * each kept number keeps its contact fields. `summary.imported` and `skippedExisting` are
+ * zero here; the import fills them in.
+ */
+export function cleanUploadRows(
+  rows: readonly UploadRow[],
+  opts: CleanUploadRowsOptions,
+): CleanUploadRowsResult {
+  const kept: CleanedRow[] = [];
+  const dropped: DroppedNumber[] = [];
+  const seen = new Set<string>();
+  let duplicates = 0;
+
+  for (const { phone, ...fields } of rows) {
+    const normalised = normalisePhone(phone, opts.defaultCountry);
+    if (!normalised.ok) {
+      dropped.push({ raw: phone, reason: normalised.reason });
+      continue;
+    }
+    const check = logicalCheck(normalised, { removeLandlines: opts.removeLandlines });
+    if (!check.keep) {
+      dropped.push({ raw: phone, reason: check.reason });
+      continue;
+    }
+    if (seen.has(normalised.e164)) {
+      duplicates += 1;
+      continue;
+    }
+    seen.add(normalised.e164);
+    kept.push({ ...fields, e164: normalised.e164, country: normalised.country });
+  }
+
+  return {
+    kept,
+    summary: {
+      rows: rows.length,
+      imported: 0,
+      skippedExisting: 0,
+      duplicates,
+      dropped: countDrops(dropped),
+    },
+  };
 }

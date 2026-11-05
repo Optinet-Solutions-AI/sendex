@@ -6,6 +6,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { isAuthError, requireOrg } from "../../lib/auth";
 import { authMode, devAuthConfig } from "../../lib/env";
+import { AlertsBanner } from "./alerts-banner";
 import { DevAuthBanner } from "./dev-auth-banner";
 
 /** The balance in the header must never be stale; the shell is rendered per request. */
@@ -29,6 +30,7 @@ const NAV: readonly NavItem[] = [
 ];
 
 interface Shell {
+  organisationId: string;
   role: Role;
   balanceMicro: bigint;
 }
@@ -41,7 +43,7 @@ async function shellContext(): Promise<Shell | null> {
   try {
     const ctx = await requireOrg();
     const balanceMicro = await getBalanceMicro(db(), ctx.organisationId);
-    return { role: ctx.role, balanceMicro };
+    return { organisationId: ctx.organisationId, role: ctx.role, balanceMicro };
   } catch (error) {
     if (isAuthError(error)) return null;
     throw error;
@@ -107,7 +109,12 @@ export default async function DashboardLayout({ children }: { children: ReactNod
           )}
         </header>
         <main className="flex-1 p-6">
-          <ToastProvider>{children}</ToastProvider>
+          <ToastProvider>
+            {shell ? (
+              <AlertsBanner organisationId={shell.organisationId} role={shell.role} />
+            ) : null}
+            {children}
+          </ToastProvider>
         </main>
       </div>
     </div>

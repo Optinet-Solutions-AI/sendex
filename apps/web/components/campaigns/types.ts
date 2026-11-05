@@ -77,6 +77,9 @@ export interface LapView {
   sales: number;
   costMicro: number;
   rank: number | null;
+  /** Messages a daily cap refused (D3-11), with the cap that bound. */
+  refused: number;
+  refusalReason: string | null;
   startedAt: string | null;
   finishedAt: string | null;
   createdAt: string;

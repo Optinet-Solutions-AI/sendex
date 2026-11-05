@@ -45,6 +45,13 @@ miss with a 30 day TTL (`LINK_TTL_SECONDS`); a link edited after its first click
 cached destination until then. To force re-resolution delete the key:
 `wrangler kv key delete --binding LINKS code:<shortCode>`.
 
+`src/index.ts` exports only the Workers handler (`fetch` and the queue consumer): workerd treats
+every export of the entry module as an entrypoint and refuses to start when a constant is
+exported too. The app, its types and `LINK_TTL_SECONDS` live in `src/app.ts`. Locally, put
+`INTERNAL_API_SECRET=<same value as the worker>` in `apps/links/.dev.vars` (git-ignored) and
+`wrangler dev --port 8787` answers `/health` and redirects short codes through the worker on
+port 4000.
+
 Without the binding (local `wrangler dev` before the namespace exists) every request goes to the
 worker. The service still works, just slower.
 

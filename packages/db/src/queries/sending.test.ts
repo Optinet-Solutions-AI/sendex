@@ -296,6 +296,20 @@ describe("selectEligibleMembers", () => {
     expect(await store.countEligibleMembers(eligibility())).toBe(5);
   });
 
+  it("counts the skipped members by reason", async () => {
+    // bad: 1; already sent (not flushed since): sent, sentAfterFlush; suppressed: 1;
+    // reused: reusedSent, reusedDelivered (account-wide) and inThisCampaign.
+    expect(await store.countSkipReasons(eligibility())).toEqual({
+      bad: 1,
+      alreadySent: 2,
+      suppressed: 1,
+      reused: 3,
+    });
+    expect(
+      await store.countSkipReasons({ ...eligibility(), contactReuse: "per_campaign" }),
+    ).toMatchObject({ reused: 1 });
+  });
+
   it("sees nothing for another organisation's list", async () => {
     expect(
       await store.selectEligibleMembers({ ...eligibility(), organisationId: otherOrg }, 10),
@@ -411,6 +425,10 @@ describe("claimAndCreateMessages / applyOutcomes", () => {
     const [a, b] = queued;
     if (!a || !b) throw new Error("expected queued messages");
     const lap = { id: lapId, organisationId: org, listId };
+    const [memberBBefore] = await t.db
+      .select()
+      .from(listMembers)
+      .where(eq(listMembers.contactId, b.contactId));
     const outcomes = [
       {
         messageId: a.id,
@@ -445,7 +463,8 @@ describe("claimAndCreateMessages / applyOutcomes", () => {
       .select()
       .from(listMembers)
       .where(eq(listMembers.contactId, b.contactId));
-    expect(memberB?.sentAt).toBeNull();
+    // A failed send leaves the member's sent_at as it was.
+    expect(memberB?.sentAt).toEqual(memberBBefore?.sentAt ?? null);
 
     const refunds = await t.db.select().from(ledgerEntries).where(eq(ledgerEntries.kind, "refund"));
     expect(refunds).toHaveLength(1);
@@ -545,9 +564,15 @@ describe("claimQueuedLaps and lap lifecycle", () => {
     }
   });
 
-  it("claims a scheduled lap once its time has come", async () => {
+  it("claims a scheduled lap once its time has come, and unclaim puts it back", async () => {
     const claimed = await store.claimQueuedLaps(new Date("2099-01-02T00:00:00Z"));
     expect(claimed.map((l) => l.id)).toEqual([futureLap]);
+    await store.unclaimLap(futureLap);
+    const [row] = await t.db.select().from(laps).where(eq(laps.id, futureLap));
+    expect(row?.status).toBe("queued");
+    expect(
+      (await store.claimQueuedLaps(new Date("2099-01-02T00:00:00Z"))).map((l) => l.id),
+    ).toEqual([futureLap]);
   });
 
   it("marks a lap started and finished, and ranks the campaign's finished laps", async () => {
@@ -558,12 +583,26 @@ describe("claimQueuedLaps and lap lifecycle", () => {
       .update(laps)
       .set({ sent: 10, clicks: 2, costMicro: 250_000n })
       .where(eq(laps.id, readyLap));
-    await store.finishLap({ lapId: readyLap, listId });
+    const finish = () =>
+      store.finishLap({
+        lapId: readyLap,
+        organisationId: org,
+        listId,
+        details: { sent: 10, failed: 0, skipped: { bad: 1 } },
+      });
+    await finish();
+    await finish();
     const [done] = await t.db.select().from(laps).where(eq(laps.id, readyLap));
     expect(done?.status).toBe("done");
     expect(done?.finishedAt).toBeInstanceOf(Date);
     const [list] = await t.db.select().from(lists).where(eq(lists.id, listId));
     expect(list?.lastSentAt).toBeInstanceOf(Date);
+    const audits = await t.db.select().from(auditLog).where(eq(auditLog.action, "lap.finish"));
+    expect(audits).toHaveLength(1);
+    expect(audits[0]).toMatchObject({
+      targetId: readyLap,
+      details: { sent: 10, skipped: { bad: 1 } },
+    });
 
     // The cancelled lap from before (sent 1) is not ranked; only done laps are.
     await store.rankCampaignLaps(campaignId);

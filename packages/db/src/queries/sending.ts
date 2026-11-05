@@ -145,6 +145,17 @@ export interface ApplyOutcomesInput {
   outcomes: MessageOutcome[];
 }
 
+export interface SkipCounts {
+  /** Members flagged bad. */
+  bad: number;
+  /** Members sent to and not flushed since. */
+  alreadySent: number;
+  /** Members whose number is suppressed for the organisation. */
+  suppressed: number;
+  /** Members excluded by the contact reuse rule (this campaign, or account-wide). */
+  reused: number;
+}
+
 export interface ClaimedLap {
   id: string;
   organisationId: string;
@@ -185,16 +196,26 @@ export interface SendingStore {
   listQueuedMessages(lapId: string): Promise<QueuedMessage[]>;
   selectEligibleMembers(input: EligibilityInput, limit: number): Promise<EligibleMember[]>;
   countEligibleMembers(input: EligibilityInput): Promise<number>;
+  /** How many members of the list the eligibility rules leave out, by reason. */
+  countSkipReasons(input: EligibilityInput): Promise<SkipCounts>;
   /** Lock up to `limit` eligible members, insert their messages and debits, return the messages. */
   claimAndCreateMessages(input: ClaimAndCreateInput): Promise<QueuedMessage[]>;
   /** Record provider outcomes: statuses, member sent_at, refunds for failures, lap counters. */
   applyOutcomes(input: ApplyOutcomesInput): Promise<void>;
   /** Cancel the lap and its queued messages (refunding them), with an audit row. Idempotent. */
   cancelLap(input: { lapId: string; organisationId: string; reason: string }): Promise<void>;
-  finishLap(input: { lapId: string; listId: string }): Promise<void>;
+  /** Mark a sending lap done with an audit row (`lap.finish`) carrying `details`. Idempotent. */
+  finishLap(input: {
+    lapId: string;
+    organisationId: string;
+    listId: string;
+    details: Record<string, unknown>;
+  }): Promise<void>;
   rankCampaignLaps(campaignId: string): Promise<void>;
   /** Move every dispatchable queued lap to `sending` and return them. */
   claimQueuedLaps(now: Date): Promise<ClaimedLap[]>;
+  /** Put a claimed lap back to `queued` (its job could not be enqueued). */
+  unclaimLap(lapId: string): Promise<void>;
   listCampaignLaps(organisationId: string, campaignId: string): Promise<CampaignLapRow[]>;
   createQueuedLap(input: CreateQueuedLapInput): Promise<LapRow>;
   loadLapPlanningContext(input: {
@@ -247,33 +268,55 @@ const ACTIVE_MESSAGE_STATUSES = ["queued", "sent", "delivered", "failed", "expir
  *  - account_wide reuse: no sent/delivered message for the contact anywhere in the
  *    organisation since the member's last flush.
  */
-function eligibilityWhere(db: Db, input: EligibilityInput): SQL | undefined {
+interface EligibilityRules {
+  /** The list and organisation scope. */
+  scope: SQL;
+  notBad: SQL;
+  /** Never sent, or flushed after the last send. */
+  unsent: SQL;
+  notSuppressed: SQL;
+  /** No live message in this campaign and, account-wide, none in the organisation since the flush. */
+  notReused: SQL;
+}
+
+function eligibilityRules(db: Db, input: EligibilityInput): EligibilityRules {
   const sinceFlush = or(
     isNull(listMembers.flushedAt),
     gt(sql`coalesce(${messages.sentAt}, ${messages.createdAt})`, listMembers.flushedAt),
   );
-  const reuseClause =
-    input.contactReuse === "account_wide"
-      ? notExists(
-          db
-            .select({ one: sql`1` })
-            .from(messages)
-            .where(
-              and(
-                eq(messages.organisationId, input.organisationId),
-                eq(messages.contactId, listMembers.contactId),
-                inArray(messages.status, ["sent", "delivered"]),
-                sinceFlush,
-              ),
-            ),
-        )
-      : undefined;
-  return and(
-    eq(listMembers.organisationId, input.organisationId),
-    eq(listMembers.listId, input.listId),
-    eq(listMembers.bad, false),
-    or(isNull(listMembers.sentAt), gt(listMembers.flushedAt, listMembers.sentAt)),
-    notExists(
+  const inCampaign = notExists(
+    db
+      .select({ one: sql`1` })
+      .from(messages)
+      .where(
+        and(
+          eq(messages.campaignId, input.campaignId),
+          eq(messages.contactId, listMembers.contactId),
+          inArray(messages.status, [...ACTIVE_MESSAGE_STATUSES]),
+        ),
+      ),
+  );
+  const accountWide = notExists(
+    db
+      .select({ one: sql`1` })
+      .from(messages)
+      .where(
+        and(
+          eq(messages.organisationId, input.organisationId),
+          eq(messages.contactId, listMembers.contactId),
+          inArray(messages.status, ["sent", "delivered"]),
+          sinceFlush,
+        ),
+      ),
+  );
+  const notReused =
+    input.contactReuse === "account_wide" ? sql`(${inCampaign} and ${accountWide})` : inCampaign;
+  return {
+    scope: sql`(${eq(listMembers.organisationId, input.organisationId)} and ${eq(listMembers.listId, input.listId)})`,
+    notBad: eq(listMembers.bad, false),
+    // coalesce: a null flushed_at must read as "not flushed", also under `not (...)` in the counts.
+    unsent: sql`(${isNull(listMembers.sentAt)} or coalesce(${gt(listMembers.flushedAt, listMembers.sentAt)}, false))`,
+    notSuppressed: notExists(
       db
         .select({ one: sql`1` })
         .from(suppressions)
@@ -284,20 +327,13 @@ function eligibilityWhere(db: Db, input: EligibilityInput): SQL | undefined {
           ),
         ),
     ),
-    notExists(
-      db
-        .select({ one: sql`1` })
-        .from(messages)
-        .where(
-          and(
-            eq(messages.campaignId, input.campaignId),
-            eq(messages.contactId, listMembers.contactId),
-            inArray(messages.status, [...ACTIVE_MESSAGE_STATUSES]),
-          ),
-        ),
-    ),
-    reuseClause,
-  );
+    notReused,
+  };
+}
+
+function eligibilityWhere(db: Db, input: EligibilityInput): SQL | undefined {
+  const r = eligibilityRules(db, input);
+  return and(r.scope, r.notBad, r.unsent, r.notSuppressed, r.notReused);
 }
 
 function eligibleMembersQuery(db: Db, input: EligibilityInput, limit: number) {
@@ -483,6 +519,24 @@ export function createSendingStore(db: Db): SendingStore {
       return row?.count ?? 0;
     },
 
+    async countSkipReasons(input) {
+      const r = eligibilityRules(db, input);
+      const count = (cond: SQL) => sql`count(*) filter (where ${cond})`.mapWith(toNumber);
+      const [row] = await db
+        .select({
+          bad: count(sql`not ${r.notBad}`),
+          alreadySent: count(sql`${r.notBad} and not ${r.unsent}`),
+          suppressed: count(sql`${r.notBad} and ${r.unsent} and not ${r.notSuppressed}`),
+          reused: count(
+            sql`${r.notBad} and ${r.unsent} and ${r.notSuppressed} and not ${r.notReused}`,
+          ),
+        })
+        .from(listMembers)
+        .innerJoin(contacts, eq(contacts.id, listMembers.contactId))
+        .where(r.scope);
+      return row ?? { bad: 0, alreadySent: 0, suppressed: 0, reused: 0 };
+    },
+
     async claimAndCreateMessages({ lap, eligibility, limit, priceMicro, build }) {
       if (limit <= 0) return [];
       return db.transaction(async (tx) => {
@@ -614,14 +668,30 @@ export function createSendingStore(db: Db): SendingStore {
       });
     },
 
-    async finishLap({ lapId, listId }) {
+    async finishLap({ lapId, organisationId, listId, details }) {
       await db.transaction(async (tx) => {
-        await tx
+        const [lap] = await tx
           .update(laps)
           .set({ status: "done", finishedAt: sql`now()` })
-          .where(and(eq(laps.id, lapId), eq(laps.status, "sending")));
+          .where(and(eq(laps.id, lapId), eq(laps.status, "sending")))
+          .returning({ id: laps.id });
+        if (!lap) return;
         await tx.update(lists).set({ lastSentAt: sql`now()` }).where(eq(lists.id, listId));
+        await tx.insert(auditLog).values({
+          organisationId,
+          action: "lap.finish",
+          targetType: "lap",
+          targetId: lapId,
+          details,
+        });
       });
+    },
+
+    async unclaimLap(lapId) {
+      await db
+        .update(laps)
+        .set({ status: "queued" })
+        .where(and(eq(laps.id, lapId), eq(laps.status, "sending")));
     },
 
     async rankCampaignLaps(campaignId) {

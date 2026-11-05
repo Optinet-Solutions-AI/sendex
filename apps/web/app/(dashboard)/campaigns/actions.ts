@@ -28,6 +28,7 @@ import {
   recordAudit,
   setCampaignLists,
   setCampaignSidGroup,
+  setLapOn,
   toggleAdText,
   toggleCampaignLink,
   toggleSenderId,
@@ -372,5 +373,30 @@ export async function sendCampaignAction(input: unknown): Promise<ActionResult<L
     });
     revalidateCampaign(data.campaignId);
     return rows.map((lap) => toLapView({ ...lap, routeName: "", listName: "" }));
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Results: lap on/off (D3-05)
+// ---------------------------------------------------------------------------
+
+const toggleLapInput = campaignRef.extend({ lapId: uuid, on: z.boolean() });
+
+/**
+ * The per-lap switch of the results table. Off cancels a queued or sending lap (its queued
+ * messages are refunded); on re-queues a cancelled lap. `setLapOn` writes the `lap.toggle`
+ * audit row on the campaign.
+ */
+export async function toggleLapAction(input: unknown): Promise<ActionResult<LapView>> {
+  return run("campaign.send", async (ctx) => {
+    const data = toggleLapInput.parse(input);
+    const lap = await setLapOn(db(), ctx.organisationId, {
+      lapId: data.lapId,
+      on: data.on,
+      actorUserId: ctx.userId,
+    });
+    if (lap.campaignId !== data.campaignId) throw new Error("Lap not found");
+    revalidateCampaign(data.campaignId);
+    return toLapView(lap);
   });
 }

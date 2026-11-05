@@ -1,4 +1,4 @@
-# Campaigns (D1-20 to D1-23)
+# Campaigns (D1-20 to D1-23, D3-05, D3-06)
 
 How the campaign screens are put together, where the numbers come from, and the contract the
 sending engine (D2-04) picks up from.
@@ -7,11 +7,15 @@ sending engine (D2-04) picks up from.
 
 ```
 apps/web/app/(dashboard)/campaigns/page.tsx        campaigns table, filters, New Campaign modal
-apps/web/app/(dashboard)/campaigns/[id]/page.tsx   campaign page: header, tabs, send form
+apps/web/app/(dashboard)/campaigns/export/route.ts CSV of the filtered campaigns (same query string)
+apps/web/app/(dashboard)/campaigns/[id]/page.tsx   campaign page: header, tabs, send form, results
 apps/web/app/(dashboard)/campaigns/actions.ts      every mutation (server actions)
 apps/web/components/campaigns/*                    plain-Tailwind client components
 apps/web/lib/campaign-views.ts                     db rows -> serialisable views (dates as ISO, micro-EUR as number)
+apps/web/lib/campaigns-params.ts                   list filters <-> query string <-> listCampaigns input
 packages/db/src/queries/campaigns.ts               all reads and writes, scoped by organisation
+packages/db/src/queries/results.ts                 campaignResults, setLapOn (D3-05)
+packages/core/src/results.ts                       ratioOf, costPerMicro, resultRates, formatPercent (pure)
 packages/db/src/queries/audit.ts                   recordAudit / listAuditLog
 packages/core/src/campaigns.ts                     Zod schemas, country -> timezone table, placeholders, preview
 packages/core/src/laps.ts, send-count.ts           planLaps, estimateCost, sendCount (pure maths)
@@ -49,13 +53,14 @@ click shows at once and is re-synced when the refreshed props arrive.
 
 | Action                                                              | Permission        |
 | ------------------------------------------------------------------- | ----------------- |
-| list, open, estimate                                                | `campaign.view`   |
+| list, open, estimate, results, CSV export                           | `campaign.view`   |
 | create, duplicate, delete, lists, sender ids, texts, links, settings | `campaign.create` |
-| send                                                                | `campaign.send`   |
+| send, lap on/off                                                    | `campaign.send`   |
 
 Audit rows (`audit_log`, `target_type = "campaign"`) are written for `campaign.create`,
-`campaign.duplicate`, `campaign.delete` (from the actions) and `campaign.send` (inside the
-`createLaps` transaction). The Logs tab lists them with `listAuditLog`.
+`campaign.duplicate`, `campaign.delete` (from the actions), `campaign.send` (inside the
+`createLaps` transaction) and `lap.toggle` (from `setLapOn`). The Logs tab lists them with
+`listAuditLog`.
 
 ## Available contacts
 
@@ -118,10 +123,67 @@ What the engine owns from there:
   clicks arrive (`clicks`, `leads`, `sales` from the tracking tables);
 - set `status = 'done'` and `finished_at`, and `rank` the laps of a test round with
   `rankLaps` from `@sendex/core`;
-- `cancelled` is reserved for the stop / emergency-stop flows; the laps table's on/off column
-  is read-only until then.
+- `cancelled` is written by the stop / emergency-stop flows and by the lap switch below.
 
-Nothing in the web app changes a lap after it is queued.
+The only lap change the web app makes after queueing is the on/off switch (`setLapOn`).
+
+## Results page (D3-05)
+
+`campaignResults(db, org, campaignId)` in `queries/results.ts` returns, or null for another
+tenant's campaign:
+
+- `totals`: `sumResultCounters` over the campaign's laps (`sent`, `delivered`, `failed`,
+  `clicks`, `leads`, `sales`, `cost_micro`, `revenue_micro`) plus `resultRates` (CTR, delivery
+  and failure rate, CPC / CPL / CPS as bigint micro-EUR, `costPerMicro` rounds half up and is
+  null without a count);
+- `laps`: `LapSummary` rows with the same rates and `on = status !== 'cancelled'`, ordered by
+  `rank asc nulls last`, then creation;
+- `networks`: one row per route of the campaign's messages with `sent` (status `sent`,
+  `delivered` or `expired`, i.e. accepted by the carrier), `delivered`, `failed` (`failed` or
+  `expired`), clicks (joined through `messages.route_id`), CTR, delivery rate and the cost of
+  the laps on that route. `source` is `"route"`: messages have no operator column, and the
+  Analytics tab says so; when receipts bring the operator the breakdown switches to it;
+- `clicksPerHour`: clicks grouped by `floor((at - first_sent) / 1h)`, where `first_sent` is
+  `min(messages.sent_at)` falling back to the earliest `laps.started_at`; empty hours are not
+  returned, the view renders what it gets;
+- `clicksPerLink`: messages grouped by `link_id` (null -> "No link") with submitted count,
+  clicks and CTR.
+
+The lap counters are the source of the header and the lap table because the engine keeps them
+current; the breakdowns are re-counted from `messages` and `clicks` so a discrepancy shows up.
+`results.test.ts` seeds both and asserts they agree with raw counts.
+
+The web layer computes the same rates with `resultRates` from `@sendex/core` where it only has
+`LapView`s (the lap table under the send form), so the two paths cannot diverge. The derived
+numbers reach the client as numbers (`lib/campaign-views.ts: toResultsView`).
+
+### Lap on/off
+
+`setLapOn(db, org, { lapId, on, actorUserId })` reuses `laps.status` rather than adding a
+column, so the engine honours the switch with no change on its side:
+
+| From        | on = false                                                        | on = true          |
+| ----------- | ----------------------------------------------------------------- | ------------------ |
+| `queued`    | `cancelled` via the sending store's `cancelLap` (refunds queued messages, writes `lap.cancel`) | no-op |
+| `sending`   | same; the running job sees `cancelled` on its next batch           | no-op              |
+| `cancelled` | no-op                                                             | `queued`, `finished_at` cleared; the dispatcher claims it again and `send-lap` continues with `test_size - existing messages` |
+| `done`      | throws                                                            | throws             |
+
+Every call writes `lap.toggle` on the campaign (`details: { lapId, on, from, to }`). The
+action is `toggleLapAction` (`campaign.send`); the table disables the switch for `done` laps
+and for roles that cannot send.
+
+## Campaigns list (D3-06)
+
+`listCampaigns` keeps its signature and takes optional filters: `from` / `to` (the sending
+period `[coalesce(first_lap_at, created_at), coalesce(last_lap_at, created_at)]` overlaps
+`[from, to)`), `hasLeads`, `hasSales`, `noClicks`, `spendMinMicro` / `spendMaxMicro`
+(inclusive, on `coalesce(sum(cost_micro), 0)`), and `pageSize` (default 25; the export walks
+pages of 500). The filters are applied to the campaign row joined to the per-campaign lap
+aggregate, and the total count uses the same join. `lib/campaigns-params.ts` parses the query
+string (`search, country, status, from, to, hasLeads, hasSales, noClicks, spendMin, spendMax,
+page`) and builds the `listCampaigns` input; the page and `export/route.ts` share it so the
+CSV always equals the filtered table.
 
 ## Tests
 
@@ -130,7 +192,17 @@ Nothing in the web app changes a lap after it is queued.
 - `packages/db/src/queries/campaigns.test.ts` (PGlite): create, list with aggregates and
   filters, tenancy, sender id dedupe, detail with available counts, routes and prices,
   estimate (test and send-all), `createLaps` and its audit row, refusals, duplicate, delete.
+- `packages/db/src/queries/results.test.ts` (PGlite): `campaignResults` against raw sums and
+  counts over seeded laps, messages and clicks; `setLapOn` off / on / refusals and its audit
+  rows; the new `listCampaigns` filters and page size.
+- `packages/core/src/results.test.ts`: the rate and cost-per maths.
+- `apps/web/lib/campaigns-params.test.ts`: query string parsing and the `listCampaigns` input.
 - `apps/web/components/campaigns/format.test.ts`, `schedule.test.ts`: money, CTR, periods,
   totals, CSV, timezone conversion.
 - `apps/web/e2e/campaigns.spec.ts`: the happy path against the seeded development
   organisation. Set `PLAYWRIGHT_PORT` when port 3000 is already taken.
+- `apps/web/e2e/campaign-results.spec.ts`: seeds a campaign with laps, messages and clicks
+  (`seedE2eResults`) and checks the header, the ranked lap table, the switch and the
+  Analytics tab against SQL counts.
+- `apps/web/e2e/campaigns-list.spec.ts`: the sales / no-clicks / spend filters, the CSV
+  export and Duplicate from the actions menu.

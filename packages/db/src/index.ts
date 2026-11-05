@@ -35,3 +35,4 @@ export function db(): Database {
 }
 export * from "./queries/postback-keys.js";
 export * from "./queries/postbacks.js";
+export * from "./queries/results.js";

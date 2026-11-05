@@ -9,8 +9,8 @@ out through the best one.
 
 1. Open **Campaigns** in the left menu. The table shows every campaign of your organisation
    with its status, country, laps, sent, clicks, CTR, cost, leads, sales and period. Use the
-   search box and the country / status filters to narrow it down; **Export CSV** downloads
-   the rows you see.
+   search box and the filters to narrow it down; **Export CSV** downloads every row that
+   matches (see [The campaigns list](campaigns-list.md)).
 2. Click **New Campaign**.
 3. Enter a **Name** (up to 120 characters), pick the **Country** and check the **Timezone**.
    The timezone is filled in from the country (Spain gives `Europe/Madrid`) and is what the

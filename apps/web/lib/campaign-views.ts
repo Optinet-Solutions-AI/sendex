@@ -2,6 +2,7 @@ import type {
   AuditRow,
   CampaignDetail,
   CampaignListSummary,
+  CampaignResults,
   CampaignSummary,
   LapSummary,
   LinkRow,
@@ -11,12 +12,14 @@ import type {
 } from "@sendex/db";
 import type {
   AuditView,
+  CampaignResultsView,
   CampaignSummaryView,
   CampaignView,
   EstimateView,
   LapView,
   LinkOption,
   ListOption,
+  ResultRatesView,
   RouteView,
   SidGroupView,
 } from "../components/campaigns/types";
@@ -152,5 +155,58 @@ export function toCampaignSummaryView(row: CampaignSummary): CampaignSummaryView
     sales: row.sales,
     firstLapAt: iso(row.firstLapAt),
     lastLapAt: iso(row.lastLapAt),
+  };
+}
+
+function micro(value: bigint | null): number | null {
+  return value === null ? null : Number(value);
+}
+
+function toRatesView(rates: {
+  ctr: number;
+  deliveryRate: number;
+  failureRate: number;
+  cpcMicro: bigint | null;
+  cplMicro: bigint | null;
+  cpsMicro: bigint | null;
+}): ResultRatesView {
+  return {
+    ctr: rates.ctr,
+    deliveryRate: rates.deliveryRate,
+    failureRate: rates.failureRate,
+    cpcMicro: micro(rates.cpcMicro),
+    cplMicro: micro(rates.cplMicro),
+    cpsMicro: micro(rates.cpsMicro),
+  };
+}
+
+export function toResultsView(results: CampaignResults): CampaignResultsView {
+  const t = results.totals;
+  return {
+    campaignId: results.campaignId,
+    firstSentAt: iso(results.firstSentAt),
+    lastSentAt: iso(results.lastSentAt),
+    totals: {
+      sent: t.sent,
+      delivered: t.delivered,
+      failed: t.failed,
+      clicks: t.clicks,
+      leads: t.leads,
+      sales: t.sales,
+      costMicro: Number(t.costMicro),
+      revenueMicro: Number(t.revenueMicro),
+      ...toRatesView(t),
+    },
+    laps: results.laps.map((lap) => ({ ...toLapView(lap), ...toRatesView(lap), on: lap.on })),
+    networks: {
+      source: results.networks.source,
+      rows: results.networks.rows.map((r) => ({ ...r, costMicro: Number(r.costMicro) })),
+    },
+    clicksPerHour: results.clicksPerHour.map((h) => ({
+      hour: h.hour,
+      at: h.at.toISOString(),
+      clicks: h.clicks,
+    })),
+    clicksPerLink: results.clicksPerLink.map((l) => ({ ...l })),
   };
 }

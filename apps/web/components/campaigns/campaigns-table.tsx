@@ -8,7 +8,8 @@ import {
   deleteCampaignAction,
   duplicateCampaignAction,
 } from "../../app/(dashboard)/campaigns/actions";
-import { formatMicro, formatPercent, formatPeriod, shortId, toCsv } from "./format";
+import { type CampaignsQuery, campaignsQueryString } from "../../lib/campaigns-params";
+import { formatMicro, formatPercent, formatPeriod, shortId } from "./format";
 import type { CampaignStatus, CampaignSummaryView } from "./types";
 import { Button, ErrorText, inputClass, StatusBadge } from "./ui";
 
@@ -21,56 +22,20 @@ const STATUSES: readonly CampaignStatus[] = [
   "completed",
 ];
 
-export interface CampaignFilters {
-  search: string;
-  country: string;
-  status: string;
-  page: number;
+function Check({ name, label, checked }: { name: string; label: string; checked: boolean }) {
+  return (
+    <label className="inline-flex items-center gap-1 text-sm">
+      <input type="checkbox" name={name} value="1" defaultChecked={checked} />
+      {label}
+    </label>
+  );
 }
 
-function downloadCsv(rows: readonly CampaignSummaryView[]): void {
-  const csv = toCsv([
-    [
-      "id",
-      "campaign",
-      "status",
-      "country",
-      "laps",
-      "sent",
-      "clicks",
-      "ctr",
-      "cost_eur",
-      "leads",
-      "sales",
-      "first_lap",
-      "last_lap",
-    ],
-    ...rows.map((c) => [
-      c.id,
-      c.name,
-      c.status,
-      c.country,
-      String(c.lapsCount),
-      String(c.sent),
-      String(c.clicks),
-      formatPercent(c.ctr),
-      (c.costMicro / 1_000_000).toFixed(2),
-      String(c.leads),
-      String(c.sales),
-      c.firstLapAt ?? "",
-      c.lastLapAt ?? "",
-    ]),
-  ]);
-  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = "campaigns.csv";
-  a.click();
-  URL.revokeObjectURL(url);
-}
-
-/** Search, filters and the campaigns table with per-row view / duplicate / delete. */
+/**
+ * Search, filters (country, status, period, leads, sales, spend, no clicks), the campaigns
+ * table with a per-row actions menu (view, duplicate, delete) and the CSV export link that
+ * carries the same filters.
+ */
 export function CampaignsTable({
   items,
   total,
@@ -82,7 +47,7 @@ export function CampaignsTable({
   total: number;
   page: number;
   pageSize: number;
-  filters: CampaignFilters;
+  filters: CampaignsQuery;
 }) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
@@ -110,59 +75,107 @@ export function CampaignsTable({
   }
 
   function pageHref(next: number): string {
-    const params = new URLSearchParams();
-    if (filters.search) params.set("search", filters.search);
-    if (filters.country) params.set("country", filters.country);
-    if (filters.status) params.set("status", filters.status);
-    if (next > 1) params.set("page", String(next));
-    const query = params.toString();
-    return query ? `/campaigns?${query}` : "/campaigns";
+    return `/campaigns${campaignsQueryString({ ...filters, page: next })}`;
   }
+
+  const exportHref = `/campaigns/export${campaignsQueryString({ ...filters, page: 1 })}`;
 
   return (
     <div className="space-y-3">
-      <form method="get" action="/campaigns" className="flex flex-wrap items-end gap-2">
-        <input
-          type="search"
-          name="search"
-          placeholder="Search campaigns"
-          defaultValue={filters.search}
-          aria-label="Search"
-          className={`${inputClass} w-56`}
-        />
-        <select
-          name="country"
-          defaultValue={filters.country}
-          aria-label="Country"
-          className={`${inputClass} w-44`}
-        >
-          <option value="">All countries</option>
-          {countryOptions.map((c) => (
-            <option key={c.code} value={c.code}>
-              {c.flag} {c.name}
-            </option>
-          ))}
-        </select>
-        <select
-          name="status"
-          defaultValue={filters.status}
-          aria-label="Status"
-          className={`${inputClass} w-40`}
-        >
-          <option value="">All statuses</option>
-          {STATUSES.map((s) => (
-            <option key={s} value={s} className="capitalize">
-              {s}
-            </option>
-          ))}
-        </select>
-        <Button type="submit">Filter</Button>
-        <Button onClick={() => downloadCsv(items)} disabled={items.length === 0}>
-          Export CSV
-        </Button>
-        <span className="ml-auto text-sm text-neutral-600" data-testid="campaign-count">
-          {total} {total === 1 ? "campaign" : "campaigns"}
-        </span>
+      <form method="get" action="/campaigns" className="space-y-2" data-testid="campaign-filters">
+        <div className="flex flex-wrap items-end gap-2">
+          <input
+            type="search"
+            name="search"
+            placeholder="Search campaigns"
+            defaultValue={filters.search}
+            aria-label="Search"
+            className={`${inputClass} w-56`}
+          />
+          <select
+            name="country"
+            defaultValue={filters.country}
+            aria-label="Country"
+            className={`${inputClass} w-44`}
+          >
+            <option value="">All countries</option>
+            {countryOptions.map((c) => (
+              <option key={c.code} value={c.code}>
+                {c.flag} {c.name}
+              </option>
+            ))}
+          </select>
+          <select
+            name="status"
+            defaultValue={filters.status}
+            aria-label="Status"
+            className={`${inputClass} w-40`}
+          >
+            <option value="">All statuses</option>
+            {STATUSES.map((s) => (
+              <option key={s} value={s} className="capitalize">
+                {s}
+              </option>
+            ))}
+          </select>
+          <input
+            type="date"
+            name="from"
+            defaultValue={filters.from}
+            aria-label="From"
+            className={`${inputClass} w-40`}
+          />
+          <input
+            type="date"
+            name="to"
+            defaultValue={filters.to}
+            aria-label="To"
+            className={`${inputClass} w-40`}
+          />
+          <span className="ml-auto text-sm text-neutral-600" data-testid="campaign-count">
+            {total} {total === 1 ? "campaign" : "campaigns"}
+          </span>
+        </div>
+        <div className="flex flex-wrap items-center gap-3">
+          <Check name="hasLeads" label="Has leads" checked={filters.hasLeads} />
+          <Check name="hasSales" label="Has sales" checked={filters.hasSales} />
+          <Check name="noClicks" label="No clicks" checked={filters.noClicks} />
+          <label className="inline-flex items-center gap-1 text-sm">
+            Spend above
+            <input
+              type="text"
+              name="spendMin"
+              inputMode="decimal"
+              defaultValue={filters.spendMin}
+              aria-label="Spend above (EUR)"
+              placeholder="EUR"
+              className={`${inputClass} w-24`}
+            />
+          </label>
+          <label className="inline-flex items-center gap-1 text-sm">
+            below
+            <input
+              type="text"
+              name="spendMax"
+              inputMode="decimal"
+              defaultValue={filters.spendMax}
+              aria-label="Spend below (EUR)"
+              placeholder="EUR"
+              className={`${inputClass} w-24`}
+            />
+          </label>
+          <Button type="submit">Filter</Button>
+          <Link href="/campaigns" className="text-sm underline">
+            Clear
+          </Link>
+          <a
+            href={exportHref}
+            data-testid="export-csv"
+            className="ml-auto rounded border border-neutral-300 bg-white px-3 py-1.5 text-sm font-medium text-neutral-800 hover:bg-neutral-50"
+          >
+            Export CSV
+          </a>
+        </div>
       </form>
       <ErrorText error={error} />
       <div className="overflow-x-auto rounded border border-neutral-200 bg-white">
@@ -188,13 +201,20 @@ export function CampaignsTable({
             {items.length === 0 ? (
               <tr>
                 <td colSpan={13} className="px-3 py-6 text-center text-neutral-500">
-                  No campaigns yet. Create one with "New Campaign".
+                  No campaigns match. Clear the filters or create one with "New Campaign".
                 </td>
               </tr>
             ) : null}
             {items.map((c) => (
-              <tr key={c.id} className="border-t border-neutral-100" data-testid="campaign-row">
-                <td className="px-3 py-2 font-mono text-xs text-neutral-500">{shortId(c.id)}</td>
+              <tr
+                key={c.id}
+                className="border-t border-neutral-100"
+                data-testid="campaign-row"
+                data-campaign-id={c.id}
+              >
+                <td className="px-3 py-2 font-mono text-xs text-neutral-500" title={c.id}>
+                  {shortId(c.id)}
+                </td>
                 <td className="px-3 py-2">
                   <Link href={`/campaigns/${c.id}`} className="font-medium hover:underline">
                     {c.name}
@@ -203,47 +223,57 @@ export function CampaignsTable({
                 <td className="px-3 py-2">
                   <StatusBadge status={c.status} />
                 </td>
-                <td className="px-3 py-2">
+                <td className="px-3 py-2" title={countryName(c.country)}>
                   <span className="mr-1">{flagEmoji(c.country)}</span>
-                  {countryName(c.country)}
+                  {c.country}
                 </td>
-                <td className="px-3 py-2 text-right">{c.lapsCount}</td>
-                <td className="px-3 py-2 text-right">{c.sent}</td>
-                <td className="px-3 py-2 text-right">{c.clicks}</td>
-                <td className="px-3 py-2 text-right">{formatPercent(c.ctr)}</td>
-                <td className="px-3 py-2 text-right">{formatMicro(c.costMicro)}</td>
-                <td className="px-3 py-2 text-right">{c.leads}</td>
-                <td className="px-3 py-2 text-right">{c.sales}</td>
+                <td className="px-3 py-2 text-right tabular-nums">{c.lapsCount}</td>
+                <td className="px-3 py-2 text-right tabular-nums">{c.sent}</td>
+                <td className="px-3 py-2 text-right tabular-nums">{c.clicks}</td>
+                <td className="px-3 py-2 text-right tabular-nums">{formatPercent(c.ctr)}</td>
+                <td className="px-3 py-2 text-right tabular-nums">{formatMicro(c.costMicro)}</td>
+                <td className="px-3 py-2 text-right tabular-nums">{c.leads}</td>
+                <td className="px-3 py-2 text-right tabular-nums">{c.sales}</td>
                 <td className="px-3 py-2 whitespace-nowrap text-xs text-neutral-600">
                   {formatPeriod(c.firstLapAt, c.lastLapAt, c.timezone)}
                 </td>
                 <td className="px-3 py-2 whitespace-nowrap">
-                  <Link
-                    href={`/campaigns/${c.id}`}
-                    className="mr-2 text-xs underline"
-                    aria-label={`View ${c.name}`}
-                  >
-                    View
-                  </Link>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    disabled={pending}
-                    onClick={() => duplicate(c.id)}
-                    aria-label={`Duplicate ${c.name}`}
-                  >
-                    Duplicate
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    disabled={pending || c.status !== "draft"}
-                    title={c.status === "draft" ? undefined : "Only drafts can be deleted"}
-                    onClick={() => remove(c)}
-                    aria-label={`Delete ${c.name}`}
-                  >
-                    Delete
-                  </Button>
+                  <details className="relative">
+                    <summary
+                      className="cursor-pointer list-none rounded border border-neutral-300 px-2 py-1 text-xs hover:bg-neutral-50"
+                      aria-label={`Actions for ${c.name}`}
+                    >
+                      Actions ▾
+                    </summary>
+                    <div className="absolute right-0 z-10 mt-1 flex w-36 flex-col rounded border border-neutral-200 bg-white py-1 text-sm shadow-lg">
+                      <Link
+                        href={`/campaigns/${c.id}`}
+                        className="px-3 py-1 text-left hover:bg-neutral-100"
+                        aria-label={`View ${c.name}`}
+                      >
+                        View
+                      </Link>
+                      <button
+                        type="button"
+                        disabled={pending}
+                        onClick={() => duplicate(c.id)}
+                        aria-label={`Duplicate ${c.name}`}
+                        className="px-3 py-1 text-left hover:bg-neutral-100 disabled:text-neutral-400"
+                      >
+                        Duplicate
+                      </button>
+                      <button
+                        type="button"
+                        disabled={pending || c.status !== "draft"}
+                        title={c.status === "draft" ? undefined : "Only drafts can be deleted"}
+                        onClick={() => remove(c)}
+                        aria-label={`Delete ${c.name}`}
+                        className="px-3 py-1 text-left text-red-700 hover:bg-red-50 disabled:text-neutral-400"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </details>
                 </td>
               </tr>
             ))}

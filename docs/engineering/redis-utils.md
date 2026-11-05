@@ -74,16 +74,24 @@ await lock.release(); // on shutdown
 ### How the worker will use it (SMPP binds)
 
 23Telecom allows a fixed number of binds per account. With several Fly.io machines, only one
-may hold the SMPP session for a route. The SMPP provider adapter (D2-06) will:
+may hold the SMPP session for a provider. `bindSmppAsLeader` in
+`apps/worker/src/send/smpp-leader.ts` (wired in the worker's `index.ts`) does this:
 
-1. Create one lock per route, key `sendex:leader:smpp:<routeId>`, holder id = machine id.
-2. Loop `acquire()` every 5 s until it wins, then bind and start pulling from the `send` queue
-   for that route.
-3. On `onLost`, unbind immediately and go back to step 2. Messages already handed to the
-   carrier are reconciled by delivery receipts; nothing is re-sent because the send ledger entry
-   (idempotency key) already exists.
-4. On `SIGTERM`, `release()` before closing the bind so the next machine takes over within one
-   renew interval instead of one TTL.
+1. One lock per SMPP provider in the registry, key `sendex:leader:smpp:<provider>`, holder id
+   = `FLY_MACHINE_ID` (or host and pid).
+2. Every process tries `acquire()` at boot and every 5 s (`retryMs`) until it wins, then binds.
+   While a process leads no provider its `send` BullMQ worker is paused, so send jobs wait for
+   the machine with the bind instead of opening a second session; the other queues (dlr,
+   clicks, postbacks, scheduler) keep running everywhere.
+3. On `onLost` (expired or stolen key) the process unbinds, pauses sending and shuts itself
+   down; Fly restarts it and it races for the lock again. Messages already handed to the
+   carrier are reconciled by delivery receipts on the new bind; nothing is re-sent because the
+   send ledger entry (idempotency key) already exists.
+4. On `SIGTERM`, `release()` runs before the queues close so the next machine takes over
+   within one retry interval instead of one TTL.
+
+`apps/worker/src/send/smpp-leader.test.ts` runs two "machines" against the SMPP simulator
+with a fake Redis: one bind, a hand-over on release, and a stolen key closing the session.
 
 ## Rate limiter (D2-19)
 

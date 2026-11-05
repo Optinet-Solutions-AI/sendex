@@ -103,6 +103,7 @@ The session acknowledges every `deliver_sm` immediately with `deliver_sm_resp`; 
 - Reconnect with exponential backoff: 1 s, 2 s, 4 s, ... capped at 60 s (`reconnectMinMs` / `reconnectMaxMs`), reset after a successful bind. A refused bind rejects `connect()` / `ready()` with `SmppBindError` and also keeps retrying with the same backoff, since the SMSC may be rejecting binds only temporarily.
 - Window: at most `windowSize` (default 10) `submit_sm` await a response at any time. Throughput cap: with `throughputPerSecond` set, submits are spaced at `1000 / tps` ms.
 - `provider.session.state` is one of `idle`, `connecting`, `bound`, `reconnecting`, `closed`; `provider.session.binds` counts successful binds (useful for health checks and tests).
+- In the worker only the process holding the Redis leader lock `sendex:leader:smpp:<provider>` binds; the others keep their `send` worker paused and retry every 5 s (D2-16, see `docs/engineering/redis-utils.md`, "Leader lock"). A lost lock closes the session and shuts the process down for a clean restart.
 
 ## Environment variables
 

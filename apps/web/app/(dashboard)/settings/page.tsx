@@ -22,13 +22,21 @@ export default function SettingsPage() {
               ? "You can manage organisation settings, members and balance."
               : "Organisation settings are read only for your role."}
           </p>
-          <div className="mt-4">
+          <div className="mt-4 flex flex-wrap gap-2">
             <Link
               href="/settings/billing"
               className="inline-flex h-9 items-center rounded-md border border-neutral-300 bg-white px-4 text-sm font-medium hover:bg-neutral-100"
             >
               Billing: low balance alert and daily caps
             </Link>
+            {can(ctx.role, "settings.manage") ? (
+              <Link
+                href="/settings/api-tokens"
+                className="inline-flex h-9 items-center rounded-md border border-neutral-300 bg-white px-4 text-sm font-medium hover:bg-neutral-100"
+              >
+                API tokens
+              </Link>
+            ) : null}
           </div>
           <div className="mt-6">
             {mode === "dev" ? (

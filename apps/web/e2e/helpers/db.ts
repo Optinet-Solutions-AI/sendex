@@ -115,3 +115,15 @@ export async function cleanupE2ePostbacks(namePrefix: string): Promise<void> {
     await sql.end();
   }
 }
+
+/** Remove the API tokens the api-tokens spec created (names starting with `namePrefix`). */
+export async function cleanupE2eApiTokens(namePrefix: string): Promise<void> {
+  const url = process.env.DATABASE_URL;
+  if (!url) throw new Error("DATABASE_URL must be set to run the api-tokens e2e spec");
+  const sql = postgres(url, { max: 1 });
+  try {
+    await sql`delete from api_tokens where name like ${`${namePrefix}%`}`;
+  } finally {
+    await sql.end();
+  }
+}

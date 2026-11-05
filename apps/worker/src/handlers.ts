@@ -1,20 +1,66 @@
+import type { SendingStore } from "@sendex/db";
+import type { ProviderRegistry } from "@sendex/providers";
 import { log as defaultLog, type Logger } from "./log.js";
 import type { JobHandlers } from "./queues.js";
+import { dispatchQueuedLaps, type SendQueueLike } from "./send/dispatcher.js";
+import type { ProgressTracker, SendRedis } from "./send/progress.js";
+import { sendLap } from "./send/send-lap.js";
+
+export interface HandlerDeps {
+  log?: Logger;
+  store: SendingStore;
+  providers: ProviderRegistry;
+  redis: Pick<SendRedis, "get">;
+  progress: ProgressTracker;
+  sendQueue: SendQueueLike;
+  send: {
+    linksBaseUrl: string;
+    batchSize?: number;
+    pauseRetryMs?: number;
+  };
+}
 
 /**
- * The real job handlers. Stubs for now: each one logs the job and returns, so the queue
- * plumbing can be exercised end to end. D2-04 onwards replace them one by one.
- * Payloads may carry phone numbers (DLR receipts, clicks); only log ids and counts.
+ * The real job handlers. `send` runs the send loop (D2-04/05), `scheduledSend` is the lap
+ * dispatcher tick; the ingest handlers are still stubs (D2-07 dlr, D2-12 clicks, D2-14
+ * postbacks). Payloads may carry phone numbers (DLR receipts, clicks); only log ids and counts.
  */
-export function createHandlers(log: Logger = defaultLog): JobHandlers {
+export function createHandlers(deps: HandlerDeps): JobHandlers {
+  const log = deps.log ?? defaultLog;
+  const stubs = createStubHandlers(log);
+  return {
+    ...stubs,
+    async send(job, meta) {
+      const result = await sendLap(
+        {
+          store: deps.store,
+          providers: deps.providers,
+          redis: deps.redis,
+          progress: deps.progress,
+          log,
+          ...deps.send,
+        },
+        job,
+        meta,
+      );
+      log("info", "send lap finished", { jobId: meta.id, lapId: job.lapId, ...result });
+    },
+    async scheduledSend(_job, meta) {
+      const result = await dispatchQueuedLaps({
+        store: deps.store,
+        sendQueue: deps.sendQueue,
+        log,
+      });
+      if (result.claimed > 0) log("info", "laps dispatched", { jobId: meta.id, ...result });
+    },
+  };
+}
+
+/** Handlers that only log: used until the ingest cards land, and when the worker has no database. */
+export function createStubHandlers(log: Logger = defaultLog): JobHandlers {
   return {
     async send(job, meta) {
-      log("info", "send lap (stub)", {
-        jobId: meta.id,
-        organisationId: job.organisationId,
-        campaignId: job.campaignId,
-        lapId: job.lapId,
-      });
+      log("warn", "send lap (stub: no database)", { jobId: meta.id, lapId: job.lapId });
     },
     async dlr(job, meta) {
       log("info", "delivery receipt (stub)", { jobId: meta.id, provider: job.provider });
@@ -30,11 +76,7 @@ export function createHandlers(log: Logger = defaultLog): JobHandlers {
       });
     },
     async scheduledSend(job, meta) {
-      log("info", "scheduled send (stub)", {
-        jobId: meta.id,
-        organisationId: job.organisationId,
-        campaignId: job.campaignId,
-      });
+      log("warn", "lap dispatch (stub: no database)", { jobId: meta.id, kind: job.kind });
     },
   };
 }

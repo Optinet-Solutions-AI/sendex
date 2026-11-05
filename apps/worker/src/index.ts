@@ -1,8 +1,9 @@
 import { serve } from "@hono/node-server";
+import { createSendingStore, db, type SendingStore } from "@sendex/db";
 import { sql } from "drizzle-orm";
 import { Redis } from "ioredis";
 import { createApp } from "./app.js";
-import { createHandlers } from "./handlers.js";
+import { createHandlers, createStubHandlers } from "./handlers.js";
 import { queueDepths } from "./health.js";
 import { log } from "./log.js";
 import {
@@ -14,15 +15,23 @@ import {
   type WorkerSet,
   workerSettingsFromEnv,
 } from "./queues.js";
+import { scheduleLapDispatcher } from "./send/dispatcher.js";
+import { createProgressTracker } from "./send/progress.js";
+import { createDefaultProviderRegistry } from "./send/providers.js";
 
 const port = Number(process.env.WORKER_PORT ?? 4000);
 const version = process.env.SENDEX_VERSION ?? "dev";
 const SHUTDOWN_TIMEOUT_MS = Number(process.env.SHUTDOWN_TIMEOUT_MS ?? 30_000);
+const linksBaseUrl = process.env.LINKS_BASE_URL ?? "http://localhost:8787";
+const internalSecret = process.env.INTERNAL_API_SECRET;
 
 // BullMQ requires maxRetriesPerRequest: null on the connection it shares.
 const redisUrl = process.env.REDIS_URL;
 const redis = redisUrl ? new Redis(redisUrl, { maxRetriesPerRequest: null }) : null;
 redis?.on("error", (err) => log("error", "redis error", { err }));
+
+const store: SendingStore | null = process.env.DATABASE_URL ? createSendingStore(db()) : null;
+const progress = redis ? createProgressTracker(redis) : null;
 
 let queues: Queues | null = null;
 let workerSet: WorkerSet | null = null;
@@ -30,8 +39,26 @@ let workerSet: WorkerSet | null = null;
 if (redis) {
   const settings = workerSettingsFromEnv();
   queues = createQueues(redis);
-  workerSet = createWorkers(redis, createHandlers(), { settings });
+  const handlers =
+    store && progress
+      ? createHandlers({
+          store,
+          providers: createDefaultProviderRegistry(),
+          redis,
+          progress,
+          sendQueue: queues.send,
+          send: { linksBaseUrl, pauseRetryMs: settings.pauseRetryMs },
+        })
+      : createStubHandlers();
+  workerSet = createWorkers(redis, handlers, { settings });
   log("info", "workers started", { queues: Object.values(QUEUES), ...settings });
+  if (store) {
+    scheduleLapDispatcher(queues.scheduledSend, settings.lapPollMs)
+      .then(() => log("info", "lap dispatcher scheduled", { everyMs: settings.lapPollMs }))
+      .catch((err: unknown) => log("error", "lap dispatcher could not be scheduled", { err }));
+  } else {
+    log("warn", "DATABASE_URL not set: send and dispatch handlers are stubs");
+  }
 } else {
   log("warn", "REDIS_URL not set: queues and workers are disabled");
 }
@@ -43,7 +70,6 @@ async function checkRedis(): Promise<boolean> {
 
 async function checkDatabase(): Promise<boolean> {
   if (!process.env.DATABASE_URL) return false;
-  const { db } = await import("@sendex/db");
   const rows = await db().execute(sql`select 1 as ok`);
   return rows.length === 1;
 }
@@ -58,7 +84,9 @@ const app = createApp({
   checkRedis,
   checkDatabase,
   ...(allQueues ? { getQueueDepths: () => queueDepths(allQueues) } : {}),
+  ...(store && progress ? { internal: { secret: internalSecret, store, progress } } : {}),
 });
+if (!internalSecret) log("warn", "INTERNAL_API_SECRET not set: /internal routes answer 503");
 
 const server = serve({ fetch: app.fetch, port }, (info) => {
   log("info", "worker listening", { port: info.port, version });

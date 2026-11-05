@@ -72,17 +72,13 @@ describe("job payload schemas", () => {
   });
 
   it("parses a ScheduledSendJob", () => {
-    expect(parseScheduledSendJob({ organisationId: "org_1", campaignId: "cmp_1" })).toEqual({
-      organisationId: "org_1",
-      campaignId: "cmp_1",
-    });
+    expect(parseScheduledSendJob({ kind: "dispatch-laps" })).toEqual({ kind: "dispatch-laps" });
     expect(() => parseScheduledSendJob({ organisationId: "org_1" })).toThrow();
   });
 
   it("parses by queue key", () => {
-    expect(parseJob("scheduledSend", { organisationId: "o", campaignId: "c" })).toEqual({
-      organisationId: "o",
-      campaignId: "c",
+    expect(parseJob("scheduledSend", { kind: "dispatch-laps" })).toEqual({
+      kind: "dispatch-laps",
     });
     expect(() => parseJob("dlr", {})).toThrowError(/invalid "dlr" job payload/i);
   });

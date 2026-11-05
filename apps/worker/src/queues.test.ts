@@ -1,4 +1,4 @@
-import { UnrecoverableError } from "bullmq";
+import { DelayedError, UnrecoverableError } from "bullmq";
 import { describe, expect, it } from "vitest";
 import {
   buildDeadLetterEntry,
@@ -44,6 +44,8 @@ describe("workerSettingsFromEnv", () => {
       sendConcurrency: 5,
       sendRatePerSecond: 50,
       ingestConcurrency: 5,
+      lapPollMs: 5000,
+      pauseRetryMs: 10_000,
     });
   });
 
@@ -53,12 +55,21 @@ describe("workerSettingsFromEnv", () => {
         SEND_CONCURRENCY: "12",
         SEND_RATE_PER_SECOND: "200",
         INGEST_CONCURRENCY: "3",
+        LAP_POLL_MS: "1000",
+        PAUSE_RETRY_MS: "250",
       }),
-    ).toEqual({ sendConcurrency: 12, sendRatePerSecond: 200, ingestConcurrency: 3 });
+    ).toEqual({
+      sendConcurrency: 12,
+      sendRatePerSecond: 200,
+      ingestConcurrency: 3,
+      lapPollMs: 1000,
+      pauseRetryMs: 250,
+    });
   });
 
   it("rejects values that are not positive integers", () => {
     expect(() => workerSettingsFromEnv({ SEND_CONCURRENCY: "0" })).toThrowError(/SEND_CONCURRENCY/);
+    expect(() => workerSettingsFromEnv({ LAP_POLL_MS: "-1" })).toThrowError(/LAP_POLL_MS/);
     expect(() => workerSettingsFromEnv({ SEND_RATE_PER_SECOND: "fast" })).toThrowError(
       /SEND_RATE_PER_SECOND/,
     );
@@ -139,10 +150,42 @@ describe("createProcessor", () => {
       id: "7",
       name: "scheduled-send",
       attemptsMade: 0,
-      data: { organisationId: "o", campaignId: "c" },
+      data: { kind: "dispatch-laps" },
     };
     await processor(job);
-    expect(seen).toEqual([{ organisationId: "o", campaignId: "c" }, "7"]);
+    expect(seen).toEqual([{ kind: "dispatch-laps" }, "7"]);
+  });
+
+  it("gives the handler a delay() that parks the job and throws DelayedError", async () => {
+    const moved: Array<{ timestamp: number; token: string | undefined }> = [];
+    const processor = createProcessor("scheduledSend", async (_payload, job) => {
+      if (!job.delay) throw new Error("expected delay()");
+      await job.delay(5000);
+      throw new Error("delay() must not return");
+    });
+    const job = {
+      id: "9",
+      name: "scheduled-send",
+      attemptsMade: 0,
+      data: { kind: "dispatch-laps" },
+      moveToDelayed: async (timestamp: number, token?: string) => {
+        moved.push({ timestamp, token });
+      },
+    };
+    const before = Date.now();
+    await expect(processor(job, "tok")).rejects.toBeInstanceOf(DelayedError);
+    expect(moved).toHaveLength(1);
+    expect(moved[0]?.token).toBe("tok");
+    expect(moved[0]?.timestamp).toBeGreaterThanOrEqual(before + 5000);
+  });
+
+  it("offers no delay() when the job cannot be moved", async () => {
+    let hadDelay: boolean | null = null;
+    const processor = createProcessor("scheduledSend", async (_payload, job) => {
+      hadDelay = job.delay !== undefined;
+    });
+    await processor({ id: "10", name: "x", attemptsMade: 0, data: { kind: "dispatch-laps" } });
+    expect(hadDelay).toBe(false);
   });
 
   it("throws an UnrecoverableError for an invalid payload so it is not retried", async () => {

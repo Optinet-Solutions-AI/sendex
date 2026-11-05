@@ -1,6 +1,10 @@
 {
   "$schema": "https://biomejs.dev/schemas/2.6.5/schema.json",
-  "vcs": { "enabled": true, "clientKind": "git", "useIgnoreFile": true },
+  "vcs": {
+    "enabled": true,
+    "clientKind": "git",
+    "useIgnoreFile": true
+  },
   "files": {
     "includes": [
       "**",
@@ -9,7 +13,10 @@
       "!**/dist",
       "!**/.turbo",
       "!**/coverage",
-      "!**/drizzle/meta"
+      "!**/drizzle/meta",
+      "!**/*.md",
+      "!**/*.astro",
+      "!**/.claude"
     ]
   },
   "formatter": {
@@ -22,12 +29,23 @@
     "enabled": true,
     "rules": {
       "preset": "recommended",
-      "suspicious": { "noConsole": "off" },
-      "style": { "noNonNullAssertion": "error" },
-      "correctness": { "noUnusedImports": "error", "noUnusedVariables": "error" }
+      "suspicious": {
+        "noConsole": "off"
+      },
+      "style": {
+        "noNonNullAssertion": "error"
+      },
+      "correctness": {
+        "noUnusedImports": "error",
+        "noUnusedVariables": "error"
+      }
     }
   },
   "javascript": {
-    "formatter": { "quoteStyle": "double", "semicolons": "always", "trailingCommas": "all" }
+    "formatter": {
+      "quoteStyle": "double",
+      "semicolons": "always",
+      "trailingCommas": "all"
+    }
   }
 }

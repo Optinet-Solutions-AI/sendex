@@ -8,5 +8,6 @@ export * from "./permissions.js";
 export * from "./phone.js";
 export * from "./postbacks.js";
 export * from "./render.js";
+export * from "./results.js";
 export * from "./send-count.js";
 export * from "./sms-encoding.js";

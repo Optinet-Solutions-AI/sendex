@@ -495,7 +495,9 @@ describe("cleanBatch", () => {
     expect(out.dropped).toEqual([{ raw: "612 345 678", reason: "no_country" }]);
   });
 
-  it("handles a large batch without recursion", () => {
+  // libphonenumber parses each number; 50k numbers took 5.3 s on a CI runner once, so the
+  // test gets its own budget instead of the 5 s default.
+  it("handles a large batch without recursion", { timeout: 30_000 }, () => {
     const big = Array.from(
       { length: 50_000 },
       (_, i) => `+3461234${String(i % 10_000).padStart(4, "0")}`,

@@ -1,4 +1,4 @@
-import type { CampaignLapRow } from "@sendex/db";
+import type { CampaignLapRow, CreateQueuedLapInput, LapPlanningContext } from "@sendex/db";
 import { describe, expect, it } from "vitest";
 import { createInternalApi, type InternalApiDeps } from "./internal-api.js";
 import { createLogger } from "./log.js";
@@ -9,11 +9,21 @@ const quiet = createLogger({ write: () => undefined });
 
 interface FakeOptions {
   laps?: CampaignLapRow[];
+  planning?: Partial<LapPlanningContext>;
+  priceMicro?: bigint | null;
+  available?: number;
 }
 
 /** `secret: null` builds deps for a worker without INTERNAL_API_SECRET. */
 function deps(options: FakeOptions = {}, secret: string | null = "s3cret") {
+  const created: CreateQueuedLapInput[] = [];
   const redis = fakeRedis();
+  const planning: LapPlanningContext = {
+    campaign: { id: "cmp-1", status: "sending", contactReuse: "account_wide" },
+    list: { id: "list-1", country: "ES" },
+    route: { id: "route-1", provider: "fake", active: true },
+    ...options.planning,
+  };
   const d: InternalApiDeps = {
     secret: secret ?? undefined,
     log: quiet,
@@ -22,12 +32,43 @@ function deps(options: FakeOptions = {}, secret: string | null = "s3cret") {
       async listCampaignLaps(organisationId) {
         return organisationId === "org-1" ? (options.laps ?? []) : [];
       },
+      async loadLapPlanningContext() {
+        return planning;
+      },
+      async getCurrentPriceMicro() {
+        return options.priceMicro === undefined ? 25_000n : options.priceMicro;
+      },
+      async countEligibleMembers() {
+        return options.available ?? 1000;
+      },
+      async createQueuedLap(input) {
+        created.push(input);
+        return {
+          id: "lap-new",
+          organisationId: input.organisationId,
+          campaignId: input.campaignId,
+          listId: input.listId,
+          routeId: input.routeId,
+          testSize: input.testSize,
+          status: "queued",
+          sent: 0,
+          failed: 0,
+          costMicro: 0n,
+        };
+      },
     },
   };
-  return { deps: d, redis };
+  return { deps: d, created, redis };
 }
 
 const auth = { "x-internal-secret": "s3cret" };
+
+const lapBody = {
+  organisationId: "org-1",
+  campaignId: "cmp-1",
+  listId: "list-1",
+  routeId: "route-1",
+};
 
 describe("internal api auth", () => {
   it("answers 503 when no secret is configured", async () => {
@@ -86,5 +127,103 @@ describe("GET /internal/progress/campaigns/:id", () => {
       headers: auth,
     });
     expect(await other.json()).toMatchObject({ total: 0, laps: [] });
+  });
+});
+
+describe("POST /internal/laps", () => {
+  const post = (app: ReturnType<typeof createInternalApi>, body: unknown) =>
+    app.request("/internal/laps", {
+      method: "POST",
+      headers: { ...auth, "content-type": "application/json" },
+      body: JSON.stringify(body),
+    });
+
+  it("validates the body with the shared Zod schema", async () => {
+    const app = createInternalApi(deps().deps);
+    const res = await post(app, { ...lapBody, mode: "budget" });
+    expect(res.status).toBe(400);
+    expect(await res.json()).toMatchObject({ error: "invalid request" });
+    const notJson = await app.request("/internal/laps", {
+      method: "POST",
+      headers: auth,
+      body: "nope",
+    });
+    expect(notJson.status).toBe(400);
+  });
+
+  it("queues a finish lap for every eligible member", async () => {
+    const d = deps({ available: 321 });
+    const res = await post(createInternalApi(d.deps), { ...lapBody, mode: "finish" });
+    expect(res.status).toBe(201);
+    expect(await res.json()).toEqual({
+      lap: {
+        id: "lap-new",
+        ...lapBody,
+        testSize: 321,
+        status: "queued",
+        sent: 0,
+        failed: 0,
+        costMicro: "0",
+      },
+      available: 321,
+      priceMicro: "25000",
+      estimatedCostMicro: String(321 * 25_000),
+    });
+    expect(d.created[0]).toMatchObject({
+      testSize: 321,
+      details: { mode: "finish", available: 321, priceMicro: "25000", source: "internal-api" },
+    });
+  });
+
+  it("queues a budget lap capped by what the budget buys and what is available", async () => {
+    const d = deps({ available: 1000 });
+    const app = createInternalApi(d.deps);
+    // EUR 5 at 0.025 = 200 messages.
+    const res = await post(app, { ...lapBody, mode: "budget", budgetMicro: 5_000_000 });
+    expect(res.status).toBe(201);
+    expect(await res.json()).toMatchObject({
+      lap: { testSize: 200 },
+      estimatedCostMicro: "5000000",
+    });
+    expect(d.created[0]?.details).toMatchObject({ mode: "budget", budgetMicro: 5_000_000 });
+
+    const capped = deps({ available: 120 });
+    const res2 = await post(createInternalApi(capped.deps), {
+      ...lapBody,
+      mode: "budget",
+      budgetMicro: 5_000_000,
+    });
+    expect(await res2.json()).toMatchObject({ lap: { testSize: 120 } });
+  });
+
+  it("explains why a lap cannot be queued", async () => {
+    const missing = await post(createInternalApi(deps({ planning: { campaign: null } }).deps), {
+      ...lapBody,
+      mode: "finish",
+    });
+    expect(missing.status).toBe(404);
+    expect(await missing.json()).toEqual({ error: "campaign not found" });
+
+    const inactive = await post(
+      createInternalApi(
+        deps({ planning: { route: { id: "route-1", provider: "fake", active: false } } }).deps,
+      ),
+      { ...lapBody, mode: "finish" },
+    );
+    expect(inactive.status).toBe(422);
+
+    const unpriced = await post(createInternalApi(deps({ priceMicro: null }).deps), {
+      ...lapBody,
+      mode: "finish",
+    });
+    expect(unpriced.status).toBe(422);
+    expect(await unpriced.json()).toEqual({ error: "route has no price for ES" });
+
+    const empty = await post(createInternalApi(deps({ available: 0 }).deps), {
+      ...lapBody,
+      mode: "finish",
+    });
+    expect(empty.status).toBe(422);
+    expect(await empty.json()).toMatchObject({ error: "nothing to send", available: 0 });
   });
 });

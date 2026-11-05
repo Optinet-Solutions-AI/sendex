@@ -44,3 +44,24 @@ instance) set `PLAYWRIGHT_PORT=3100` (or `PORT`): the config then starts or reus
 
 Each new screen gets a spec covering its happy path (AGENTS.md, "Adding a screen"). The e2e
 job is not in the CI workflow yet; it is wired in once the database migrations are on `main`.
+
+The suite runs with one worker: every spec seeds rows in the same database and cleans up by
+its own name or phone-number prefix (`e2e/helpers/db.ts`), so two specs running side by side
+would see each other's rows. Do not leave a worker process running while the suite runs
+either: its dispatcher sends the laps the campaign specs expect to stay queued.
+
+### The full flow (D2-20)
+
+`e2e/full-flow.spec.ts` is the one spec that uses the real engine. It starts the worker
+itself (`e2e/helpers/worker.ts`: `pnpm --filter @sendex/worker exec tsx src/index.ts` on port
+4300 with `LAP_POLL_MS=1000`, the FakeProvider behind the `platform` routes), cancels the
+queued laps other specs left behind, builds a campaign on the screens (sender ids, the seeded
+Spanish list, a text with `{{domain}}`, the "Rolling Slots" link, test size 20 on route 405),
+sends it, reloads until the lap is `done`, checks the progress, the EUR 0.50 debit in the
+header balance, then posts one click to `/internal/clicks` the way the links service does and
+checks the lap's click count and the 5.00% CTR. It needs `REDIS_URL` as well as
+`DATABASE_URL` and skips itself without them, so it runs locally and not on CI yet.
+
+```sh
+DATABASE_URL=postgresql://sendex:sendex@127.0.0.1:5432/sendex REDIS_URL=redis://127.0.0.1:6379 pnpm test:e2e
+```

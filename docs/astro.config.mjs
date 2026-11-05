@@ -28,6 +28,7 @@ export default defineConfig({
             { label: "Read the results", slug: "using/read-the-results" },
             { label: "Balance and billing", slug: "using/balance-and-billing" },
             { label: "Track conversions", slug: "using/track-conversions" },
+            { label: "API tokens", slug: "using/api-tokens" },
           ],
         },
         {
@@ -38,6 +39,7 @@ export default defineConfig({
             { label: "Adding a provider", slug: "engineering/adding-a-provider" },
             { label: "Billing", slug: "engineering/billing" },
             { label: "Postbacks", slug: "engineering/postbacks" },
+            { label: "Public API", slug: "engineering/public-api" },
             {
               label: "Runbooks",
               items: [{ label: "Local setup", slug: "engineering/runbooks/local-setup" }],

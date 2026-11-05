@@ -8,6 +8,7 @@ import { isAuthError, requireOrg } from "../../lib/auth";
 import { authMode, devAuthConfig } from "../../lib/env";
 import { AlertsBanner } from "./alerts-banner";
 import { DevAuthBanner } from "./dev-auth-banner";
+import { EmergencyStopBanner } from "./emergency-stop-banner";
 
 /** The balance in the header must never be stale; the shell is rendered per request. */
 export const dynamic = "force-dynamic";
@@ -22,6 +23,7 @@ interface NavItem {
 const NAV: readonly NavItem[] = [
   { href: "/", label: "Dashboard" },
   { href: "/campaigns", label: "Campaigns" },
+  { href: "/campaigns/scheduled", label: "Scheduled" },
   { href: "/lists", label: "Lists" },
   { href: "/billing", label: "Billing" },
   { href: "/reports/postbacks", label: "Reports" },
@@ -108,6 +110,7 @@ export default async function DashboardLayout({ children }: { children: ReactNod
             </>
           )}
         </header>
+        {shell ? <EmergencyStopBanner organisationId={shell.organisationId} /> : null}
         <main className="flex-1 p-6">
           <ToastProvider>
             {shell ? (

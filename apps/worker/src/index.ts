@@ -124,7 +124,9 @@ const app = createApp({
   checkRedis,
   checkDatabase,
   ...(allQueues ? { getQueueDepths: () => queueDepths(allQueues) } : {}),
-  ...(store && progress ? { internal: { secret: internalSecret, store, progress } } : {}),
+  ...(store && progress && redis
+    ? { internal: { secret: internalSecret, store, progress, redis } }
+    : {}),
   ...(linksDeps ? { links: linksDeps } : {}),
   ...(postbacksDeps ? { postbacks: postbacksDeps } : {}),
 });

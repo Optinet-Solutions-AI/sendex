@@ -13,6 +13,7 @@ import {
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AnalyticsSection } from "../../../../components/campaigns/analytics-section";
+import { CampaignControls } from "../../../../components/campaigns/campaign-controls";
 import { CampaignHeader } from "../../../../components/campaigns/campaign-header";
 import { CampaignTabs } from "../../../../components/campaigns/campaign-tabs";
 import { ConversionsSection } from "../../../../components/campaigns/conversions-section";
@@ -94,6 +95,11 @@ export default async function CampaignPage({ params }: { params: Promise<{ id: s
               / {campaign.name}
             </nav>
             <CampaignHeader campaign={campaign} {...(results ? { totals: results.totals } : {})} />
+            <CampaignControls
+              campaign={campaign}
+              canStop={can(ctx.role, "campaign.stop")}
+              canSend={can(ctx.role, "campaign.send")}
+            />
             <CampaignTabs
               panels={{
                 Status: (

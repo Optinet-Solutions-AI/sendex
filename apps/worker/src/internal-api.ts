@@ -1,15 +1,29 @@
 import { timingSafeEqual } from "node:crypto";
-import { budgetPlan, createLapRequestSchema, finishListPlan } from "@sendex/core";
+import {
+  budgetPlan,
+  createLapRequestSchema,
+  type EmergencyStopState,
+  emergencyStopOrganisationSchema,
+  emergencyStopRequestSchema,
+  finishListPlan,
+} from "@sendex/core";
 import type { SendingStore } from "@sendex/db";
+import {
+  clearEmergencyStop,
+  getEmergencyStop,
+  type RedisLike,
+  setEmergencyStop,
+} from "@sendex/redis-utils";
 import { Hono } from "hono";
 import { z } from "zod";
 import { log as defaultLog, type Logger } from "./log.js";
 import type { ProgressTracker } from "./send/progress.js";
 
 /**
- * `/internal/*`: endpoints the web app calls server-side (D2-06 progress, D2-07 laps).
- * Protected by a shared secret in `x-internal-secret` (`INTERNAL_API_SECRET`); without the
- * env the routes answer 503. Documented in docs/engineering/sending-engine.md.
+ * `/internal/*`: endpoints the web app calls server-side (D2-06 progress, D2-07 laps, D2-09
+ * emergency stop). Protected by a shared secret in `x-internal-secret`
+ * (`INTERNAL_API_SECRET`); without the env the routes answer 503. Documented in
+ * docs/engineering/sending-engine.md.
  */
 
 export const INTERNAL_SECRET_HEADER = "x-internal-secret";
@@ -26,6 +40,8 @@ export interface InternalApiDeps {
     | "createQueuedLap"
   >;
   progress: Pick<ProgressTracker, "readCampaign">;
+  /** Where the emergency stop flags live; without it those routes answer 503. */
+  redis?: RedisLike;
   log?: Logger;
 }
 
@@ -132,6 +148,65 @@ export function createInternalApi(deps: InternalApiDeps): Hono {
       },
       201,
     );
+  });
+
+  // -------------------------------------------------------------------------
+  // Emergency stop (D2-09): the per-organisation flag the send loop checks per batch.
+  // The web app writes the audit row; the worker only owns the flag.
+  // -------------------------------------------------------------------------
+
+  async function stopState(redis: RedisLike, organisationId: string): Promise<EmergencyStopState> {
+    const stop = await getEmergencyStop(redis, organisationId);
+    return stop ? { stopped: true, stop } : { stopped: false, stop: null };
+  }
+
+  function parseOrganisation(c: { req: { query(name: string): string | undefined } }) {
+    return emergencyStopOrganisationSchema.safeParse({
+      organisationId: c.req.query("organisationId"),
+    });
+  }
+
+  app.get("/internal/emergency-stop", async (c) => {
+    const redis = deps.redis;
+    if (!redis) return c.json({ error: "emergency stop unavailable: no Redis" }, 503);
+    const query = parseOrganisation(c);
+    if (!query.success) {
+      return c.json({ error: "organisationId query parameter is required" }, 400);
+    }
+    return c.json(await stopState(redis, query.data.organisationId));
+  });
+
+  app.post("/internal/emergency-stop", async (c) => {
+    const redis = deps.redis;
+    if (!redis) return c.json({ error: "emergency stop unavailable: no Redis" }, 503);
+    let body: unknown;
+    try {
+      body = await c.req.json();
+    } catch {
+      return c.json({ error: "body must be JSON" }, 400);
+    }
+    const parsed = emergencyStopRequestSchema.safeParse(body);
+    if (!parsed.success) {
+      return c.json({ error: "invalid request", issues: z.prettifyError(parsed.error) }, 400);
+    }
+    const { organisationId, reason, byUserId } = parsed.data;
+    const stop = await setEmergencyStop(redis, organisationId, { reason, byUserId });
+    log("warn", "emergency stop raised", { organisationId, byUserId });
+    const state: EmergencyStopState = { stopped: true, stop };
+    return c.json(state);
+  });
+
+  app.delete("/internal/emergency-stop", async (c) => {
+    const redis = deps.redis;
+    if (!redis) return c.json({ error: "emergency stop unavailable: no Redis" }, 503);
+    const query = parseOrganisation(c);
+    if (!query.success) {
+      return c.json({ error: "organisationId query parameter is required" }, 400);
+    }
+    const cleared = await clearEmergencyStop(redis, query.data.organisationId);
+    if (cleared)
+      log("info", "emergency stop cleared", { organisationId: query.data.organisationId });
+    return c.json({ ...(await stopState(redis, query.data.organisationId)), cleared });
   });
 
   return app;

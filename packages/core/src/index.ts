@@ -1,4 +1,5 @@
 export * from "./billing.js";
+export * from "./campaign-control.js";
 export * from "./campaigns.js";
 export * from "./caps.js";
 export * from "./internal-api.js";

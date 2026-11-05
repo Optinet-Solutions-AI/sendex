@@ -124,6 +124,15 @@ export async function sendLap(
   if (ctx.lap.organisationId !== job.organisationId || ctx.lap.campaignId !== job.campaignId) {
     throw new UnrecoverableError(`lap ${job.lapId} does not belong to the job's campaign`);
   }
+  if (ctx.lap.status === "cancelled") {
+    // Stopped from the campaign page while this job was parked or between attempts: the lap
+    // row is already cancelled; sweep any message an earlier attempt left queued (refunded).
+    await store.cancelLap({
+      lapId: ctx.lap.id,
+      organisationId: ctx.lap.organisationId,
+      reason: "campaign stopped",
+    });
+  }
   if (ctx.lap.status === "done" || ctx.lap.status === "cancelled") {
     log("info", "lap already finished, nothing to do", { ...fields, status: ctx.lap.status });
     return { outcome: "skipped", sent: 0, failed: 0, reason: ctx.lap.status };

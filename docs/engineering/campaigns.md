@@ -61,6 +61,30 @@ Audit rows (`audit_log`, `target_type = "campaign"`) are written for `campaign.c
 `campaign.duplicate`, `campaign.delete` (from the actions), `campaign.send` (inside the
 `createLaps` transaction) and `lap.toggle` (from `setLapOn`). The Logs tab lists them with
 `listAuditLog`.
+| send, resume, change or cancel the schedule                         | `campaign.send`   |
+| pause, stop                                                         | `campaign.stop`   |
+| emergency stop (Settings, owners)                                   | `emergency.stop`  |
+
+Audit rows (`audit_log`, `target_type = "campaign"`) are written for `campaign.create`,
+`campaign.duplicate`, `campaign.delete` (from the actions), `campaign.send` (inside the
+`createLaps` transaction) and, from the control helpers in `queries/campaign-control.ts`,
+`campaign.pause`, `campaign.resume`, `campaign.stop`, `campaign.reschedule` and
+`campaign.schedule_cancel` (plus `lap.cancel` per cancelled lap). The Logs tab lists them with
+`listAuditLog`. The emergency stop writes `emergency.stop` / `emergency.clear` against the
+organisation.
+
+## Pause, resume, stop and the schedule (D2-08, D2-09)
+
+`components/campaigns/campaign-controls.tsx` sits under the header: Pause / Resume / Stop
+(Stop behind a confirm dialog that states how many contacts remain) and, while the campaign is
+`scheduled`, the schedule editor (change time, cancel schedule). Which buttons show follows
+`canTransition` from `@sendex/core`, the same rules the server applies. The actions are in
+`app/(dashboard)/campaigns/control-actions.ts`; the state changes and what they do to laps and
+messages are described in `sending-engine.md` ("The control surface"). `/campaigns/scheduled`
+lists upcoming sends per day in each campaign's timezone (`listScheduledCampaigns`). The
+owner-only emergency stop lives under `/settings/emergency-stop` and talks to the worker
+through `lib/worker-api.ts`; `app/(dashboard)/emergency-stop-banner.tsx` shows the red bar.
+How-to: `docs/using/schedule-pause-stop.md`.
 
 ## Available contacts
 
@@ -184,6 +208,9 @@ aggregate, and the total count uses the same join. `lib/campaigns-params.ts` par
 string (`search, country, status, from, to, hasLeads, hasSales, noClicks, spendMin, spendMax,
 page`) and builds the `listCampaigns` input; the page and `export/route.ts` share it so the
 CSV always equals the filtered table.
+The only way the web app changes a lap after it is queued is through the control helpers
+(`stopCampaign`, `cancelSchedule`), which move `queued` / `sending` laps to `cancelled`; see
+`sending-engine.md`, "The control surface".
 
 ## Tests
 
@@ -206,3 +233,8 @@ CSV always equals the filtered table.
   Analytics tab against SQL counts.
 - `apps/web/e2e/campaigns-list.spec.ts`: the sales / no-clicks / spend filters, the CSV
   export and Duplicate from the actions menu.
+- `apps/web/e2e/campaign-control.spec.ts`: pause, resume and stop on a seeded sending
+  campaign (badges, lap rows, Logs tab); change and cancel the schedule of a seeded scheduled
+  campaign, including its row on `/campaigns/scheduled`.
+- `apps/web/lib/worker-api.test.ts`: the internal API client (config fallbacks, headers,
+  error mapping, answer parsing).

@@ -118,7 +118,8 @@ The skip counts are taken before the lap sends and stored on the `lap.finish` au
 | --- | --- | --- |
 | `campaigns.status = 'paused'` | before the lap starts and between batches | The lap stays `sending`; the job is parked with `moveToDelayed` (`PAUSE_RETRY_MS`, default 10 s) and looks again, without using an attempt. The dispatcher claims no new lap of the campaign. |
 | `campaigns.status = 'stopped'` | same | Remaining `queued` messages become `cancelled` and are refunded; the lap becomes `cancelled` with `campaign stopped` in the audit log. Messages already submitted stay as they are. |
-| Redis key `sendex:stop:<organisationId>` (any value; set by D2-10) | same | Same as stopped, reason `emergency stop`. Applies to every campaign of the organisation. |
+| Redis key `sendex:stop:<organisationId>` (any value; set through `/internal/emergency-stop`) | same | Same as stopped, reason `emergency stop`. Applies to every campaign of the organisation. |
+| `laps.status = 'cancelled'` when the job loads the lap | at the start of every attempt | The web stopped the campaign while the job was parked or between attempts. The loop sweeps any message an earlier attempt left `queued` (cancelled + refunded) and returns `skipped`. |
 
 The provider is never asked to recall a message; "stop" means no further batch is submitted.
 
@@ -152,6 +153,40 @@ organisations with a message in the last hour get `sendRate` → `spikeDecision`
 `shouldAlertLowBalance` (alert `low_balance`, `markLowBalanceAlerted`, rearm). Each organisation
 is checked at most once per five minutes through a Redis `SET NX PX` key, shared by every
 worker process.
+### The control surface (D2-08, D2-09)
+
+The campaign page's Pause / Resume / Stop buttons and schedule editor call server actions in
+`apps/web/app/(dashboard)/campaigns/control-actions.ts`, which call the helpers in
+`packages/db/src/queries/campaign-control.ts`. Each helper runs in one transaction: lock the
+campaign row, apply `campaignTransition(status, action)` from `packages/core/src/campaign-control.ts`
+(the state machine, tested on its own), update what the move touches, write the audit row.
+
+| Helper | Transition | What else changes | Audit |
+| --- | --- | --- | --- |
+| `pauseCampaign` | `sending \| scheduled -> paused` | nothing; the engine parks on its own | `campaign.pause {from}` |
+| `resumeCampaign` | `paused -> sending`, or `scheduled` when `scheduled_at` is still ahead | nothing; parked jobs pick up on their next look | `campaign.resume {to}` |
+| `stopCampaign` | `sending \| scheduled \| paused -> stopped` | laps `queued`/`sending` -> `cancelled` (+ `finished_at`); the queued messages of laps that were still `queued` are cancelled and refunded | `campaign.stop {from, cancelledLaps, cancelledMessages}` and `lap.cancel` per lap |
+| `rescheduleCampaign` | `draft \| scheduled` keep their status | `scheduled_at` replaced; queued laps stay queued and wait for the new time | `campaign.reschedule {from, to}` |
+| `cancelSchedule` | `scheduled -> draft` (`draft` stays) | queued laps -> `cancelled`, `scheduled_at` cleared | `campaign.schedule_cancel {from, scheduledAt, cancelledLaps}` |
+
+Why `stopCampaign` leaves the queued messages of a *sending* lap alone: that lap's job may have
+a batch at the provider at that very moment (`claimAndCreateMessages` has inserted the rows as
+`queued`, `provider.send` is in flight, `applyOutcomes` has not run). Marking those rows
+cancelled would refund messages that are going out. So the helper only cancels the lap row;
+the loop notices the stop between batches (or, if it was parked, when it wakes on a cancelled
+lap) and cancels what is genuinely left through `cancelLap`, which is idempotent. The
+`pause-stop.test.ts` scenario interrupts the provider mid-batch to prove this.
+
+Scheduling (D2-08): `createLaps` stores `scheduled_at` (UTC) next to the campaign `timezone`
+and sets the status to `scheduled`; the dispatcher's `claimQueuedLaps(now)` only claims laps of
+campaigns whose `scheduled_at` is null or past, and flips those campaigns to `sending` in the
+same transaction. Rescheduling therefore needs no queue work: the old time can never fire
+because the dispatcher reads the current `scheduled_at` on every tick. `listScheduledCampaigns`
+feeds the `/campaigns/scheduled` view, grouping by the wall-clock day of each campaign's zone
+(`localDayAndTime` in `packages/core`, computed in JS so the database needs no tz tables).
+
+Permissions: pause and stop need `campaign.stop`; resume, reschedule and cancel-schedule need
+`campaign.send`; the emergency stop needs `emergency.stop` (owners).
 
 ## Progress (D2-06)
 
@@ -212,6 +247,27 @@ its next tick and the send loop applies the balance check then. Errors: `400` in
 `organisation_id` null are visible to everyone), `422` route inactive, no price, or nothing
 to send.
 
+### `GET | POST | DELETE /internal/emergency-stop` (D2-09)
+
+The organisation's emergency stop flag (`sendex:stop:<organisationId>`, see
+`packages/redis-utils` `stop-flag.ts`). The worker owns the flag; the web app writes the
+audit rows (`emergency.stop`, `emergency.clear`, `target_type = "organisation"`) from the
+owner-only page under Settings, and shows a red bar in the dashboard header while the flag
+is set.
+
+```
+GET    /internal/emergency-stop?organisationId=<org>      -> { stopped: false, stop: null }
+                                                          |  { stopped: true, stop: { reason, byUserId, stoppedAt } }
+POST   /internal/emergency-stop  { organisationId, reason, byUserId }   -> the stopped state
+DELETE /internal/emergency-stop?organisationId=<org>      -> state + { cleared: boolean }
+```
+
+`400` on a missing organisation id or an invalid body (`emergencyStopRequestSchema` in
+`packages/core/src/campaign-control.ts`), `503` when the worker has no Redis. The web side
+lives in `apps/web/lib/worker-api.ts` (`WORKER_INTERNAL_URL`, falling back to
+`WORKER_PUBLIC_URL`, plus `INTERNAL_API_SECRET`); the header banner uses a 1.5 s timeout and
+renders nothing when the worker cannot be reached.
+
 ## Providers
 
 `routes.provider` names the adapter: `platform` and `fake` both resolve to `FakeProvider`
@@ -234,9 +290,18 @@ such a route is cancelled with `unknown provider "smpp"` rather than retried for
 - `packages/db/src/queries/sending.test.ts` (PGlite): every exclusion rule and skip count,
   the lap context, claim/create idempotency, outcomes with refunds applied twice, cancel,
   dispatcher claim, finish/rank, the lap API helpers.
+- `packages/db/src/queries/campaign-control.test.ts` (PGlite): every transition helper, the
+  refund rules of stop, the dispatcher honouring a reschedule (old time does not fire, new
+  time does, campaign flips to `sending`), cancel-schedule, the per-day grouping across zones.
+- `packages/core/src/campaign-control.test.ts`: the state machine and the action schemas.
 - `apps/worker/src/send/send-lap.test.ts`: the loop against an in-memory store
   (`store.fake.ts`) and `FakeProvider`: batches, rotation, rendering, multi-part pricing,
-  list exhaustion, balance refusal, pause, stop, emergency stop, resume, no-op on a finished lap.
+  list exhaustion, balance refusal, pause, stop, emergency stop, resume, a parked lap
+  continuing after resume, a parked lap skipped after a web stop, no-op on a finished lap.
+- `apps/worker/src/send/pause-stop.test.ts` (PGlite, real store, real loop, no BullMQ): the
+  D2-09 acceptance scenarios, 1,000 contacts in one lap: pause after 300 then resume ends at
+  1,000 distinct contacts; stop after 300 leaves 700 unsent, the lap cancelled, nothing sent
+  afterwards and one `lap.cancel` row.
 - `apps/worker/src/send/send.integration.test.ts` (PGlite + Redis, skipped without
   `REDIS_URL`): seeds an organisation, 120 contacts, a campaign with two sender ids, two texts
   and a link, a fake route at 0.025 and a queued lap of 100; runs the dispatcher and the real

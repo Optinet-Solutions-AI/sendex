@@ -1,0 +1,31 @@
+# Fly.io app for the Sendex worker. Create once with: fly launch --no-deploy --copy-config
+# Secrets (never in the repo): fly secrets set DATABASE_URL=... REDIS_URL=... SMPP_PASSWORD=... POSTBACK_SIGNING_SECRET=...
+# Static egress for carrier whitelisting: fly ips allocate-v4 (dedicated)
+app = "sendex-worker"
+primary_region = "fra"
+
+[build]
+  dockerfile = "Dockerfile"
+  # Build context is the monorepo root; deploy with: fly deploy --config apps/worker/fly.toml --dockerfile apps/worker/Dockerfile .
+
+[env]
+  WORKER_PORT = "4000"
+  NODE_ENV = "production"
+
+[http_service]
+  internal_port = 4000
+  force_https = true
+  auto_stop_machines = false
+  auto_start_machines = true
+  min_machines_running = 1
+
+  [[http_service.checks]]
+    interval = "15s"
+    timeout = "5s"
+    grace_period = "20s"
+    method = "GET"
+    path = "/health"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"

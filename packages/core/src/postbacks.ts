@@ -5,7 +5,6 @@
  * postback a duplicate instead of a second conversion. Pure functions shared by the
  * worker (verifies and ingests), the web app (shows the URL to configure) and the docs.
  */
-import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 import { z } from "zod";
 
 export const POSTBACK_TYPES = ["lead", "sale"] as const;
@@ -157,23 +156,65 @@ export function canonicalPostbackQuery(params: PostbackParams): string {
     .join("&");
 }
 
+/*
+ * Web Crypto (`crypto.subtle`) rather than `node:crypto`: this module is shared by the
+ * worker (Node), the Next.js app (whose middleware bundle runs on the Edge runtime and
+ * cannot load `node:` modules) and potentially the links service on Cloudflare. The
+ * price is that signing and hashing are asynchronous.
+ */
+
+const encoder = new TextEncoder();
+
+function hex(bytes: ArrayBuffer): string {
+  return Array.from(new Uint8Array(bytes), (b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+function fromHex(text: string): Uint8Array<ArrayBuffer> {
+  const out = new Uint8Array(new ArrayBuffer(text.length / 2));
+  for (let i = 0; i < out.length; i += 1) {
+    out[i] = Number.parseInt(text.slice(i * 2, i * 2 + 2), 16);
+  }
+  return out;
+}
+
+/** Named through `crypto.subtle` so no DOM or Node type for `CryptoKey` is needed. */
+type HmacKey = Awaited<ReturnType<typeof crypto.subtle.importKey>>;
+
+function hmacKey(secret: string, usage: "sign" | "verify"): Promise<HmacKey> {
+  return crypto.subtle.importKey(
+    "raw",
+    encoder.encode(secret),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    [usage],
+  );
+}
+
 /** Lower-case hex HMAC-SHA256 of the canonical query under the organisation's secret. */
-export function signPostbackQuery(params: PostbackParams, secret: string): string {
-  return createHmac("sha256", secret).update(canonicalPostbackQuery(params)).digest("hex");
+export async function signPostbackQuery(params: PostbackParams, secret: string): Promise<string> {
+  const key = await hmacKey(secret, "sign");
+  return hex(await crypto.subtle.sign("HMAC", key, encoder.encode(canonicalPostbackQuery(params))));
 }
 
 const HEX_SIGNATURE = /^[0-9a-fA-F]{64}$/;
 
-/** Constant-time check of `sig` against the expected signature; false for anything malformed. */
-export function verifyPostbackSignature(
+/**
+ * Check `sig` against the expected signature; false for anything malformed or an empty
+ * secret. `crypto.subtle.verify` compares in constant time.
+ */
+export async function verifyPostbackSignature(
   params: PostbackParams,
   sig: string | undefined,
   secret: string,
-): boolean {
+): Promise<boolean> {
   if (secret === "" || sig === undefined || !HEX_SIGNATURE.test(sig)) return false;
-  const expected = Buffer.from(signPostbackQuery(params, secret), "hex");
-  const given = Buffer.from(sig.toLowerCase(), "hex");
-  return expected.length === given.length && timingSafeEqual(expected, given);
+  const key = await hmacKey(secret, "verify");
+  return crypto.subtle.verify(
+    "HMAC",
+    key,
+    fromHex(sig.toLowerCase()),
+    encoder.encode(canonicalPostbackQuery(params)),
+  );
 }
 
 const TEMPLATE_PLACEHOLDER = /%7B%7B([A-Za-z0-9_]+)%7D%7D/g;
@@ -183,17 +224,17 @@ const TEMPLATE_PLACEHOLDER = /%7B%7B([A-Za-z0-9_]+)%7D%7D/g;
  * `{{placeholder}}` values are left unencoded so the result can be pasted as a template;
  * the signature of a template is only an example, the brand signs each real call itself.
  */
-export function buildPostbackUrl(
+export async function buildPostbackUrl(
   baseUrl: string,
   orgKey: string,
   params: PostbackParams,
   secret: string,
-): string {
+): Promise<string> {
   const query = new URLSearchParams();
   for (const key of Object.keys(params).sort()) {
     if (key !== SIGNATURE_PARAM) query.set(key, params[key] ?? "");
   }
-  query.set(SIGNATURE_PARAM, signPostbackQuery(params, secret));
+  query.set(SIGNATURE_PARAM, await signPostbackQuery(params, secret));
   const encoded = query.toString().replace(TEMPLATE_PLACEHOLDER, "{{$1}}");
   return `${baseUrl.replace(/\/+$/, "")}/postback/${encodeURIComponent(orgKey)}?${encoded}`;
 }
@@ -215,14 +256,15 @@ export interface EventKeyInput {
  * event key always give the same value, so a tracker that retries a postback produces a
  * duplicate rather than a second lead or sale. Prefixed with the type for readability.
  */
-export function deriveEventKey(input: EventKeyInput): string {
-  const hash = createHash("sha256")
-    .update(
-      [input.organisationId, input.type, input.dynamicId, input.clientEventKey ?? ""].join("\n"),
-    )
-    .digest("hex")
-    .slice(0, 32);
-  return `${input.type}_${hash}`;
+export async function deriveEventKey(input: EventKeyInput): Promise<string> {
+  const material = [
+    input.organisationId,
+    input.type,
+    input.dynamicId,
+    input.clientEventKey ?? "",
+  ].join("\n");
+  const digest = await crypto.subtle.digest("SHA-256", encoder.encode(material));
+  return `${input.type}_${hex(digest).slice(0, 32)}`;
 }
 
 // ---------------------------------------------------------------------------

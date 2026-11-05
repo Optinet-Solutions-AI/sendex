@@ -109,34 +109,40 @@ describe("signatures", () => {
     );
   });
 
-  it("signs deterministically regardless of key order and verifies", () => {
-    const a = signPostbackQuery({ type: "lead", dynamic_id: DYN }, SECRET);
-    const b = signPostbackQuery({ dynamic_id: DYN, type: "lead" }, SECRET);
+  it("signs deterministically regardless of key order and verifies", async () => {
+    const a = await signPostbackQuery({ type: "lead", dynamic_id: DYN }, SECRET);
+    const b = await signPostbackQuery({ dynamic_id: DYN, type: "lead" }, SECRET);
     expect(a).toBe(b);
     expect(a).toMatch(/^[0-9a-f]{64}$/);
-    expect(verifyPostbackSignature({ type: "lead", dynamic_id: DYN, sig: a }, a, SECRET)).toBe(
-      true,
-    );
     expect(
-      verifyPostbackSignature({ type: "lead", dynamic_id: DYN }, a.toUpperCase(), SECRET),
+      await verifyPostbackSignature({ type: "lead", dynamic_id: DYN, sig: a }, a, SECRET),
+    ).toBe(true);
+    expect(
+      await verifyPostbackSignature({ type: "lead", dynamic_id: DYN }, a.toUpperCase(), SECRET),
     ).toBe(true);
   });
 
-  it("rejects a wrong secret, a tampered parameter, a malformed or missing signature", () => {
-    const sig = signPostbackQuery({ type: "lead", dynamic_id: DYN }, SECRET);
-    expect(verifyPostbackSignature({ type: "lead", dynamic_id: DYN }, sig, "other")).toBe(false);
-    expect(verifyPostbackSignature({ type: "sale", dynamic_id: DYN }, sig, SECRET)).toBe(false);
-    expect(verifyPostbackSignature({ type: "lead", dynamic_id: DYN }, "abc", SECRET)).toBe(false);
-    expect(verifyPostbackSignature({ type: "lead", dynamic_id: DYN }, undefined, SECRET)).toBe(
+  it("rejects a wrong secret, a tampered parameter, a malformed or missing signature", async () => {
+    const sig = await signPostbackQuery({ type: "lead", dynamic_id: DYN }, SECRET);
+    expect(await verifyPostbackSignature({ type: "lead", dynamic_id: DYN }, sig, "other")).toBe(
       false,
     );
-    expect(verifyPostbackSignature({ type: "lead", dynamic_id: DYN }, sig, "")).toBe(false);
+    expect(await verifyPostbackSignature({ type: "sale", dynamic_id: DYN }, sig, SECRET)).toBe(
+      false,
+    );
+    expect(await verifyPostbackSignature({ type: "lead", dynamic_id: DYN }, "abc", SECRET)).toBe(
+      false,
+    );
+    expect(
+      await verifyPostbackSignature({ type: "lead", dynamic_id: DYN }, undefined, SECRET),
+    ).toBe(false);
+    expect(await verifyPostbackSignature({ type: "lead", dynamic_id: DYN }, sig, "")).toBe(false);
   });
 });
 
 describe("buildPostbackUrl", () => {
-  it("builds the signed URL the brand should call", () => {
-    const url = buildPostbackUrl(
+  it("builds the signed URL the brand should call", async () => {
+    const url = await buildPostbackUrl(
       "https://worker.sendex.example/",
       "external",
       { type: "lead", dynamic_id: DYN },
@@ -147,12 +153,12 @@ describe("buildPostbackUrl", () => {
     expect(parsed.searchParams.get("type")).toBe("lead");
     expect(parsed.searchParams.get("dynamic_id")).toBe(DYN);
     expect(parsed.searchParams.get("sig")).toBe(
-      signPostbackQuery({ type: "lead", dynamic_id: DYN }, SECRET),
+      await signPostbackQuery({ type: "lead", dynamic_id: DYN }, SECRET),
     );
   });
 
-  it("keeps template placeholders readable", () => {
-    const url = buildPostbackUrl(
+  it("keeps template placeholders readable", async () => {
+    const url = await buildPostbackUrl(
       "http://localhost:4000",
       "external",
       { type: "lead", dynamic_id: "{{dynamic}}" },
@@ -163,17 +169,17 @@ describe("buildPostbackUrl", () => {
 });
 
 describe("deriveEventKey", () => {
-  it("is deterministic and depends on org, type, dynamic id and client key", () => {
+  it("is deterministic and depends on org, type, dynamic id and client key", async () => {
     const base = { organisationId: ORG, type: "lead" as const, dynamicId: DYN };
-    const key = deriveEventKey(base);
-    expect(key).toBe(deriveEventKey({ ...base }));
+    const key = await deriveEventKey(base);
+    expect(key).toBe(await deriveEventKey({ ...base }));
     expect(key).toMatch(/^lead_[0-9a-f]{32}$/);
-    expect(deriveEventKey({ ...base, type: "sale" })).not.toBe(key);
-    expect(deriveEventKey({ ...base, dynamicId: "other" })).not.toBe(key);
-    expect(deriveEventKey({ ...base, organisationId: DYN })).not.toBe(key);
-    expect(deriveEventKey({ ...base, clientEventKey: "ev-1" })).not.toBe(key);
-    expect(deriveEventKey({ ...base, clientEventKey: "ev-1" })).toBe(
-      deriveEventKey({ ...base, clientEventKey: "ev-1" }),
+    expect(await deriveEventKey({ ...base, type: "sale" })).not.toBe(key);
+    expect(await deriveEventKey({ ...base, dynamicId: "other" })).not.toBe(key);
+    expect(await deriveEventKey({ ...base, organisationId: DYN })).not.toBe(key);
+    expect(await deriveEventKey({ ...base, clientEventKey: "ev-1" })).not.toBe(key);
+    expect(await deriveEventKey({ ...base, clientEventKey: "ev-1" })).toBe(
+      await deriveEventKey({ ...base, clientEventKey: "ev-1" }),
     );
   });
 });

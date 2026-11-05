@@ -28,11 +28,13 @@ function build() {
   return { handler, lines };
 }
 
-function payload(overrides: Partial<PostbackIngestPayload> = {}): PostbackIngestPayload {
+async function payload(
+  overrides: Partial<PostbackIngestPayload> = {},
+): Promise<PostbackIngestPayload> {
   const type = overrides.type ?? "registration";
   return {
     organisationId: seed.organisationId,
-    eventKey: deriveEventKey({
+    eventKey: await deriveEventKey({
       organisationId: seed.organisationId,
       type: type === "registration" ? "lead" : "sale",
       dynamicId: overrides.dynamicId ?? seed.dynamicId,
@@ -53,7 +55,7 @@ async function lap() {
 describe("postback ingest handler", () => {
   it("stores a registration as a lead, attributes it to the message and counts the lap", async () => {
     const { handler, lines } = build();
-    const job = payload();
+    const job = await payload();
     await handler(job, { id: "1", name: "postback", attemptsMade: 0 });
 
     const [stored] = await t.db
@@ -85,14 +87,14 @@ describe("postback ingest handler", () => {
 
   it("ignores a replay of the same event", async () => {
     const { handler, lines } = build();
-    await handler(payload(), { id: "2", name: "postback", attemptsMade: 0 });
+    await handler(await payload(), { id: "2", name: "postback", attemptsMade: 0 });
     expect((await lap()).leads).toBe(1);
     expect(lines[0]?.fields).toMatchObject({ inserted: false, attributed: false });
   });
 
   it("stores a sale with its value on the lap", async () => {
     const { handler } = build();
-    await handler(payload({ type: "sale", valueMicro: 12_500_000 }), {
+    await handler(await payload({ type: "sale", valueMicro: 12_500_000 }), {
       id: "3",
       name: "postback",
       attemptsMade: 0,
@@ -104,7 +106,7 @@ describe("postback ingest handler", () => {
 
   it("keeps an unknown dynamic id unattributed and says so in the log", async () => {
     const { handler, lines } = build();
-    const job = payload({ dynamicId: "never-sent" });
+    const job = await payload({ dynamicId: "never-sent" });
     await handler(job, { id: "4", name: "postback", attemptsMade: 0 });
     const [stored] = await t.db
       .select()
@@ -122,7 +124,7 @@ describe("postback ingest handler", () => {
 
   it("fails loudly when the job carries no organisation id", async () => {
     const { handler } = build();
-    const { organisationId: _dropped, ...job } = payload();
+    const { organisationId: _dropped, ...job } = await payload();
     await expect(
       handler(job as PostbackIngestPayload, { id: "5", name: "postback", attemptsMade: 0 }),
     ).rejects.toThrow(/organisationId/);

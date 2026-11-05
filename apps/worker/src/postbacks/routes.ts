@@ -90,7 +90,7 @@ export function createPostbackRoutes(deps: PostbackRoutesDeps) {
     const params = stringMap(raw);
     const sig = params[SIGNATURE_PARAM];
     const key = await getOrCreatePostbackKey(deps.db, organisationId);
-    if (!verifyPostbackSignature(params, sig, key.secret)) {
+    if (!(await verifyPostbackSignature(params, sig, key.secret))) {
       const rejected = (rejectedByOrg.get(organisationId) ?? 0) + 1;
       rejectedByOrg.set(organisationId, rejected);
       log("warn", "postback signature rejected", {
@@ -106,7 +106,7 @@ export function createPostbackRoutes(deps: PostbackRoutesDeps) {
       return c.json({ error: z.prettifyError(parsed.error) }, 400);
     }
     const event = parsed.data;
-    const eventKey = deriveEventKey({
+    const eventKey = await deriveEventKey({
       organisationId,
       type: event.type,
       dynamicId: event.dynamicId,

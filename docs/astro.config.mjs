@@ -27,6 +27,7 @@ export default defineConfig({
             { label: "Schedule and stop", slug: "using/schedule-and-stop" },
             { label: "Read the results", slug: "using/read-the-results" },
             { label: "Balance and billing", slug: "using/balance-and-billing" },
+            { label: "Daily caps and alerts", slug: "using/caps-and-alerts" },
             { label: "Track conversions", slug: "using/track-conversions" },
           ],
         },

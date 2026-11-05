@@ -49,7 +49,9 @@ on the Billing page):
 The alert is sent once when the balance first drops below the threshold. It is not repeated
 while the balance stays low; once a deposit brings the balance back to the threshold or
 above, the alert arms again and fires on the next dip. The settings page tells you when the
-last alert went out. The caps are enforced by the sending engine when it schedules laps.
+last alert went out. The caps are enforced by the sending engine before every batch it sends;
+what happens when one is reached, and the alerts banner, are described in
+[Daily caps and alerts](caps-and-alerts.md).
 
 ## Audit log
 

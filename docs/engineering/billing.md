@@ -64,7 +64,7 @@ created on first save; migration `0003_settings_and_caps`):
 | `low_balance_threshold_micro` | Alert below this; null disables. |
 | `low_balance_emails` | `text[]`, at most five (checked by the Zod schema and `updateSettings`). |
 | `low_balance_alerted_at` | When the current dip was alerted; null once rearmed. |
-| `daily_message_cap`, `daily_spend_cap_micro` | Null means unlimited. Enforced by the worker when it plans laps (later card). |
+| `daily_message_cap`, `daily_spend_cap_micro` | Null means unlimited. Enforced by the send loop before every batch (D3-11, see "Daily caps and alerts" below and `sending-engine.md`). |
 
 Queries in `queries/settings.ts`: `getSettings` (defaults when there is no row),
 `updateSettings` (upsert, leaves the alert timestamp alone) and `markLowBalanceAlerted(db,
@@ -80,13 +80,58 @@ shouldAlertLowBalance({ balanceMicro, thresholdMicro, alertedAt, now })
   → { action: "none" }                    balance >= threshold and nothing to clear
 ```
 
-The worker (later card) runs it after every debit batch and deposit: on `alert` it sends the
-email to `low_balance_emails` and calls `markLowBalanceAlerted(now)`; on `rearm` it calls
-`markLowBalanceAlerted(null)`. Exactly one email per dip, however many debits follow, and
-a new email the next time the balance falls through the threshold.
+The worker runs it from the dispatcher tick (`apps/worker/src/alerts/checks.ts`, D3-11) for
+every organisation with a threshold set or an alert still to rearm
+(`organisationsWithLowBalanceRule`), at most once per five minutes per organisation: on
+`alert` it raises a `low_balance` alert (below) and calls `markLowBalanceAlerted(now)`; on
+`rearm` it calls `markLowBalanceAlerted(null)`. Exactly one alert per dip, however many
+debits follow, and a new one the next time the balance falls through the threshold. Email
+delivery to `low_balance_emails` is a later card; the alert row carries `recipients` for it.
 
 `updateBillingSettingsAction` is behind `settings.manage` and writes an audit row
 `settings.update` with `{ section: "billing", … }`.
+
+## Daily caps and alerts (D3-11)
+
+User guide: `docs/using/caps-and-alerts.md`. Migration `0005_caps_and_alerts`.
+
+**Rules** (pure, `packages/core/src/caps.ts`):
+
+```
+capDecision({ sentToday, spentTodayMicro, batchSize, batchCostMicro, caps })
+  → { action: "allow" }                              the batch fits (or no cap is set)
+  → { action: "trim", allowed, reason }              only `allowed` fit; reason = the tighter cap
+  → { action: "refuse", reason }                     not one more message today
+spikeDecision({ lastHour, sevenDayHourlyAverage })
+  → { spike: true, ratio }  lastHour > 5 x average and lastHour >= 100 (ratio Infinity on a zero average)
+  → { spike: false }
+```
+
+The spend allowance divides what is left of the cap by the batch's average cost per message
+(rounded up). On a tie the message cap is named. `alertPayloadSchema` validates what goes
+into an alert row: `kind` (`daily_message_cap`, `daily_spend_cap`, `send_spike`,
+`low_balance`), `periodKey`, `message`, JSON-scalar `details` (bigints as strings).
+
+**Usage** (`packages/db/src/queries/usage.ts`): `dailyUsage(db, org, dayStartUtc)` counts the
+organisation's messages created since midnight UTC in any status but `cancelled`, and the
+net of its `reference_type = 'message'` ledger entries since then (debits less refunds,
+clamped at zero). `sendRate(db, org, now)` gives the last hour and the previous 168 hours'
+average for the spike rule. "Today" is the UTC day everywhere (`startOfUtcDay`).
+
+**Alerts** (`packages/db/src/schema/alerts.ts`, `queries/alerts.ts`): `organisation_alerts`
+is unique on `(organisation_id, kind, period_key)`, so `raiseAlert` is idempotent: the first
+call inserts the row and an audit entry `alert.raise`, later calls return the stored row with
+`created: false`. The period key is the UTC day for the caps and the UTC hour for spike and
+low balance, which is what "at most once per hour" means. `listOpenAlerts` feeds the
+dashboard banner (`app/(dashboard)/alerts-banner.tsx`, rendered by the layout for every
+page); `acknowledgeAlert(db, org, { alertId, userId })` is owner-only through
+`acknowledgeAlertAction` (`settings.manage`) and writes `alert.acknowledge` with the actor.
+
+**Enforcement** is in the send loop (`sending-engine.md`, "Daily caps"); the `CapsStore`
+(`queries/caps.ts`) gives it the caps, the usage, `recordLapRefusal` (`laps.refused`,
+`laps.refusal_reason`), `pauseCampaign` (audit `campaign.pause` with `by: "worker"`) and
+`raiseAlert`. The spike check runs from the dispatcher tick, once per five minutes per
+organisation (Redis `SET NX PX` keys `sendex:alerts:spike:<org>` / `sendex:alerts:balance:<org>`).
 
 ## Billing page
 

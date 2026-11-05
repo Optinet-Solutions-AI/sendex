@@ -122,6 +122,37 @@ The skip counts are taken before the lap sends and stored on the `lap.finish` au
 
 The provider is never asked to recall a message; "stop" means no further batch is submitted.
 
+## Daily caps (D3-11)
+
+Before every batch of new messages the guard also asks the organisation's daily caps
+(`organisation_settings.daily_message_cap`, `daily_spend_cap_micro`; both null means the
+check is skipped). `sendLap` gets a `CapsStore` (`packages/db/src/queries/caps.ts`) and a
+clock; `capDecision` from `packages/core` turns today's usage (`dailyUsage`: messages created
+since midnight UTC in any status but cancelled, net message debits since then) and the next
+batch's estimated cost (`wanted x max parts x price`) into one of:
+
+| Decision | What the loop does |
+| --- | --- |
+| `allow` | The batch is created as planned. |
+| `trim` to `allowed` | `claimAndCreateMessages` is called with `limit = allowed`; the next guard call then refuses. |
+| `refuse` | The remaining `remaining` messages are refused: `recordLapRefusal` adds them to `laps.refused` and sets `laps.refusal_reason` (`daily_message_cap` / `daily_spend_cap`); `raiseAlert` stores one alert per cap per UTC day (`alert.raise`); `pauseCampaign` moves a `sending` or `scheduled` campaign to `paused` with an audit row `campaign.pause` `{ reason, by: "worker", lapId, refused, cap }`. The lap then finishes normally (`done`, progress total lowered to what was created, `lap.finish` details carry `refused` and `refusalReason`) and the result is `{ outcome: "done", refused, reason: "daily message cap" }`. |
+
+Paused rather than stopped so the owner can raise the cap under Settings → Billing and
+resume; the refused numbers were never created or charged, so a later "Finish List" lap picks
+them up. Messages left `queued` by an earlier attempt are resubmitted without a cap check:
+they were created, and counted, earlier today. The check is per batch, so laps running in
+parallel for one organisation can each overshoot by one batch at most. The 500-cap / 600-send
+scenario is `send-lap.test.ts` ("sends up to the daily message cap, refuses the rest and
+pauses the campaign"): 10 batches go, the 11th is refused, `refused: 100`.
+
+The spike and low balance checks ride on the dispatcher tick (`apps/worker/src/alerts/checks.ts`,
+`runAlertChecks` after `dispatchQueuedLaps`; a failure there never fails the dispatch):
+organisations with a message in the last hour get `sendRate` → `spikeDecision` (an alert
+`send_spike` per UTC hour), organisations with a low balance rule get
+`shouldAlertLowBalance` (alert `low_balance`, `markLowBalanceAlerted`, rearm). Each organisation
+is checked at most once per five minutes through a Redis `SET NX PX` key, shared by every
+worker process.
+
 ## Progress (D2-06)
 
 Per batch the loop updates Redis counters (7 day TTL):

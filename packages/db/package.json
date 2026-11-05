@@ -13,7 +13,9 @@
     "generate": "drizzle-kit generate",
     "migrate": "tsx src/migrate.ts",
     "seed": "tsx src/seed.ts",
-    "studio": "drizzle-kit studio"
+    "studio": "drizzle-kit studio",
+    "erd": "tsx scripts/erd.ts",
+    "erd:check": "tsx scripts/erd.ts --check"
   },
   "dependencies": {
     "@sendex/core": "workspace:*",

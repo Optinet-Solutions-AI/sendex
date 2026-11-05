@@ -9,7 +9,9 @@
       "!**/dist",
       "!**/.turbo",
       "!**/coverage",
-      "!**/drizzle/meta"
+      "!**/drizzle/meta",
+      "!**/.astro",
+      "!**/*.astro"
     ]
   },
   "formatter": {
@@ -26,6 +28,9 @@
       "style": { "noNonNullAssertion": "error" },
       "correctness": { "noUnusedImports": "error", "noUnusedVariables": "error" }
     }
+  },
+  "markdown": {
+    "formatter": { "enabled": false }
   },
   "javascript": {
     "formatter": { "quoteStyle": "double", "semicolons": "always", "trailingCommas": "all" }

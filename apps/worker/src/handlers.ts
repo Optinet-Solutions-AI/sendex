@@ -1,5 +1,6 @@
-import type { SendingStore } from "@sendex/db";
+import type { Db, SendingStore } from "@sendex/db";
 import type { ProviderRegistry } from "@sendex/providers";
+import { createClickIngestHandler } from "./links/ingest.js";
 import { log as defaultLog, type Logger } from "./log.js";
 import type { JobHandlers } from "./queues.js";
 import { dispatchQueuedLaps, type SendQueueLike } from "./send/dispatcher.js";
@@ -8,6 +9,8 @@ import { sendLap } from "./send/send-lap.js";
 
 export interface HandlerDeps {
   log?: Logger;
+  /** Database for the ingest handlers (clicks now, postbacks and receipts later). */
+  db?: Db;
   store: SendingStore;
   providers: ProviderRegistry;
   redis: Pick<SendRedis, "get">;
@@ -30,6 +33,7 @@ export function createHandlers(deps: HandlerDeps): JobHandlers {
   const stubs = createStubHandlers(log);
   return {
     ...stubs,
+    ...(deps.db ? { clickIngest: createClickIngestHandler(deps.db, log) } : {}),
     async send(job, meta) {
       const result = await sendLap(
         {

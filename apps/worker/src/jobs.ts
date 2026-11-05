@@ -29,6 +29,9 @@ export const clickSchema = z.object({
   clickedAt: z.iso.datetime(),
   ip: nonEmpty,
   userAgent: z.string(),
+  country: z.string().optional(),
+  device: z.string().optional(),
+  asn: z.string().optional(),
 });
 export type Click = z.infer<typeof clickSchema>;
 

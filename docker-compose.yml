@@ -28,12 +28,10 @@ services:
       timeout: 3s
       retries: 10
 
-  # SMPP simulator for the carrier path (D2-15 onwards). Binds on 2775, accepts any system_id/password.
-  smppsim:
-    image: ghcr.io/sendex/smppsim:placeholder
-    profiles: ["carrier"]
-    ports:
-      - "2775:2775"
+  # No SMPP container: the carrier path is exercised by the in-process simulator shipped with
+  # `@sendex/providers` (`startSimulator()` in packages/providers/src/smpp/simulator.ts). The
+  # provider tests start it on a free loopback port, so `pnpm test` needs no Docker at all.
+  # See docs/engineering/providers/smpp.md.
 
 volumes:
   pgdata:

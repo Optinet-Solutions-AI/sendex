@@ -5,6 +5,7 @@ import { Redis } from "ioredis";
 import { createApp } from "./app.js";
 import { createHandlers, createStubHandlers } from "./handlers.js";
 import { queueDepths } from "./health.js";
+import type { ClickBatch } from "./links/ingest.js";
 import { log } from "./log.js";
 import {
   closeQueues,
@@ -42,6 +43,7 @@ if (redis) {
   const handlers =
     store && progress
       ? createHandlers({
+          db: db(),
           store,
           providers: createDefaultProviderRegistry(),
           redis,
@@ -79,12 +81,22 @@ const allQueues =
     ? [...Object.values(queues), ...Object.values(workerSet.deadLetterQueues)]
     : null;
 
+const linksDeps =
+  store && queues && internalSecret
+    ? {
+        db: db(),
+        secret: internalSecret,
+        enqueueClicks: (batch: ClickBatch) => (queues as Queues).clickIngest.add("clicks", batch),
+      }
+    : null;
+
 const app = createApp({
   version,
   checkRedis,
   checkDatabase,
   ...(allQueues ? { getQueueDepths: () => queueDepths(allQueues) } : {}),
   ...(store && progress ? { internal: { secret: internalSecret, store, progress } } : {}),
+  ...(linksDeps ? { links: linksDeps } : {}),
 });
 if (!internalSecret) log("warn", "INTERNAL_API_SECRET not set: /internal routes answer 503");
 

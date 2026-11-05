@@ -3,6 +3,7 @@ import postgres from "postgres";
 import * as schema from "./schema/index.js";
 
 export * from "./queries/ledger.js";
+export * from "./queries/sending.js";
 export * from "./schema/index.js";
 export type { Db } from "./types.js";
 export { schema };

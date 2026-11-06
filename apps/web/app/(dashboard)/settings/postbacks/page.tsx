@@ -2,16 +2,15 @@ import { buildPostbackUrl, can, canonicalPostbackQuery, signPostbackQuery } from
 import { db, findOrganisationByKey, getOrCreatePostbackKey } from "@sendex/db";
 import Link from "next/link";
 import { formatDateTime } from "../../../../lib/format";
+import { workerPublicUrl } from "../../../../lib/worker-public-url";
 import { RequireOrg } from "../../require-org";
 import { RotateSecretButton } from "./rotate-secret-button";
 
 export const dynamic = "force-dynamic";
 
 const EXAMPLE_DYNAMIC = "7b1c3e2a-5d4f-4c6b-8a9e-0f1d2c3b4a59";
-
-function workerBaseUrl(): string {
-  return (process.env.WORKER_PUBLIC_URL ?? "http://localhost:4000").replace(/\/+$/, "");
-}
+/** Stands in for the worker's address in the templates until it is deployed. */
+const WORKER_PLACEHOLDER = "https://<worker-address>";
 
 function Code({ children }: { children: string }) {
   return (
@@ -35,7 +34,8 @@ export default function PostbackSettingsPage() {
           getOrCreatePostbackKey(database, ctx.organisationId),
         ]);
         const orgKey = organisation?.slug ?? ctx.organisationId;
-        const base = workerBaseUrl();
+        const workerUrl = workerPublicUrl();
+        const base = workerUrl ?? WORKER_PLACEHOLDER;
         const leadTemplate = (
           await buildPostbackUrl(
             base,
@@ -73,6 +73,18 @@ export default function PostbackSettingsPage() {
                 .
               </p>
             </div>
+
+            {workerUrl ? null : (
+              <p
+                role="status"
+                data-testid="worker-not-deployed"
+                className="rounded border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900"
+              >
+                The worker service is not deployed yet, so these URLs cannot receive calls. The
+                templates below show the shape; <code>{WORKER_PLACEHOLDER}</code> becomes the
+                worker's address once it is live.
+              </p>
+            )}
 
             <div className="space-y-3 rounded border border-neutral-200 bg-white p-4">
               <h2 className="text-sm font-semibold">Postback URL</h2>

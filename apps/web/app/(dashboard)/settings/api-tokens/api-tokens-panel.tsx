@@ -44,7 +44,8 @@ export function ApiTokensPanel({
   apiBaseUrl,
 }: {
   tokens: ApiTokenView[];
-  apiBaseUrl: string;
+  /** Public address of the worker; null while it is not deployed (no docs link to show). */
+  apiBaseUrl: string | null;
 }) {
   const router = useRouter();
   const { toast } = useToast();
@@ -147,19 +148,26 @@ export function ApiTokensPanel({
           >
             {revealed?.token ?? ""}
           </code>
-          <p className="mt-3 text-xs text-neutral-500">
-            Use it as <code>Authorization: Bearer &lt;token&gt;</code> against{" "}
-            <code>{apiBaseUrl}/api/v1</code>. Reference:{" "}
-            <a
-              href={`${apiBaseUrl}/api/docs`}
-              className="underline"
-              target="_blank"
-              rel="noreferrer"
-            >
-              {apiBaseUrl}/api/docs
-            </a>
-            .
-          </p>
+          {apiBaseUrl ? (
+            <p className="mt-3 text-xs text-neutral-500">
+              Use it as <code>Authorization: Bearer &lt;token&gt;</code> against{" "}
+              <code>{apiBaseUrl}/api/v1</code>. Reference:{" "}
+              <a
+                href={`${apiBaseUrl}/api/docs`}
+                className="underline"
+                target="_blank"
+                rel="noreferrer"
+              >
+                {apiBaseUrl}/api/docs
+              </a>
+              .
+            </p>
+          ) : (
+            <p className="mt-3 text-xs text-amber-800" data-testid="worker-not-deployed">
+              Use it as <code>Authorization: Bearer &lt;token&gt;</code>. The API address and its
+              reference appear here once the worker service is deployed.
+            </p>
+          )}
           <div className="mt-6 flex justify-end gap-2">
             <Button variant="outline" onClick={() => revealed && copy(revealed.token)}>
               Copy

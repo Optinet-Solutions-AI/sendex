@@ -1,6 +1,7 @@
 import type { EmergencyStopState } from "@sendex/core";
 import Link from "next/link";
-import { readEmergencyStop, WorkerApiError } from "../../../../lib/worker-api";
+import { readEmergencyStop, WorkerApiError, workerApiConfig } from "../../../../lib/worker-api";
+import { workerPublicUrl } from "../../../../lib/worker-public-url";
 import { RequireOrg } from "../../require-org";
 import { EmergencyStopSwitch } from "./emergency-stop-switch";
 
@@ -9,6 +10,10 @@ export const dynamic = "force-dynamic";
 async function currentState(
   organisationId: string,
 ): Promise<{ state: EmergencyStopState | null; unavailable: string | null }> {
+  if (!workerPublicUrl() && !workerApiConfig().secret) {
+    // Production before the worker exists: say so instead of quoting a missing variable.
+    return { state: null, unavailable: "the worker service is not deployed yet" };
+  }
   try {
     return { state: await readEmergencyStop(organisationId), unavailable: null };
   } catch (error) {

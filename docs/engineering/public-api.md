@@ -81,7 +81,7 @@ curl -s http://localhost:4405/api/v1/me -H "Authorization: Bearer sdx_…"
 open http://localhost:4405/api/docs
 ```
 
-The web app's settings page reads `WORKER_PUBLIC_URL` to show the base URL and the link to `/api/docs`.
+The web app's settings page shows the base URL and the link to `/api/docs` from `workerPublicUrl()` (`apps/web/lib/worker-public-url.ts`): `WORKER_PUBLIC_URL`, or `http://localhost:4000` outside production; in production without the variable the dialog says the worker is not deployed yet instead.
 
 ## Tests
 

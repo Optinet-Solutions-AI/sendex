@@ -8,7 +8,7 @@ import { createAlertChecksStore, createRedisThrottle } from "./alerts/checks.js"
 import { createApp } from "./app.js";
 import { subscribeDeliveryReceipts } from "./dlr/subscribe.js";
 import { createHandlers, createStubHandlers } from "./handlers.js";
-import { queueDepths } from "./health.js";
+import { cachedQueueDepths, DEFAULT_QUEUE_DEPTH_CACHE_MS, queueDepths } from "./health.js";
 import type { DlrJob } from "./jobs.js";
 import type { ClickBatch } from "./links/ingest.js";
 import { log } from "./log.js";
@@ -121,6 +121,11 @@ const allQueues =
   queues && workerSet
     ? [...Object.values(queues), ...Object.values(workerSet.deadLetterQueues)]
     : null;
+// Health probes every 15 s would otherwise cost 40 Redis commands each (D3-23).
+const queueDepthCacheMs = Number(process.env.QUEUE_DEPTH_CACHE_MS ?? DEFAULT_QUEUE_DEPTH_CACHE_MS);
+const getQueueDepths = allQueues
+  ? cachedQueueDepths(() => queueDepths(allQueues), queueDepthCacheMs)
+  : null;
 
 const linksDeps =
   store && queues && internalSecret
@@ -184,7 +189,7 @@ const app = createApp({
   version,
   checkRedis,
   checkDatabase,
-  ...(allQueues ? { getQueueDepths: () => queueDepths(allQueues) } : {}),
+  ...(getQueueDepths ? { getQueueDepths } : {}),
   ...(store && progress && redis
     ? { internal: { secret: internalSecret, store, progress, redis } }
     : {}),

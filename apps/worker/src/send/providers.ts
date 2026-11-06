@@ -38,24 +38,40 @@ export function createDefaultProviderRegistry(
 /** Why a message was refused by {@link allowlistedProvider}; final, so the send loop refunds it. */
 export const NOT_IN_ALLOWLIST = "NOT_IN_ALLOWLIST";
 
-/**
- * `SEND_ALLOWLIST_E164`: comma or whitespace separated E.164 numbers. When set, every
- * provider refuses any other recipient before the carrier is called. A safety net for the
- * first live sends (D2-18): it makes a seeded or mistaken list harmless. Unset in normal operation.
- */
-export function sendAllowlistFromEnv(env: NodeJS.ProcessEnv): Set<string> | null {
-  const raw = env.SEND_ALLOWLIST_E164?.trim();
-  if (!raw) return null;
-  const numbers = raw.split(/[\s,]+/).filter((n) => n !== "");
-  return numbers.length > 0 ? new Set(numbers) : null;
+/** Exact E.164 numbers and `+prefix*` patterns a send is allowed to go to. */
+export interface SendAllowlist {
+  numbers: ReadonlySet<string>;
+  prefixes: readonly string[];
+  allows(e164: string): boolean;
 }
 
-/** Wrap a provider so only recipients in `allowlist` reach it; the rest fail as {@link NOT_IN_ALLOWLIST}. */
-export function allowlistedProvider(inner: Provider, allowlist: ReadonlySet<string>): Provider {
+/**
+ * `SEND_ALLOWLIST_E164`: comma or whitespace separated entries, each an exact E.164 number
+ * (`+35699000001`) or a prefix with a trailing `*` (`+356*` for every Maltese number). When
+ * set, every provider refuses any other recipient before the carrier is called. A safety net
+ * for the first live sends (D2-18): it makes a seeded or mistaken list harmless. Unset in
+ * normal operation.
+ */
+export function sendAllowlistFromEnv(env: NodeJS.ProcessEnv): SendAllowlist | null {
+  const raw = env.SEND_ALLOWLIST_E164?.trim();
+  if (!raw) return null;
+  const entries = raw.split(/[\s,]+/).filter((n) => n !== "");
+  if (entries.length === 0) return null;
+  const numbers = new Set(entries.filter((e) => !e.endsWith("*")));
+  const prefixes = entries.filter((e) => e.endsWith("*")).map((e) => e.slice(0, -1));
+  return {
+    numbers,
+    prefixes,
+    allows: (e164) => numbers.has(e164) || prefixes.some((p) => p !== "" && e164.startsWith(p)),
+  };
+}
+
+/** Wrap a provider so only recipients the allowlist allows reach it; the rest fail as {@link NOT_IN_ALLOWLIST}. */
+export function allowlistedProvider(inner: Provider, allowlist: SendAllowlist): Provider {
   const guarded: Provider = {
     name: inner.name,
     async send(batch: readonly OutboundMessage[]) {
-      const allowed = batch.filter((m) => allowlist.has(m.to));
+      const allowed = batch.filter((m) => allowlist.allows(m.to));
       const sent = allowed.length > 0 ? await inner.send(allowed) : [];
       const byId = new Map(sent.map((o) => [o.id, o]));
       return batch.map(

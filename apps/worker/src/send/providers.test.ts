@@ -53,6 +53,11 @@ describe("createDefaultProviderRegistry", () => {
 });
 
 describe("send allowlist (SEND_ALLOWLIST_E164)", () => {
+  const allow = (...entries: string[]) => {
+    const list = sendAllowlistFromEnv({ SEND_ALLOWLIST_E164: entries.join(",") });
+    if (!list) throw new Error("empty allowlist");
+    return list;
+  };
   const msg = (id: string, to: string): OutboundMessage => ({
     id,
     to,
@@ -63,17 +68,24 @@ describe("send allowlist (SEND_ALLOWLIST_E164)", () => {
     country: "MT",
   });
 
-  it("parses comma or whitespace separated numbers and ignores a blank value", () => {
+  it("parses exact numbers and prefix patterns, and ignores a blank value", () => {
     expect(sendAllowlistFromEnv({})).toBeNull();
     expect(sendAllowlistFromEnv({ SEND_ALLOWLIST_E164: " , " })).toBeNull();
-    expect(
-      sendAllowlistFromEnv({ SEND_ALLOWLIST_E164: "+35699000001, +35699000002\n+639170000001" }),
-    ).toEqual(new Set(["+35699000001", "+35699000002", "+639170000001"]));
+    const list = sendAllowlistFromEnv({
+      SEND_ALLOWLIST_E164: "+35699000001, +639170000001\n+356*, +63*",
+    });
+    expect(list?.numbers).toEqual(new Set(["+35699000001", "+639170000001"]));
+    expect(list?.prefixes).toEqual(["+356", "+63"]);
+    expect(list?.allows("+35699000001")).toBe(true);
+    expect(list?.allows("+35679123456")).toBe(true);
+    expect(list?.allows("+639998887777")).toBe(true);
+    expect(list?.allows("+447700900000")).toBe(false);
+    expect(sendAllowlistFromEnv({ SEND_ALLOWLIST_E164: "*" })?.allows("+1")).toBe(false);
   });
 
   it("lets only allowlisted recipients reach the carrier and fails the rest as final", async () => {
     const inner = new FakeProvider();
-    const p = allowlistedProvider(inner, new Set(["+35699000001"]));
+    const p = allowlistedProvider(inner, allow("+35699000001"));
     const out = await p.send([
       msg("a", "+35699000001"),
       msg("b", "+447700900000"),
@@ -91,15 +103,18 @@ describe("send allowlist (SEND_ALLOWLIST_E164)", () => {
 
   it("does not call the carrier at all when nothing in the batch is allowed", async () => {
     const inner = new FakeProvider();
-    const p = allowlistedProvider(inner, new Set(["+35699000001"]));
+    const p = allowlistedProvider(inner, allow("+35699000001"));
     await p.send([msg("b", "+447700900000")]);
     expect(inner.sent).toEqual([]);
   });
 
   it("wraps every registered provider when the variable is set", async () => {
-    const registry = createDefaultProviderRegistry({ SEND_ALLOWLIST_E164: "+35699000001" });
-    const out = await registry.get("platform").send([msg("x", "+447700900000")]);
+    const registry = createDefaultProviderRegistry({ SEND_ALLOWLIST_E164: "+356*,+63*" });
+    const out = await registry
+      .get("platform")
+      .send([msg("x", "+447700900000"), msg("y", "+35699000001")]);
     expect(out[0]).toMatchObject({ status: "failed", reason: NOT_IN_ALLOWLIST });
+    expect(out[1]).toMatchObject({ status: "accepted" });
     const plain = createDefaultProviderRegistry({});
     const ok = await plain.get("platform").send([msg("x", "+447700900000")]);
     expect(ok[0]?.status).toBe("accepted");

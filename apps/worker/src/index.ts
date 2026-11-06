@@ -9,6 +9,7 @@ import { createApp } from "./app.js";
 import { subscribeDeliveryReceipts } from "./dlr/subscribe.js";
 import { createHandlers, createStubHandlers } from "./handlers.js";
 import { queueDepths } from "./health.js";
+import type { DlrJob } from "./jobs.js";
 import type { ClickBatch } from "./links/ingest.js";
 import { log } from "./log.js";
 import type { PostbackIngestPayload } from "./postbacks/ingest.js";
@@ -163,6 +164,17 @@ const publicApiDeps =
       }
     : null;
 
+// 23Telecom delivery reports (D2-22): the carrier posts to this public route; receipts go on
+// the `dlr` queue like SMPP ones. Mounted only when the provider is configured.
+const telecom23Secret = process.env.TELECOM23_WEBHOOK_SECRET?.trim();
+const telecom23WebhookDeps =
+  queues && process.env.TELECOM23_API_KEY
+    ? {
+        enqueue: (job: DlrJob) => (queues as Queues).dlr.add("receipt", job),
+        ...(telecom23Secret ? { signingSecret: telecom23Secret } : {}),
+      }
+    : null;
+
 const app = createApp({
   version,
   checkRedis,
@@ -174,7 +186,11 @@ const app = createApp({
   ...(linksDeps ? { links: linksDeps } : {}),
   ...(postbacksDeps ? { postbacks: postbacksDeps } : {}),
   ...(publicApiDeps ? { publicApi: publicApiDeps } : {}),
+  ...(telecom23WebhookDeps ? { telecom23Webhook: telecom23WebhookDeps } : {}),
 });
+if (telecom23WebhookDeps && !telecom23Secret) {
+  log("warn", "TELECOM23_WEBHOOK_SECRET not set: delivery webhook accepts unsigned requests");
+}
 if (!internalSecret) log("warn", "INTERNAL_API_SECRET not set: /internal routes answer 503");
 
 const server = serve({ fetch: app.fetch, port }, (info) => {

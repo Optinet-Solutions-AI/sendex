@@ -101,7 +101,7 @@ describe("seedDemo", () => {
     expect(await getBalanceMicro(t.db, external.id)).toBe(4_988_310_000n);
 
     const custom = await t.db.query.routes.findFirst({ where: eq(routes.name, "23Telecom") });
-    expect(custom?.provider).toBe("smpp");
+    expect(custom?.provider).toBe("23telecom");
     expect(custom?.organisationId).toBe(external.id);
     const [prices] = await t.db
       .select({ n: count() })

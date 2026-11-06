@@ -12,7 +12,9 @@ COPY packages/core/package.json packages/core/
 COPY packages/db/package.json packages/db/
 COPY packages/providers/package.json packages/providers/
 COPY packages/redis-utils/package.json packages/redis-utils/
-RUN pnpm install --frozen-lockfile --filter @sendex/worker...
+# --ignore-scripts: the root `prepare` runs `lefthook install`, which needs git; nothing the
+# worker depends on has a native build step.
+RUN pnpm install --frozen-lockfile --ignore-scripts --filter @sendex/worker...
 
 FROM deps AS build
 COPY apps/worker apps/worker

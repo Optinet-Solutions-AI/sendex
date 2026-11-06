@@ -5,8 +5,10 @@ Three deployables, three hosts. Nothing deploys until the accounts exist; the co
 ## Web (Vercel)
 
 1. Create a Vercel project from the GitHub repo. Root directory `apps/web`, framework Next.js. `apps/web/vercel.json` carries the install and build commands and security headers.
-2. Environment variables (Preview and Production): `DATABASE_URL`, `DATABASE_DIRECT_URL`, `REDIS_URL` or the Upstash REST pair, `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `CLERK_SECRET_KEY`, `CLERK_WEBHOOK_SECRET`, `WORKER_PUBLIC_URL`, `LINKS_BASE_URL`, `SENTRY_DSN`.
+2. Environment variables (Preview and Production): `DATABASE_URL`, `DATABASE_DIRECT_URL`, `REDIS_URL` or the Upstash REST pair, `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `CLERK_SECRET_KEY`, `CLERK_WEBHOOK_SECRET`, `WORKER_PUBLIC_URL`, `INTERNAL_API_SECRET`, `LINKS_BASE_URL`, `SENTRY_DSN`.
 3. Every pull request gets a preview URL; `main` deploys production.
+4. Set the function region next to the database (Settings, Functions): the dashboard runs several queries per page, so a region on another continent adds seconds.
+5. The web app works before the worker exists. Until `WORKER_PUBLIC_URL` and `INTERNAL_API_SECRET` are set, Settings, Postbacks shows its URL templates with a `<worker-address>` placeholder and a "not deployed yet" notice, the API token dialog omits the docs link, and the emergency stop page reports the worker as not deployed (`apps/web/lib/worker-public-url.ts`). Outside production the fallback is `http://localhost:4000`.
 
 ## Worker (Fly.io)
 

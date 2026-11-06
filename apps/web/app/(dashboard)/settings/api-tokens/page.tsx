@@ -1,13 +1,10 @@
 import { db, listApiTokens } from "@sendex/db";
 import Link from "next/link";
+import { workerPublicUrl } from "../../../../lib/worker-public-url";
 import { RequireOrg } from "../../require-org";
 import { ApiTokensPanel, type ApiTokenView } from "./api-tokens-panel";
 
 export const dynamic = "force-dynamic";
-
-function workerBaseUrl(): string {
-  return (process.env.WORKER_PUBLIC_URL ?? "http://localhost:4000").replace(/\/+$/, "");
-}
 
 /**
  * Settings → API tokens: the organisation's tokens for the public API, with create (the
@@ -43,7 +40,7 @@ export default function ApiTokensPage() {
                 keeps only a hash. Revoke a token the moment it may have leaked.
               </p>
             </div>
-            <ApiTokensPanel tokens={tokens} apiBaseUrl={workerBaseUrl()} />
+            <ApiTokensPanel tokens={tokens} apiBaseUrl={workerPublicUrl()} />
           </section>
         );
       }}

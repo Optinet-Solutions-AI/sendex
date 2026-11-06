@@ -67,8 +67,9 @@ describe("cleanUploadRows", () => {
 });
 
 describe("countriesList", () => {
-  it("lists the eighteen supported countries with ISO-2 codes, names and flags", () => {
-    expect(countriesList).toHaveLength(18);
+  it("lists the nineteen supported countries with ISO-2 codes, names and flags", () => {
+    expect(countriesList).toHaveLength(19);
+    expect(countriesList.map((c) => c.code)).toContain("PH");
     const gb = countriesList.find((c) => c.code === "GB");
     expect(gb).toEqual({ code: "GB", name: "United Kingdom", flag: "🇬🇧" });
     expect(countriesList.map((c) => c.code)).toContain("DZ");

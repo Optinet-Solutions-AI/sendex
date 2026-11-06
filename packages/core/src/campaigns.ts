@@ -28,6 +28,7 @@ export const COUNTRY_TIMEZONES: Readonly<Record<string, string>> = {
   AL: "Europe/Tirane",
   CA: "America/Toronto",
   US: "America/New_York",
+  PH: "Asia/Manila",
 };
 
 const COUNTRY_NAMES: Readonly<Record<string, string>> = {
@@ -49,6 +50,7 @@ const COUNTRY_NAMES: Readonly<Record<string, string>> = {
   AL: "Albania",
   CA: "Canada",
   US: "United States",
+  PH: "Philippines",
 };
 
 /** The zone a campaign for `country` is scheduled in; UTC for countries not in the table. */

@@ -2,7 +2,9 @@
 # Secrets (never in the repo): fly secrets set DATABASE_URL=... REDIS_URL=... SMPP_PASSWORD=... POSTBACK_SIGNING_SECRET=...
 # Static egress for carrier whitelisting: fly ips allocate-v4 (dedicated)
 app = "sendex-worker"
-primary_region = "fra"
+# Keep the worker in the same region as the database: the send loop writes a ledger entry and
+# a message row per SMS. Sydney while Supabase is in ap-southeast-2; move to "fra" together.
+primary_region = "syd"
 
 [build]
   dockerfile = "Dockerfile"

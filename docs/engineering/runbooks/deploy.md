@@ -10,10 +10,10 @@ Three deployables, three hosts. Nothing deploys until the accounts exist; the co
 
 ## Worker (Fly.io)
 
-1. `fly launch --no-deploy --copy-config --config apps/worker/fly.toml` from the repo root (app name `sendex-worker`, region `fra`).
+1. `fly launch --no-deploy --copy-config --config apps/worker/fly.toml` from the repo root (app name `sendex-worker`). `primary_region` in `fly.toml` must be the database's region (`syd` while Supabase is in ap-southeast-2; `fra` once it moves): the send loop writes a ledger entry and a message row per SMS.
 2. `fly ips allocate-v4` for a dedicated IPv4; give that address to 23Telecom for whitelisting.
-3. `fly secrets set DATABASE_URL=... REDIS_URL=... SMPP_HOST=... SMPP_PORT=... SMPP_SYSTEM_ID=... SMPP_PASSWORD=... POSTBACK_SIGNING_SECRET=... LINKS_INGEST_SECRET=...`
-4. First deploy: `fly deploy --config apps/worker/fly.toml --dockerfile apps/worker/Dockerfile .`
+3. `fly secrets set DATABASE_URL=... REDIS_URL=... INTERNAL_API_SECRET=... POSTBACK_SIGNING_SECRET=... WORKER_PUBLIC_URL=https://sendex-worker.fly.dev LINKS_BASE_URL=... SMPP_HOST=... SMPP_PORT=... SMPP_SYSTEM_ID=... SMPP_PASSWORD=...` (`INTERNAL_API_SECRET` is the same value the web app and the links service hold; leave the `SMPP_*` ones out until 23Telecom is live and the routes stay on the fake provider).
+4. First deploy: `fly deploy --config apps/worker/fly.toml --dockerfile apps/worker/Dockerfile .` The image runs `node apps/worker/dist/index.js`, an esbuild bundle (`apps/worker/scripts/build.mjs`) that inlines the workspace packages (they ship TypeScript sources) and keeps npm dependencies external; `apps/worker/src/build.test.ts` guards that no `@sendex/*` or `.ts` import survives. Check it locally without Docker: `pnpm --filter @sendex/worker build && node apps/worker/dist/index.js` with the `.env` values, then `curl localhost:4000/health`.
 5. Continuous deploys: add the repository secret `FLY_API_TOKEN` and the repository variable `FLY_DEPLOY_ENABLED=true`; `.github/workflows/deploy-worker.yml` then deploys on every merge to `main` that touches the worker or packages.
 6. Scale to two machines for resilience once the SMPP leader lock (D2-16) is in: `fly scale count 2`.
 

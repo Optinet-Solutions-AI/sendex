@@ -48,7 +48,7 @@ Fill every `TODO` from the 23Telecom onboarding e-mail / portal before going liv
 | `password` | TODO (`SMPP_PASSWORD`, Fly.io secret only) |
 | `system_type` | TODO (often empty; some accounts require a fixed string) |
 | Allowed binds per account | TODO (number of simultaneous sessions; we open one per worker instance) |
-| IP whitelist | TODO: give 23Telecom the worker's Fly.io outbound IP; note the date it was confirmed |
+| IP whitelist | Worker outbound IP `209.71.97.132` (Fly egress IP, region syd, allocated 2026-11-06). TODO: note the date 23Telecom confirms it |
 | Window size | TODO (their maximum outstanding `submit_sm`; set `SMPP_WINDOW`, default 10) |
 | Throughput | TODO (messages per second per bind; set `SMPP_TPS` slightly below it) |
 | Keepalive | `enquire_link` every 30 s (confirm their idle timeout is longer) |

@@ -45,3 +45,7 @@ next-env.d.ts
 
 # Local status pages (tester checklists), published as artifacts, not committed
 docs/status/
+
+# Provider rate cards received by email (contain negotiated prices)
+docs/public/*.xls
+docs/public/*.xlsx

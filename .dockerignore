@@ -1,0 +1,19 @@
+# Build context for apps/worker/Dockerfile is the repo root (fly deploy ... .).
+# Keep installed modules, build output, secrets and git history out of the image.
+**/node_modules
+**/dist
+**/.next
+**/.turbo
+**/coverage
+**/test-results
+**/playwright-report
+.git
+.github
+.claude
+.env
+.env.*
+!.env.example
+apps/links/.dev.vars
+docs
+scripts
+*.md

@@ -25,8 +25,20 @@ Three deployables, three hosts. Nothing deploys until the accounts exist; the co
 2. `pnpm --filter @sendex/links deploy`.
 3. Add the short domains in Cloudflare DNS and route them to the Worker; enable managed WAF rules, bot fight mode and a rate-limit rule on `/*`.
 
+## Releases (D3-19)
+
+Versions come from conventional commits through [release-please](https://github.com/googleapis/release-please) (`.github/workflows/release-please.yml`, `release-please-config.json`, `.release-please-manifest.json`):
+
+1. Every push to `main` refreshes the open "chore(main): release X.Y.Z" pull request: `CHANGELOG.md` from the `feat`/`fix`/`perf`/`docs` subjects since the last tag, and the version in the root and app `package.json` files. Before 1.0 a `feat` bumps the minor, a `fix` the patch.
+2. Merging that pull request tags `vX.Y.Z` and publishes the GitHub release. The tag commit touches `package.json`, so the worker and links deploys run from it; Vercel builds it like any push to `main`.
+3. The version shows in the dashboard sidebar footer (`NEXT_PUBLIC_SENDEX_VERSION`, read from `package.json` at build time), in the worker's `/health` (`SENDEX_VERSION`, passed as a Docker build argument by the deploy workflow) and in the GitHub release.
+
+One-time setup: the release pull request must get a CI run, and pull requests opened with the default `GITHUB_TOKEN` never trigger workflows. Add the repository secret `RELEASE_PLEASE_TOKEN`, a fine-grained personal access token for this repository with Contents and Pull requests set to write; the workflow falls back to `GITHUB_TOKEN` when it is missing, and the release PR then needs a manual empty commit (`git commit --allow-empty`) to get its checks. Links deploys also need `CLOUDFLARE_API_TOKEN` (Workers Scripts: Edit, Workers KV Storage: Edit), `CLOUDFLARE_ACCOUNT_ID` and the variable `CF_DEPLOY_ENABLED=true` (`.github/workflows/deploy-links.yml`), mirroring the worker's `FLY_API_TOKEN` and `FLY_DEPLOY_ENABLED`.
+
 ## Rollback
 
-- Vercel: Deployments, promote the previous one.
-- Fly.io: `fly releases` then `fly deploy --image <previous image>` or `fly releases rollback`.
-- Database: Supabase point-in-time restore, or restore the weekly dump from R2 (see backups runbook once D3-13 lands).
+- Vercel: Deployments, open the previous production deployment, "Instant Rollback" (or `vercel rollback <deployment-url>` with the CLI). Environment variables are not part of a deployment: a rollback keeps the current ones.
+- Fly.io: `fly releases -a sendex-worker` lists versions with their image; `fly deploy -a sendex-worker --image <image of the previous release>` redeploys it (the image stays in the Fly registry). Secrets are not part of a release either. `fly releases rollback` is not available on machines apps.
+- Links: `wrangler rollback` from `apps/links` (Cloudflare keeps the last ten versions), or `wrangler versions list` and `wrangler versions deploy`.
+- Database: migrations are forward-only; a release whose migration must be undone needs a down migration in a hotfix. Data: Supabase point-in-time restore, or the weekly dump from R2 (backups runbook).
+- Order for a bad release: roll the web app back first (users see it), then the worker, then links; a worker on the previous version works with a newer schema as long as the migration only added columns, which is the rule.

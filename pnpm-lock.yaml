@@ -160,6 +160,15 @@ importers:
       ioredis:
         specifier: ^5.7.0
         version: 5.11.1
+      libphonenumber-js:
+        specifier: ^1.13.15
+        version: 1.13.15
+      postgres:
+        specifier: ^3.4.9
+        version: 3.4.9
+      smpp:
+        specifier: 0.6.0-rc.4
+        version: 0.6.0-rc.4
       zod:
         specifier: ^4.1.0
         version: 4.6.7
@@ -167,6 +176,9 @@ importers:
       '@types/node':
         specifier: ^24.3.0
         version: 24.19.2
+      esbuild:
+        specifier: 0.28.2
+        version: 0.28.2
       tsx:
         specifier: ^4.20.0
         version: 4.23.15

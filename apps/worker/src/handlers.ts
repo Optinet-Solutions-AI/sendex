@@ -2,6 +2,7 @@ import type { CapsStore, Db, SendingStore } from "@sendex/db";
 import type { ProviderRegistry } from "@sendex/providers";
 import { type AlertChecksStore, type CheckThrottle, runAlertChecks } from "./alerts/checks.js";
 import { createDlrHandler } from "./dlr/handler.js";
+import { createReceiptPollTick } from "./dlr/poll.js";
 import { createClickIngestHandler } from "./links/ingest.js";
 import { log as defaultLog, type Logger } from "./log.js";
 import { createPostbackIngestHandler } from "./postbacks/ingest.js";
@@ -17,6 +18,8 @@ export interface HandlerDeps {
   db?: Db;
   /** Receipt expiry (D3-01): window and sweep interval; defaults 24 h and 60 s. */
   expiry?: { windowMs?: number | undefined; everyMs?: number | undefined };
+  /** Receipt poll (D2-23): grace period before a `sent` message is asked about, and interval; defaults 10 min and 60 s. */
+  receiptPoll?: { afterMs?: number | undefined; everyMs?: number | undefined };
   store: SendingStore;
   providers: ProviderRegistry;
   redis: Pick<SendRedis, "get">;
@@ -35,7 +38,7 @@ export interface HandlerDeps {
 
 /**
  * The real job handlers. `send` runs the send loop (D2-04/05), `scheduledSend` is the lap
- * dispatcher tick plus the receipt expiry sweep (D3-01); clicks, postbacks and delivery
+ * dispatcher tick plus the receipt expiry sweep (D3-01) and the receipt poll (D2-23); clicks, postbacks and delivery
  * receipts are ingested when a db is given (D2-12, D3-03, D3-01). Payloads may carry phone
  * numbers (DLR receipts, clicks); only log ids and counts.
  */
@@ -43,6 +46,9 @@ export function createHandlers(deps: HandlerDeps): JobHandlers {
   const log = deps.log ?? defaultLog;
   const stubs = createStubHandlers(log);
   const expiry = deps.db ? createExpiryTick({ db: deps.db, log, ...deps.expiry }) : null;
+  const receiptPoll = deps.db
+    ? createReceiptPollTick({ db: deps.db, providers: deps.providers, log, ...deps.receiptPoll })
+    : null;
   return {
     ...stubs,
     ...(deps.db
@@ -90,6 +96,12 @@ export function createHandlers(deps: HandlerDeps): JobHandlers {
       if (expiry) {
         await expiry().catch((err: unknown) =>
           log("error", "receipt expiry sweep failed", { jobId: meta.id, err }),
+        );
+      }
+      // Then the receipt poll (D2-23), for carriers that can be asked about lost webhooks.
+      if (receiptPoll) {
+        await receiptPoll().catch((err: unknown) =>
+          log("error", "receipt poll sweep failed", { jobId: meta.id, err }),
         );
       }
     },

@@ -5,6 +5,7 @@ import { createTestDb, seedOrganisation, type TestDb } from "../test/db.js";
 import {
   applyDeliveryReceipt,
   expireStaleMessages,
+  listMessagesAwaitingReceipt,
   NO_RECEIPT_ERROR_CODE,
   RECEIPT_WINDOW_MS,
 } from "./receipts.js";
@@ -172,6 +173,19 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await t.close();
+});
+
+describe("listMessagesAwaitingReceipt", () => {
+  it("lists carrier ids of one provider's sent messages accepted before the cutoff, oldest first", async () => {
+    const list = (provider: string, sentBefore: Date, limit?: number) =>
+      listMessagesAwaitingReceipt(t.db, { provider, sentBefore, ...(limit ? { limit } : {}) });
+    await expect(list("fake", hoursAgo(0.5))).resolves.toEqual(["p-3", "p-4", "p-1", "p-2"]);
+    await expect(list("fake", hoursAgo(0.5), 2)).resolves.toEqual(["p-3", "p-4"]);
+    await expect(list("fake", hoursAgo(2))).resolves.toEqual(["p-3", "p-4"]);
+    await expect(list("fake", hoursAgo(24))).resolves.toEqual(["p-3"]);
+    await expect(list("smpp", hoursAgo(0.5))).resolves.toEqual(["p-1"]);
+    await expect(list("23telecom", hoursAgo(0.5))).resolves.toEqual([]);
+  });
 });
 
 describe("applyDeliveryReceipt", () => {

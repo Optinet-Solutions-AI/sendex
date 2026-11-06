@@ -35,6 +35,10 @@ const internalSecret = process.env.INTERNAL_API_SECRET;
 // Receipt expiry (D3-01): a `sent` message with no receipt after this long is expired.
 const dlrExpiryMs = Number(process.env.DLR_EXPIRY_MS ?? 24 * 60 * 60 * 1000);
 const dlrExpiryPollMs = Number(process.env.DLR_EXPIRY_POLL_MS ?? 60_000);
+// Receipt poll (D2-23): a `sent` message with no receipt after the grace period is looked up
+// at carriers that can be polled (23Telecom REST), every RECEIPT_POLL_EVERY_MS.
+const receiptPollAfterMs = Number(process.env.RECEIPT_POLL_AFTER_MS ?? 10 * 60 * 1000);
+const receiptPollEveryMs = Number(process.env.RECEIPT_POLL_EVERY_MS ?? 60_000);
 
 // BullMQ requires maxRetriesPerRequest: null on the connection it shares.
 const redisUrl = process.env.REDIS_URL;
@@ -65,6 +69,7 @@ if (redis) {
           caps: createCapsStore(db()),
           alerts: { store: createAlertChecksStore(db()), throttle: createRedisThrottle(redis) },
           expiry: { windowMs: dlrExpiryMs, everyMs: dlrExpiryPollMs },
+          receiptPoll: { afterMs: receiptPollAfterMs, everyMs: receiptPollEveryMs },
         })
       : createStubHandlers();
   workerSet = createWorkers(redis, handlers, { settings });

@@ -36,3 +36,36 @@ export async function queueDepths(
   );
   return depths;
 }
+
+/** How long `/health` reuses the last queue depths. `QUEUE_DEPTH_CACHE_MS`, default 60 s. */
+export const DEFAULT_QUEUE_DEPTH_CACHE_MS = 60_000;
+
+/**
+ * Wrap a depth reader so concurrent and repeated health probes share one Redis round trip
+ * per `ttlMs`. Fly probes `/health` every 15 s and each depth read is four commands per queue
+ * (ten queues with dead letters): uncached that is a third of a free Upstash plan's monthly
+ * budget on probes alone. A failed read is not cached.
+ */
+export function cachedQueueDepths(
+  read: () => Promise<QueueDepths>,
+  ttlMs = DEFAULT_QUEUE_DEPTH_CACHE_MS,
+  now: () => number = Date.now,
+): () => Promise<QueueDepths> {
+  let value: QueueDepths | null = null;
+  let readAt = Number.NEGATIVE_INFINITY;
+  let inFlight: Promise<QueueDepths> | null = null;
+  return async () => {
+    if (value && now() - readAt < ttlMs) return value;
+    if (inFlight) return inFlight;
+    inFlight = read()
+      .then((depths) => {
+        value = depths;
+        readAt = now();
+        return depths;
+      })
+      .finally(() => {
+        inFlight = null;
+      });
+    return inFlight;
+  };
+}

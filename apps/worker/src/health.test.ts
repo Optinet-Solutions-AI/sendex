@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { type DepthSource, queueDepths } from "./health.js";
+import { cachedQueueDepths, type DepthSource, queueDepths } from "./health.js";
 
 function fakeQueue(name: string, counts: Record<string, number>): DepthSource {
   return {
@@ -31,5 +31,38 @@ describe("queueDepths", () => {
 
   it("returns an empty object when there are no queues", async () => {
     expect(await queueDepths([])).toEqual({});
+  });
+});
+
+describe("cachedQueueDepths", () => {
+  it("reads once per ttl, shares one read between concurrent probes, and never caches a failure", async () => {
+    let clock = 1_000_000;
+    let reads = 0;
+    let fail = false;
+    const read = async () => {
+      reads += 1;
+      if (fail) throw new Error("redis down");
+      return { send: { waiting: reads, active: 0, failed: 0, delayed: 0 } };
+    };
+    const depths = cachedQueueDepths(read, 60_000, () => clock);
+
+    const [a, b] = await Promise.all([depths(), depths()]);
+    expect(a).toBe(b);
+    expect(reads).toBe(1);
+
+    clock += 30_000;
+    expect((await depths()).send?.waiting).toBe(1);
+    expect(reads).toBe(1);
+
+    clock += 31_000;
+    expect((await depths()).send?.waiting).toBe(2);
+    expect(reads).toBe(2);
+
+    clock += 61_000;
+    fail = true;
+    await expect(depths()).rejects.toThrow("redis down");
+    fail = false;
+    expect((await depths()).send?.waiting).toBe(4);
+    expect(reads).toBe(4);
   });
 });

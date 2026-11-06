@@ -25,6 +25,17 @@ Three deployables, three hosts. Nothing deploys until the accounts exist; the co
 2. `pnpm --filter @sendex/links deploy`.
 3. Add the short domains in Cloudflare DNS and route them to the Worker; enable managed WAF rules, bot fight mode and a rate-limit rule on `/*`.
 
+## Redis (Upstash)
+
+The worker's queues, the emergency stop flag, rate limiters and progress counters live in one Upstash Redis database (`sendex`, region ap-southeast-2, `REDIS_URL` on Fly). Upstash bills per command below its fixed plans and the **free plan stops answering after 500K commands per month**: on 2026-11-06 the worker reached that after about five hours (`ERR max requests limit exceeded` on every queue, no lap could run). The database must be on a **Fixed plan (250MB, $10/month, unlimited commands)**, or pay-as-you-go with a budget cap as a stopgap.
+
+What costs commands when nothing is being sent, and the knobs (D3-23):
+
+- Idle BullMQ workers block for `DRAIN_DELAY_SECONDS` (30) per poll; a new job wakes them at once, so a longer wait costs no latency.
+- The lap dispatcher repeat job runs every `LAP_POLL_MS` (5 s), about a dozen commands per run; raising it delays when a sent campaign starts.
+- `/health` is probed by Fly every 15 s; queue depths are cached for `QUEUE_DEPTH_CACHE_MS` (60 s) so a probe is one `PING` most of the time.
+- Expect well under five commands per second with no traffic (Upstash console, Usage). A sudden climb usually means a worker stuck in a retry loop: check `fly logs` for repeated `job failed`.
+
 ## Rollback
 
 - Vercel: Deployments, promote the previous one.

@@ -22,6 +22,7 @@ Status: **REST API live in sandbox mode** (2026-11-06). SMPP: template, account 
 | Retries from their side | 3 attempts (10 s, 30 s backoff) on timeout, 408, 429 or 5xx; the worker answers 503 when Redis refuses the job so the carrier retries |
 | Sandbox | Simulated sends with ids `test_…`, a `DELIVRD` webhook about 5 s after each send (`"sandbox": true` in the body), balance untouched, messages kept 24 h. Sandbox keys can call only the send, status and messages endpoints; pricing, balance and webhook settings need a live key |
 | Prices | Not fetched from the API; `route_prices` rows on the 23Telecom route (per country) price the sends, as for every provider |
+| Lost receipts | The worker polls `GET /sms/status/{id}` for `sent` messages whose webhook has not arrived after `RECEIPT_POLL_AFTER_MS` (default 10 min), at most every `RECEIPT_POLL_EVERY_MS` (60 s), 200 ids per poll (D2-23). The sandbox sends each receipt once from a bounded pool, so a burst of 200 loses most of them; live receipts are not guaranteed either |
 
 Code: `packages/providers/src/http/telecom23-provider.ts` (adapter), `apps/worker/src/webhooks/telecom23.ts` (webhook), `apps/worker/src/send/providers.ts` (registration). Decision record: ADR 0007.
 

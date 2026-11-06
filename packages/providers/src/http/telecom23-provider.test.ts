@@ -241,6 +241,77 @@ describe("Telecom23Provider.parseDeliveryReceipt", () => {
   });
 });
 
+describe("Telecom23Provider.pollReceipts", () => {
+  const statusBody = (id: string, status: string, extra: Record<string, unknown> = {}) => ({
+    status: 200,
+    body: {
+      status: true,
+      sandbox: true,
+      message: {
+        message_id: id,
+        recipient: "+34600000000",
+        status,
+        status_code: "000",
+        delivered_at: "2026-11-06T15:11:19.485Z",
+        ...extra,
+      },
+    },
+  });
+
+  it("asks /sms/status per id and returns receipts only for final states", async () => {
+    const { fetch, calls } = fakeFetch([
+      statusBody("test_1", "DELIVRD"),
+      statusBody("test_2", "SENT"),
+      statusBody("test_3", "UNDELIV", { status_code: "034" }),
+      { status: 404, body: { status: false, error_code: "NOT_FOUND" } },
+    ]);
+    const p = new Telecom23Provider({ apiKey: "sk_test_abc", fetch, pollConcurrency: 2 });
+    const out = await p.pollReceipts(["test_1", "test_2", "test_3", "gone/4"]);
+    expect(out).toEqual([
+      {
+        providerMessageId: "test_1",
+        status: "delivered",
+        at: new Date("2026-11-06T15:11:19.485Z"),
+      },
+      {
+        providerMessageId: "test_3",
+        status: "failed",
+        errorCode: "034",
+        at: new Date("2026-11-06T15:11:19.485Z"),
+      },
+    ]);
+    expect(calls.map((c) => c.url)).toEqual([
+      `${TELECOM23_BASE_URL}/sms/status/test_1`,
+      `${TELECOM23_BASE_URL}/sms/status/test_2`,
+      `${TELECOM23_BASE_URL}/sms/status/test_3`,
+      `${TELECOM23_BASE_URL}/sms/status/gone%2F4`,
+    ]);
+    const headers = new Headers(calls[0]?.init.headers);
+    expect(headers.get("x-api-key")).toBe("sk_test_abc");
+    expect(calls[0]?.init.method).toBeUndefined();
+  });
+
+  it("returns nothing for an empty list without calling the API", async () => {
+    const { fetch, calls } = fakeFetch([]);
+    const p = new Telecom23Provider({ apiKey: "k", fetch });
+    await expect(p.pollReceipts([])).resolves.toEqual([]);
+    expect(calls).toHaveLength(0);
+  });
+
+  it("throws on authentication, server and network failures so the sweep logs and retries later", async () => {
+    const unauthorized = fakeFetch([
+      { status: 401, body: { status: false, error_code: "UNAUTHORIZED" } },
+    ]);
+    await expect(
+      new Telecom23Provider({ apiKey: "k", fetch: unauthorized.fetch }).pollReceipts(["a"]),
+    ).rejects.toThrow("401 UNAUTHORIZED");
+    const down = fakeFetch([new Error("ECONNRESET")]);
+    await expect(
+      new Telecom23Provider({ apiKey: "k", fetch: down.fetch }).pollReceipts(["a"]),
+    ).rejects.toThrow("ECONNRESET");
+  });
+});
+
 describe("isFinalDeliveryStatus", () => {
   it("knows which carrier statuses end a message", () => {
     for (const s of ["DELIVRD", "UNDELIV", "REJECTD", "EXPIRED", "UNKNOWN", "DELETED", "failed"]) {

@@ -1,4 +1,4 @@
-import { and, eq, inArray, lt, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, isNotNull, lt, sql } from "drizzle-orm";
 import { laps } from "../schema/campaigns.js";
 import { routes } from "../schema/routes.js";
 import { messages } from "../schema/tracking.js";
@@ -170,4 +170,40 @@ export async function expireStaleMessages(
     }
     return expired.length;
   });
+}
+
+export interface AwaitingReceiptOptions {
+  /** Registry name of the provider (`routes.provider`). */
+  provider: string;
+  /** Only messages accepted before this instant: the carrier's own webhook gets this long first. */
+  sentBefore: Date;
+  /** At most this many ids, oldest first. Default 200. */
+  limit?: number;
+}
+
+/**
+ * Carrier ids of `sent` messages on routes of `provider` that still have no receipt, oldest
+ * first: what the receipt poll (D2-23) asks the carrier about when a delivery webhook never
+ * arrived. Runs across organisations, like the expiry sweep.
+ */
+export async function listMessagesAwaitingReceipt(
+  db: Db,
+  options: AwaitingReceiptOptions,
+): Promise<string[]> {
+  const acceptedAt = sql`coalesce(${messages.sentAt}, ${messages.createdAt})`;
+  const rows = await db
+    .select({ providerMessageId: messages.providerMessageId })
+    .from(messages)
+    .innerJoin(routes, eq(routes.id, messages.routeId))
+    .where(
+      and(
+        eq(messages.status, "sent"),
+        eq(routes.provider, options.provider),
+        isNotNull(messages.providerMessageId),
+        lt(acceptedAt, sql`${options.sentBefore.toISOString()}::timestamptz`),
+      ),
+    )
+    .orderBy(asc(acceptedAt), asc(messages.providerMessageId))
+    .limit(options.limit ?? 200);
+  return rows.flatMap((r) => (r.providerMessageId === null ? [] : [r.providerMessageId]));
 }

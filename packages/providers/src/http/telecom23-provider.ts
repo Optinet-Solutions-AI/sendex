@@ -36,6 +36,8 @@ export interface Telecom23ProviderOptions {
   timeoutMs?: number;
   /** Price per SMS part in EUR keyed by `${route}:${country}`; the worker uses `route_prices`. */
   prices?: Record<string, number>;
+  /** Parallel status lookups per {@link Telecom23Provider.pollReceipts} call. Default 5. */
+  pollConcurrency?: number;
 }
 
 /** Statuses that end a message. Everything else (`SENT`, `ENROUTE`, `ACCEPTD`, `pending`) is on the way. */
@@ -99,6 +101,7 @@ export class Telecom23Provider implements Provider {
   private readonly maxPerRequest: number;
   private readonly timeoutMs: number;
   private readonly prices: Record<string, number>;
+  private readonly pollConcurrency: number;
 
   constructor(opts: Telecom23ProviderOptions) {
     this.name = opts.name ?? "23telecom";
@@ -108,6 +111,7 @@ export class Telecom23Provider implements Provider {
     this.maxPerRequest = Math.max(1, Math.min(opts.maxPerRequest ?? DEFAULT_MAX_PER_REQUEST, 1000));
     this.timeoutMs = opts.timeoutMs ?? DEFAULT_TIMEOUT_MS;
     this.prices = opts.prices ?? {};
+    this.pollConcurrency = Math.max(1, opts.pollConcurrency ?? 5);
   }
 
   async send(batch: readonly OutboundMessage[]): Promise<SubmitOutcome[]> {
@@ -200,6 +204,53 @@ export class Telecom23Provider implements Provider {
       errorCode: code ? String(r.status_code) : r.status,
       at,
     };
+  }
+
+  /**
+   * The receipt poll fallback (D2-23): `GET /sms/status/{id}` per id, a few in parallel.
+   * The sandbox synthesizes one webhook per message with no retries and a bounded pool, and
+   * the docs say a live delivery report is not guaranteed either, so `sent` messages whose
+   * webhook never came are asked about here. Only final states come back.
+   */
+  async pollReceipts(providerMessageIds: readonly string[]): Promise<DeliveryReceipt[]> {
+    const receipts: DeliveryReceipt[] = [];
+    for (let i = 0; i < providerMessageIds.length; i += this.pollConcurrency) {
+      const chunk = providerMessageIds.slice(i, i + this.pollConcurrency);
+      const found = await Promise.all(chunk.map((id) => this.fetchStatus(id)));
+      for (const r of found) if (r) receipts.push(r);
+    }
+    return receipts;
+  }
+
+  private async fetchStatus(providerMessageId: string): Promise<DeliveryReceipt | null> {
+    let response: Response;
+    try {
+      response = await this.fetchImpl(
+        `${this.baseUrl}/sms/status/${encodeURIComponent(providerMessageId)}`,
+        {
+          headers: { "x-api-key": this.apiKey, accept: "application/json" },
+          signal: AbortSignal.timeout(this.timeoutMs),
+        },
+      );
+    } catch (err) {
+      const reason = err instanceof Error ? err.message : String(err);
+      throw new Error(`23telecom status lookup failed: ${reason}`);
+    }
+    if (response.status === 404) return null;
+    let body: unknown = null;
+    try {
+      body = await response.json();
+    } catch {
+      body = null;
+    }
+    if (!response.ok) {
+      const code = errorCodeOf(body, response.statusText || "ERROR");
+      throw new Error(`23telecom status lookup answered ${response.status} ${code}`);
+    }
+    const message = (body as { message?: unknown } | null)?.message;
+    if (message === null || typeof message !== "object") return null;
+    const m = message as { timestamp?: unknown; delivered_at?: unknown };
+    return this.parseDeliveryReceipt({ ...m, timestamp: m.timestamp ?? m.delivered_at });
   }
 
   async priceFor(route: string, country: string): Promise<number | null> {

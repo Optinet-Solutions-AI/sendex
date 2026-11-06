@@ -35,4 +35,17 @@ export interface Provider {
   priceFor(route: string, country: string): Promise<number | null>;
   /** Whether a sender id is acceptable for the country on this provider. */
   validateSenderId(senderId: string, country: string): { ok: true } | { ok: false; reason: string };
+  /**
+   * Ask the carrier for the state of messages it accepted (D2-23): the fallback when a
+   * delivery webhook never arrives. Returns a receipt for every id that reached a final
+   * state; ids still in flight or unknown to the carrier are left out. Throws only on a
+   * transport or authentication failure. Optional: push-only carriers (SMPP) leave it out.
+   */
+  pollReceipts?(providerMessageIds: readonly string[]): Promise<DeliveryReceipt[]>;
+}
+
+export type PollingProvider = Provider & { pollReceipts: NonNullable<Provider["pollReceipts"]> };
+
+export function canPollReceipts(provider: Provider): provider is PollingProvider {
+  return typeof provider.pollReceipts === "function";
 }

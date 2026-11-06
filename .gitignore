@@ -42,3 +42,6 @@ next-env.d.ts
 
 # Local secrets for wrangler dev (apps/links)
 .dev.vars
+
+# Local status pages (tester checklists), published as artifacts, not committed
+docs/status/

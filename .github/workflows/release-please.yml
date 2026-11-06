@@ -1,0 +1,32 @@
+name: Release
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: release-please
+  cancel-in-progress: false
+
+jobs:
+  release-please:
+    name: Release PR and tag
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      # Opens or refreshes the "chore(main): release x.y.z" PR from the conventional commits
+      # since the last tag (CHANGELOG.md, version bumps). Merging that PR creates the tag
+      # vX.Y.Z and the GitHub release; the deploy workflows then build from main with that version.
+      #
+      # RELEASE_PLEASE_TOKEN is a personal access token (contents + pull requests, write). With
+      # the default GITHUB_TOKEN the release PR gets no CI run, so the required check never
+      # passes and it cannot be merged. See docs/engineering/runbooks/deploy.md, Releases.
+      - uses: googleapis/release-please-action@v4
+        with:
+          token: ${{ secrets.RELEASE_PLEASE_TOKEN || secrets.GITHUB_TOKEN }}
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json

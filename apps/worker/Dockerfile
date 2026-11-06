@@ -28,7 +28,9 @@ RUN pnpm --filter @sendex/worker run build
 
 FROM base AS runtime
 WORKDIR /app
-ENV NODE_ENV=production
+# The release version shown by /health (`vX.Y.Z` from the root package.json at deploy time).
+ARG SENDEX_VERSION=dev
+ENV NODE_ENV=production SENDEX_VERSION=$SENDEX_VERSION
 COPY --from=build /app ./
 USER node
 EXPOSE 4000

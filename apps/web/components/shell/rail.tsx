@@ -163,6 +163,15 @@ export function Rail({ tree, brand }: { tree: readonly NavGroup[]; brand: ReactN
             );
           })}
         </ul>
+        <p
+          className={cn(
+            "mt-auto truncate px-4 py-3 font-mono text-[11px] text-neutral-500",
+            !wide && "sr-only",
+          )}
+          data-testid="app-version"
+        >
+          Sendex {process.env.NEXT_PUBLIC_SENDEX_VERSION ?? "dev"}
+        </p>
       </div>
     </nav>
   );

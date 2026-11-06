@@ -23,6 +23,11 @@ helpers in `packages/db/src/queries/tenancy.ts` (`ensureUser`, `ensureOrganisati
    Clerk's `auth()` (`userId`, `orgId`, `orgRole`), looks up the local rows and creates them on
    first sight, so a user who signs in before the webhook has been delivered still works. If
    the session role differs from the stored membership the membership is updated.
+   A returning member costs one query: `getTenantByClerkIds` joins the user, the organisation
+   and the membership role, and nothing is written when the role matches the session. Only a
+   user or organisation seen for the first time goes through `ensureUser` / `ensureOrganisation`
+   one by one. `requireOrg()` is wrapped in React's `cache()`, so the dashboard layout, the page
+   and any server action of the same request resolve the tenant once (D3-22).
 
 `requireOrg()` returns `{ userId, clerkUserId, organisationId, clerkOrgId, role }`. It throws
 an `AuthError` with `status` 401 (`unauthenticated`) when there is no session and 403

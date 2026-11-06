@@ -5,11 +5,12 @@ import {
   db,
   ensureOrganisation,
   ensureUser,
-  getMembership,
   getOrganisationByClerkId,
+  getTenantByClerkIds,
   getUserByClerkId,
   upsertMembership,
 } from "@sendex/db";
+import { cache } from "react";
 import { roleFromClerk } from "./clerk-roles";
 import { devOrgContext } from "./dev-auth";
 import { authMode } from "./env";
@@ -72,10 +73,16 @@ async function resolveOrganisation(database: Database, clerkOrgId: string) {
  * Resolve the signed-in user and their active organisation, creating the local rows on first
  * sight. Throws `AuthError` 401 without a session and 403 without an active organisation.
  *
+ * A returning member costs one query: `getTenantByClerkIds` brings the user, the organisation
+ * and the membership role together, and nothing is written when the role already matches the
+ * session. Only a user or organisation seen for the first time takes the row-by-row path.
+ * The result is memoised per request (React `cache`), so the layout, the page and a server
+ * action in the same request resolve the tenant once.
+ *
  * In `authMode() === "dev"` (no Clerk keys, `SENDEX_DEV_AUTH=1`, never in production) the
  * seeded development user and organisation are returned instead; see `dev-auth.ts`.
  */
-export async function requireOrg(): Promise<OrgContext> {
+export const requireOrg = cache(async (): Promise<OrgContext> => {
   if (authMode() === "dev") return devOrgContext();
   const session = await auth();
   if (!session.userId) {
@@ -86,13 +93,11 @@ export async function requireOrg(): Promise<OrgContext> {
   }
   const role = roleFromClerk(session.orgRole);
   const database = db();
-  const user = await resolveUser(database, session.userId);
-  const organisation = await resolveOrganisation(database, session.orgId);
-  const membership = await getMembership(database, {
-    organisationId: organisation.id,
-    userId: user.id,
-  });
-  if (!membership || membership.role !== role) {
+  const ids = { clerkUserId: session.userId, clerkOrgId: session.orgId };
+  const known = await getTenantByClerkIds(database, ids);
+  const user = known?.user ?? (await resolveUser(database, session.userId));
+  const organisation = known?.organisation ?? (await resolveOrganisation(database, session.orgId));
+  if (known?.membershipRole !== role) {
     // Clerk is the source of truth for membership; mirror the session's role locally.
     await upsertMembership(database, { organisationId: organisation.id, userId: user.id, role });
   }
@@ -103,7 +108,7 @@ export async function requireOrg(): Promise<OrgContext> {
     clerkOrgId: session.orgId,
     role,
   };
-}
+});
 
 /** `requireOrg()` plus a permission check. Throws `AuthError` 403 when the role may not act. */
 export async function requireAction(action: Action): Promise<OrgContext> {

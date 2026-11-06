@@ -92,6 +92,12 @@ export default async function DashboardLayout({ children }: { children: ReactNod
             ))}
           </ul>
         </nav>
+        <p
+          className="border-t border-neutral-200 px-4 py-3 text-xs text-neutral-400"
+          data-testid="app-version"
+        >
+          Sendex {process.env.NEXT_PUBLIC_SENDEX_VERSION ?? "dev"}
+        </p>
       </aside>
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="flex h-14 items-center justify-between gap-4 border-b border-neutral-200 bg-white px-6">

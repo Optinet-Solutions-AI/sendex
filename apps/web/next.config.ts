@@ -1,7 +1,15 @@
+import { createRequire } from "node:module";
 import type { NextConfig } from "next";
+
+const require = createRequire(import.meta.url);
+const { version } = require("../../package.json") as { version: string };
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  env: {
+    // The release version (root package.json, bumped by release-please) for the sidebar footer.
+    NEXT_PUBLIC_SENDEX_VERSION: `v${version}`,
+  },
   transpilePackages: ["@sendex/core", "@sendex/db", "@sendex/ui"],
   serverExternalPackages: ["postgres"],
   poweredByHeader: false,

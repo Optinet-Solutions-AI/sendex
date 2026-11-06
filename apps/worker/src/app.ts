@@ -4,6 +4,7 @@ import { createInternalApi, type InternalApiDeps } from "./internal-api.js";
 import { createInternalLinksRoutes, type InternalLinksDeps } from "./links/internal-routes.js";
 import { createPostbackRoutes, type PostbackRoutesDeps } from "./postbacks/routes.js";
 import { createPublicApi, type PublicApiDeps } from "./public-api/routes.js";
+import { createTelecom23WebhookRoutes, type Telecom23WebhookDeps } from "./webhooks/telecom23.js";
 
 export interface HealthDeps {
   version: string;
@@ -22,6 +23,8 @@ export interface AppDeps extends HealthDeps {
   postbacks?: PostbackRoutesDeps;
   /** Optional: mounts the public `/api/v1/*` routes, `/api/openapi.json` and `/api/docs`. */
   publicApi?: PublicApiDeps;
+  /** Optional: mounts `/webhooks/23telecom/delivery` (carrier delivery reports). */
+  telecom23Webhook?: Telecom23WebhookDeps;
 }
 
 /** The HTTP surface of the worker: health, the internal API, postbacks and the public API. */
@@ -43,6 +46,7 @@ export function createApp(deps: AppDeps) {
   if (deps.links) app.route("/", createInternalLinksRoutes(deps.links));
   if (deps.postbacks) app.route("/", createPostbackRoutes(deps.postbacks));
   if (deps.publicApi) app.route("/", createPublicApi(deps.publicApi));
+  if (deps.telecom23Webhook) app.route("/", createTelecom23WebhookRoutes(deps.telecom23Webhook));
 
   return app;
 }

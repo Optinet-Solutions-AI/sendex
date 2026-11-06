@@ -369,10 +369,12 @@ async function seedRoutes(db: Db, externalOrganisationId: string): Promise<numbe
   const customRoute = {
     id: seedUuid(`route:${externalOrganisationId}:23Telecom`),
     organisationId: externalOrganisationId,
-    provider: "smpp",
+    // 23Telecom's REST API (D2-22); flip to "smpp" with { bind: "transceiver", port: 2775 }
+    // once the SMPP account is live and a static IP is whitelisted.
+    provider: "23telecom",
     name: "23Telecom",
     country: null,
-    config: { bind: "transceiver", port: 2775 },
+    config: { api: "rest", docs: "https://docs.23telecom.co.uk" },
   };
   await db
     .insert(routes)

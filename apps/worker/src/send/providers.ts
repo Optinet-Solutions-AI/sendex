@@ -3,13 +3,17 @@ import {
   FakeProvider,
   type ProviderRegistry,
   SmppProvider,
+  Telecom23Provider,
 } from "@sendex/providers";
+
+export const TELECOM23_PROVIDER_NAME = "23telecom";
 
 /**
  * The providers this worker can send through, keyed by the `routes.provider` column.
  * `platform` (rented SMS Edge style routes) and `fake` go to the FakeProvider until real
- * platform adapters exist; `smpp` (23Telecom) is registered when SMPP_HOST is configured.
- * Prices come from `route_prices`, so the SMPP provider's own price map stays empty.
+ * platform adapters exist; `23telecom` (their REST API) is registered when
+ * TELECOM23_API_KEY is set and `smpp` (23Telecom over SMPP) when SMPP_HOST is configured.
+ * Prices come from `route_prices`, so the carrier providers' own price maps stay empty.
  */
 export function createDefaultProviderRegistry(
   env: NodeJS.ProcessEnv = process.env,
@@ -17,9 +21,24 @@ export function createDefaultProviderRegistry(
   const registry = createProviderRegistry()
     .register("platform", new FakeProvider())
     .register("fake", new FakeProvider());
+  const telecom23 = telecom23ProviderFromEnv(env);
+  if (telecom23) registry.register(TELECOM23_PROVIDER_NAME, telecom23);
   const smpp = smppProviderFromEnv(env);
   if (smpp) registry.register("smpp", smpp);
   return registry;
+}
+
+/** `TELECOM23_API_KEY` (sandbox `sk_test_…` or live `sk_prod_…`), optional `TELECOM23_BASE_URL`. */
+export function telecom23ProviderFromEnv(env: NodeJS.ProcessEnv): Telecom23Provider | null {
+  const apiKey = env.TELECOM23_API_KEY?.trim();
+  if (!apiKey) return null;
+  const baseUrl = env.TELECOM23_BASE_URL?.trim();
+  return new Telecom23Provider({
+    name: TELECOM23_PROVIDER_NAME,
+    apiKey,
+    ...(baseUrl ? { baseUrl } : {}),
+    prices: {},
+  });
 }
 
 export function smppProviderFromEnv(env: NodeJS.ProcessEnv): SmppProvider | null {

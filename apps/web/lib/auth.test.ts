@@ -26,8 +26,21 @@ const store = vi.hoisted(() => {
       users.clear();
       orgs.clear();
       memberships.clear();
+      store.tenantLookups = 0;
+      store.writes = 0;
     },
+    writes: 0,
     db: () => ({}),
+    /** Counts the one-query fast path so the tests can assert how much a request costs. */
+    tenantLookups: 0,
+    getTenantByClerkIds: async (_db: unknown, ids: { clerkUserId: string; clerkOrgId: string }) => {
+      store.tenantLookups += 1;
+      const user = users.get(ids.clerkUserId);
+      const organisation = orgs.get(ids.clerkOrgId);
+      if (!user || !organisation) return null;
+      const membership = memberships.get(key(organisation.id, user.id));
+      return { user, organisation, membershipRole: membership?.role ?? null };
+    },
     getUserByClerkId: async (_db: unknown, clerkUserId: string) => users.get(clerkUserId) ?? null,
     getOrganisationByClerkId: async (_db: unknown, clerkOrgId: string) =>
       orgs.get(clerkOrgId) ?? null,
@@ -52,6 +65,7 @@ const store = vi.hoisted(() => {
       _db: unknown,
       input: { organisationId: string; userId: string; role: string },
     ) => {
+      store.writes += 1;
       memberships.set(key(input.organisationId, input.userId), input);
       return input;
     },
@@ -190,6 +204,23 @@ describe("requireOrg", () => {
     const ctx = await requireOrg();
     expect(ctx.role).toBe("campaign_manager");
     expect(store.memberships.get("o_org_1:u_user_1")?.role).toBe("campaign_manager");
+    expect(clerk.currentUser).not.toHaveBeenCalled();
+    expect(clerk.getOrganization).not.toHaveBeenCalled();
+  });
+
+  it("costs a returning member one lookup and no write", async () => {
+    store.users.set("user_1", { id: "u_user_1", clerkUserId: "user_1", email: "x@example.com" });
+    store.orgs.set("org_1", { id: "o_org_1", clerkOrgId: "org_1", name: "External", slug: "ext" });
+    store.memberships.set("o_org_1:u_user_1", {
+      organisationId: "o_org_1",
+      userId: "u_user_1",
+      role: "owner",
+    });
+    signedIn();
+    const ctx = await requireOrg();
+    expect(ctx.organisationId).toBe("o_org_1");
+    expect(store.tenantLookups).toBe(1);
+    expect(store.writes).toBe(0);
     expect(clerk.currentUser).not.toHaveBeenCalled();
     expect(clerk.getOrganization).not.toHaveBeenCalled();
   });

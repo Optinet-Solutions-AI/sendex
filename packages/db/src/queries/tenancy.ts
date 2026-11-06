@@ -29,6 +29,36 @@ export interface UpsertMembershipInput extends MembershipKey {
   role: Role;
 }
 
+export interface TenantLookup {
+  user: UserRow;
+  organisation: OrganisationRow;
+  /** Null when the user has no membership row in the organisation yet. */
+  membershipRole: Role | null;
+}
+
+/**
+ * The user, the organisation and the user's role in it, in one round trip: what every
+ * dashboard request needs before it can render. Null when either row does not exist locally
+ * yet (first sight of a user or organisation); the caller then creates them one by one.
+ */
+export async function getTenantByClerkIds(
+  db: Db,
+  ids: { clerkUserId: string; clerkOrgId: string },
+): Promise<TenantLookup | null> {
+  const [row] = await db
+    .select({ user: users, organisation: organisations, membershipRole: memberships.role })
+    .from(users)
+    .innerJoin(organisations, eq(organisations.clerkOrgId, ids.clerkOrgId))
+    .leftJoin(
+      memberships,
+      and(eq(memberships.organisationId, organisations.id), eq(memberships.userId, users.id)),
+    )
+    .where(eq(users.clerkUserId, ids.clerkUserId))
+    .limit(1);
+  if (!row) return null;
+  return { user: row.user, organisation: row.organisation, membershipRole: row.membershipRole };
+}
+
 /** Find the local user mirrored from a Clerk user, if the webhook or a sign-in has created it. */
 export async function getUserByClerkId(db: Database, clerkUserId: string): Promise<UserRow | null> {
   const [row] = await db.select().from(users).where(eq(users.clerkUserId, clerkUserId)).limit(1);

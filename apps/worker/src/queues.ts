@@ -99,6 +99,13 @@ export interface WorkerSettings {
   lapPollMs: number;
   /** How long a paused lap waits before checking the campaign again. `PAUSE_RETRY_MS`, default 10000. */
   pauseRetryMs: number;
+  /**
+   * How long an idle worker blocks waiting for a job before it asks Redis again, in seconds.
+   * `DRAIN_DELAY_SECONDS`, default 30. A job added to the queue wakes the worker at once, so
+   * this costs no latency; it only sets how many commands an idle worker sends (BullMQ's own
+   * default of 5 s is 6 times chattier, which matters on a per-command Redis plan).
+   */
+  drainDelaySeconds: number;
 }
 
 type Env = Record<string, string | undefined>;
@@ -120,6 +127,7 @@ export function workerSettingsFromEnv(env: Env = process.env): WorkerSettings {
     ingestConcurrency: positiveInt(env, "INGEST_CONCURRENCY", 5),
     lapPollMs: positiveInt(env, "LAP_POLL_MS", 5000),
     pauseRetryMs: positiveInt(env, "PAUSE_RETRY_MS", 10_000),
+    drainDelaySeconds: positiveInt(env, "DRAIN_DELAY_SECONDS", 30),
   };
 }
 
@@ -297,6 +305,7 @@ export function createWorkers(
     const name = QUEUES[key];
     const worker = new Worker<JobPayloads[K]>(name, createProcessor(key, handlers[key]), {
       connection,
+      drainDelay: settings.drainDelaySeconds,
       ...workerOptions,
       ...prefix,
     });

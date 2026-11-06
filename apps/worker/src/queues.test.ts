@@ -46,6 +46,7 @@ describe("workerSettingsFromEnv", () => {
       ingestConcurrency: 5,
       lapPollMs: 5000,
       pauseRetryMs: 10_000,
+      drainDelaySeconds: 30,
     });
   });
 
@@ -57,6 +58,7 @@ describe("workerSettingsFromEnv", () => {
         INGEST_CONCURRENCY: "3",
         LAP_POLL_MS: "1000",
         PAUSE_RETRY_MS: "250",
+        DRAIN_DELAY_SECONDS: "7",
       }),
     ).toEqual({
       sendConcurrency: 12,
@@ -64,6 +66,7 @@ describe("workerSettingsFromEnv", () => {
       ingestConcurrency: 3,
       lapPollMs: 1000,
       pauseRetryMs: 250,
+      drainDelaySeconds: 7,
     });
   });
 

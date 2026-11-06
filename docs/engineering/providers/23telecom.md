@@ -2,7 +2,7 @@
 
 Account runbook for the first carrier. 23Telecom offers two ways in: a REST API (what we use first, provider key `23telecom`) and SMPP (provider key `smpp`, section below, pending account details and IP whitelisting).
 
-Status: **REST API live in sandbox mode** (2026-11-06). SMPP: template, account details pending.
+Status: **REST API live with a production key** (2026-11-06 evening; sandbox QA passed the same day). SMPP: template, account details pending.
 
 ## REST API (provider `23telecom`)
 

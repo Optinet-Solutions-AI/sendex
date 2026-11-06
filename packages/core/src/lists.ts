@@ -35,6 +35,7 @@ export const LIST_COUNTRY_CODES = [
   "US",
   "DZ",
   "AL",
+  "PH",
 ] as const;
 export type ListCountry = (typeof LIST_COUNTRY_CODES)[number];
 
@@ -63,6 +64,7 @@ const COUNTRY_NAMES: Record<ListCountry, string> = {
   US: "United States",
   DZ: "Algeria",
   AL: "Albania",
+  PH: "Philippines",
 };
 
 /** Regional indicator pair for an ISO-2 code, e.g. "GB" -> 🇬🇧. */

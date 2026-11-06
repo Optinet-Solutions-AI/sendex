@@ -1,6 +1,13 @@
+import type { OutboundMessage } from "@sendex/providers";
 import { FakeProvider, SmppProvider, SmsEdgeProvider, Telecom23Provider } from "@sendex/providers";
 import { describe, expect, it } from "vitest";
-import { createDefaultProviderRegistry, telecom23ProviderFromEnv } from "./providers.js";
+import {
+  allowlistedProvider,
+  createDefaultProviderRegistry,
+  NOT_IN_ALLOWLIST,
+  sendAllowlistFromEnv,
+  telecom23ProviderFromEnv,
+} from "./providers.js";
 
 describe("createDefaultProviderRegistry", () => {
   it("always has the platform and fake providers; platform is fake without an SMS Edge key", () => {
@@ -42,5 +49,59 @@ describe("createDefaultProviderRegistry", () => {
     expect(telecom23ProviderFromEnv({ TELECOM23_API_KEY: " sk_test_x " })).toBeInstanceOf(
       Telecom23Provider,
     );
+  });
+});
+
+describe("send allowlist (SEND_ALLOWLIST_E164)", () => {
+  const msg = (id: string, to: string): OutboundMessage => ({
+    id,
+    to,
+    senderId: "SENDEX",
+    text: "hi",
+    encoding: "GSM_7BIT",
+    route: "136",
+    country: "MT",
+  });
+
+  it("parses comma or whitespace separated numbers and ignores a blank value", () => {
+    expect(sendAllowlistFromEnv({})).toBeNull();
+    expect(sendAllowlistFromEnv({ SEND_ALLOWLIST_E164: " , " })).toBeNull();
+    expect(
+      sendAllowlistFromEnv({ SEND_ALLOWLIST_E164: "+35699000001, +35699000002\n+639170000001" }),
+    ).toEqual(new Set(["+35699000001", "+35699000002", "+639170000001"]));
+  });
+
+  it("lets only allowlisted recipients reach the carrier and fails the rest as final", async () => {
+    const inner = new FakeProvider();
+    const p = allowlistedProvider(inner, new Set(["+35699000001"]));
+    const out = await p.send([
+      msg("a", "+35699000001"),
+      msg("b", "+447700900000"),
+      msg("c", "+35699000001"),
+    ]);
+    expect(out).toEqual([
+      { id: "a", status: "accepted", providerMessageId: "fake-1" },
+      { id: "b", status: "failed", reason: NOT_IN_ALLOWLIST, retryable: false },
+      { id: "c", status: "accepted", providerMessageId: "fake-2" },
+    ]);
+    expect(inner.sent.map((m) => m.id)).toEqual(["a", "c"]);
+    expect(p.name).toBe(inner.name);
+    expect(p.validateSenderId("SENDEX", "MT")).toEqual({ ok: true });
+  });
+
+  it("does not call the carrier at all when nothing in the batch is allowed", async () => {
+    const inner = new FakeProvider();
+    const p = allowlistedProvider(inner, new Set(["+35699000001"]));
+    await p.send([msg("b", "+447700900000")]);
+    expect(inner.sent).toEqual([]);
+  });
+
+  it("wraps every registered provider when the variable is set", async () => {
+    const registry = createDefaultProviderRegistry({ SEND_ALLOWLIST_E164: "+35699000001" });
+    const out = await registry.get("platform").send([msg("x", "+447700900000")]);
+    expect(out[0]).toMatchObject({ status: "failed", reason: NOT_IN_ALLOWLIST });
+    const plain = createDefaultProviderRegistry({});
+    const ok = await plain.get("platform").send([msg("x", "+447700900000")]);
+    expect(ok[0]?.status).toBe("accepted");
   });
 });

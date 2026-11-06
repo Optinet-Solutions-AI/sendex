@@ -1,6 +1,8 @@
 import {
   createProviderRegistry,
   FakeProvider,
+  type OutboundMessage,
+  type Provider,
   type ProviderRegistry,
   SmppProvider,
   SmsEdgeProvider,
@@ -21,14 +23,58 @@ export const PLATFORM_PROVIDER_NAME = "platform";
 export function createDefaultProviderRegistry(
   env: NodeJS.ProcessEnv = process.env,
 ): ProviderRegistry {
+  const allowlist = sendAllowlistFromEnv(env);
+  const guard = (p: Provider): Provider => (allowlist ? allowlistedProvider(p, allowlist) : p);
   const registry = createProviderRegistry()
-    .register(PLATFORM_PROVIDER_NAME, smsEdgeProviderFromEnv(env) ?? new FakeProvider())
-    .register("fake", new FakeProvider());
+    .register(PLATFORM_PROVIDER_NAME, guard(smsEdgeProviderFromEnv(env) ?? new FakeProvider()))
+    .register("fake", guard(new FakeProvider()));
   const telecom23 = telecom23ProviderFromEnv(env);
-  if (telecom23) registry.register(TELECOM23_PROVIDER_NAME, telecom23);
+  if (telecom23) registry.register(TELECOM23_PROVIDER_NAME, guard(telecom23));
   const smpp = smppProviderFromEnv(env);
-  if (smpp) registry.register("smpp", smpp);
+  if (smpp) registry.register("smpp", guard(smpp));
   return registry;
+}
+
+/** Why a message was refused by {@link allowlistedProvider}; final, so the send loop refunds it. */
+export const NOT_IN_ALLOWLIST = "NOT_IN_ALLOWLIST";
+
+/**
+ * `SEND_ALLOWLIST_E164`: comma or whitespace separated E.164 numbers. When set, every
+ * provider refuses any other recipient before the carrier is called. A safety net for the
+ * first live sends (D2-18): it makes a seeded or mistaken list harmless. Unset in normal operation.
+ */
+export function sendAllowlistFromEnv(env: NodeJS.ProcessEnv): Set<string> | null {
+  const raw = env.SEND_ALLOWLIST_E164?.trim();
+  if (!raw) return null;
+  const numbers = raw.split(/[\s,]+/).filter((n) => n !== "");
+  return numbers.length > 0 ? new Set(numbers) : null;
+}
+
+/** Wrap a provider so only recipients in `allowlist` reach it; the rest fail as {@link NOT_IN_ALLOWLIST}. */
+export function allowlistedProvider(inner: Provider, allowlist: ReadonlySet<string>): Provider {
+  const guarded: Provider = {
+    name: inner.name,
+    async send(batch: readonly OutboundMessage[]) {
+      const allowed = batch.filter((m) => allowlist.has(m.to));
+      const sent = allowed.length > 0 ? await inner.send(allowed) : [];
+      const byId = new Map(sent.map((o) => [o.id, o]));
+      return batch.map(
+        (m) =>
+          byId.get(m.id) ?? {
+            id: m.id,
+            status: "failed" as const,
+            reason: NOT_IN_ALLOWLIST,
+            retryable: false,
+          },
+      );
+    },
+    parseDeliveryReceipt: (raw) => inner.parseDeliveryReceipt(raw),
+    priceFor: (route, country) => inner.priceFor(route, country),
+    validateSenderId: (senderId, country) => inner.validateSenderId(senderId, country),
+  };
+  const poll = inner.pollReceipts?.bind(inner);
+  if (poll) guarded.pollReceipts = poll;
+  return guarded;
 }
 
 /** `SMS_EDGE_API_KEY`, optional `SMS_EDGE_BASE_URL`. SMS Edge has no sandbox: a key means real sends. */

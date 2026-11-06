@@ -18,8 +18,14 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: isCI,
   retries: isCI ? 1 : 0,
-  ...(isCI ? { workers: 1 } : {}),
+  // One worker: the specs share one database and seed rows side by side, and `next dev`
+  // compiles every route on first hit. The suite takes about two minutes serially.
+  workers: 1,
+  timeout: 60_000,
   reporter: [["list"], ["html", { outputFolder: "playwright-report", open: "never" }]],
+  // `next dev` compiles each route on first hit, so a first server action can take longer
+  // than Playwright's 5 s default before the page moves on.
+  expect: { timeout: 15_000 },
   use: {
     baseURL,
     trace: "on-first-retry",

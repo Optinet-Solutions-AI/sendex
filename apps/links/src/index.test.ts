@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { app, type Bindings, LINK_TTL_SECONDS } from "./app.js";
 import type { ClickRecord } from "./clicks.js";
-import { app, type Bindings, LINK_TTL_SECONDS } from "./index.js";
 
 const CODE = "abcdefgh";
 const PAYLOAD = {

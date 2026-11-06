@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { flushListByName } from "./helpers/db";
 
 /**
  * Happy path of the campaign screens as the seeded development owner (`SENDEX_DEV_AUTH=1`,
@@ -6,6 +7,9 @@ import { expect, test } from "@playwright/test";
  * and platform routes 405 (EUR 0.025) and 403 for Spain.
  */
 test.describe("campaigns", () => {
+  // The engine may have sent to this list in earlier local runs; start from a full list.
+  test.beforeEach(() => flushListByName("Roy Boy_ES_14092026_Batch2"));
+
   test("create a Spanish campaign, build the send form, estimate and queue two laps", async ({
     page,
   }) => {

@@ -51,8 +51,9 @@ function toNullableDate(value: unknown): Date | null {
 }
 
 /**
- * Members of a list that can still be messaged: not bad, not sent, not flushed and whose
- * number is not suppressed for the organisation. Written with explicit aliases and a literal
+ * Members of a list that can still be messaged: not bad, never sent (or flushed after the last
+ * send, which makes them reusable, as the engine's `alreadySent` filter does) and whose number
+ * is not suppressed for the organisation. Written with explicit aliases and a literal
  * `lists.id` because Drizzle drops table qualifiers in single-table selects; callers must
  * select from `lists` unaliased.
  */
@@ -61,8 +62,7 @@ function availableSql(): SQL<number> {
     join contacts c on c.id = m.contact_id
     where m.list_id = lists.id
       and m.bad = false
-      and m.sent_at is null
-      and m.flushed_at is null
+      and (m.sent_at is null or m.flushed_at > m.sent_at)
       and not exists (select 1 from suppressions s
         where s.organisation_id = m.organisation_id
           and s.e164 = c.e164))::int`.mapWith(Number);
@@ -90,7 +90,18 @@ export interface ListCampaignsInput {
   search?: string;
   country?: string;
   status?: CampaignStatus;
+  /** Sending period overlaps [from, to); a campaign without laps is placed at its creation date. */
+  from?: Date;
+  to?: Date;
+  hasLeads?: boolean;
+  hasSales?: boolean;
+  noClicks?: boolean;
+  /** Spend bounds in micro-EUR, both inclusive. */
+  spendMinMicro?: bigint;
+  spendMaxMicro?: bigint;
   page: number;
+  /** Defaults to `CAMPAIGN_PAGE_SIZE`; the CSV export walks larger pages. */
+  pageSize?: number;
 }
 
 export interface CampaignSummary {
@@ -130,7 +141,6 @@ export async function listCampaigns(
   if (search) conditions.push(ilike(campaigns.name, `%${search}%`));
   if (input.country) conditions.push(eq(campaigns.country, input.country.toUpperCase()));
   if (input.status) conditions.push(eq(campaigns.status, input.status));
-  const where = and(...conditions);
 
   const agg = db
     .select({
@@ -154,7 +164,26 @@ export async function listCampaigns(
     .groupBy(laps.campaignId)
     .as("agg");
 
+  // Aggregate-based filters: the lap sums are null for a campaign without laps.
+  const clicksSum = sql`coalesce(${agg.clicks}, 0)`;
+  const leadsSum = sql`coalesce(${agg.leads}, 0)`;
+  const salesSum = sql`coalesce(${agg.sales}, 0)`;
+  const costSum = sql`coalesce(${agg.costMicro}, 0)`;
+  const periodStart = sql`coalesce(${agg.firstLapAt}, ${campaigns.createdAt})`;
+  const periodEnd = sql`coalesce(${agg.lastLapAt}, ${campaigns.createdAt})`;
+  if (input.hasLeads) conditions.push(sql`${leadsSum} > 0`);
+  if (input.hasSales) conditions.push(sql`${salesSum} > 0`);
+  if (input.noClicks) conditions.push(sql`${clicksSum} = 0`);
+  if (input.spendMinMicro !== undefined)
+    conditions.push(sql`${costSum} >= ${input.spendMinMicro.toString()}::bigint`);
+  if (input.spendMaxMicro !== undefined)
+    conditions.push(sql`${costSum} <= ${input.spendMaxMicro.toString()}::bigint`);
+  if (input.from) conditions.push(sql`${periodEnd} >= ${input.from}`);
+  if (input.to) conditions.push(sql`${periodStart} < ${input.to}`);
+  const filtered = and(...conditions);
+
   const page = Math.max(1, Math.floor(input.page));
+  const pageSize = Math.max(1, Math.floor(input.pageSize ?? CAMPAIGN_PAGE_SIZE));
   const rows = await db
     .select({
       id: campaigns.id,
@@ -174,18 +203,22 @@ export async function listCampaigns(
     })
     .from(campaigns)
     .leftJoin(agg, eq(agg.campaignId, campaigns.id))
-    .where(where)
+    .where(filtered)
     .orderBy(desc(campaigns.createdAt), desc(campaigns.id))
-    .limit(CAMPAIGN_PAGE_SIZE)
-    .offset((page - 1) * CAMPAIGN_PAGE_SIZE);
+    .limit(pageSize)
+    .offset((page - 1) * pageSize);
 
-  const [totalRow] = await db.select({ total: count() }).from(campaigns).where(where);
+  const [totalRow] = await db
+    .select({ total: count() })
+    .from(campaigns)
+    .leftJoin(agg, eq(agg.campaignId, campaigns.id))
+    .where(filtered);
 
   return {
     items: rows.map((r) => ({ ...r, ctr: r.sent > 0 ? r.clicks / r.sent : 0 })),
     total: totalRow?.total ?? 0,
     page,
-    pageSize: CAMPAIGN_PAGE_SIZE,
+    pageSize,
   };
 }
 

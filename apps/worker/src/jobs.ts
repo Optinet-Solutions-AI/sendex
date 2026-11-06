@@ -29,6 +29,9 @@ export const clickSchema = z.object({
   clickedAt: z.iso.datetime(),
   ip: nonEmpty,
   userAgent: z.string(),
+  country: z.string().optional(),
+  device: z.string().optional(),
+  asn: z.string().optional(),
 });
 export type Click = z.infer<typeof clickSchema>;
 
@@ -41,6 +44,8 @@ export const postbackEventTypeSchema = z.enum(["registration", "sale"]);
 export type PostbackEventType = z.infer<typeof postbackEventTypeSchema>;
 
 export const postbackIngestJobSchema = z.object({
+  /** The organisation whose postback key signed the event; attribution is scoped to it. */
+  organisationId: nonEmpty,
   /** Unique per event; replays with the same key are ignored downstream. */
   eventKey: nonEmpty,
   type: postbackEventTypeSchema,
@@ -52,9 +57,13 @@ export const postbackIngestJobSchema = z.object({
 });
 export type PostbackIngestJob = z.infer<typeof postbackIngestJobSchema>;
 
+/**
+ * The lap dispatcher tick (D2-04): a repeatable job that claims every dispatchable
+ * `queued` lap and enqueues its `SendLapJob`. Carries no ids: the dispatcher reads the
+ * laps table, so scheduled campaigns need no job of their own.
+ */
 export const scheduledSendJobSchema = z.object({
-  organisationId: nonEmpty,
-  campaignId: nonEmpty,
+  kind: z.literal("dispatch-laps"),
 });
 export type ScheduledSendJob = z.infer<typeof scheduledSendJobSchema>;
 

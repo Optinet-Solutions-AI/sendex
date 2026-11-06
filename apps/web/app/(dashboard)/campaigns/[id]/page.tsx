@@ -1,5 +1,8 @@
 import { can } from "@sendex/core";
 import {
+  campaignResults,
+  clickStats,
+  conversionStats,
   db,
   getCampaign,
   listAuditLog,
@@ -10,8 +13,12 @@ import {
 } from "@sendex/db";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { AnalyticsSection } from "../../../../components/campaigns/analytics-section";
+import { CampaignControls } from "../../../../components/campaigns/campaign-controls";
 import { CampaignHeader } from "../../../../components/campaigns/campaign-header";
 import { CampaignTabs } from "../../../../components/campaigns/campaign-tabs";
+import { ClicksSection } from "../../../../components/campaigns/clicks-section";
+import { ConversionsSection } from "../../../../components/campaigns/conversions-section";
 import { formatDateTime } from "../../../../components/campaigns/format";
 import { SendForm } from "../../../../components/campaigns/send-form";
 import type { AuditView } from "../../../../components/campaigns/types";
@@ -20,6 +27,7 @@ import {
   toCampaignView,
   toLinkOption,
   toListOption,
+  toResultsView,
   toRouteView,
   toSidGroupView,
 } from "../../../../lib/campaign-views";
@@ -67,14 +75,19 @@ export default async function CampaignPage({ params }: { params: Promise<{ id: s
         const database = db();
         const detail = await getCampaign(database, ctx.organisationId, id);
         if (!detail) notFound();
-        const [sidGroups, lists, links, routes, audit] = await Promise.all([
-          listSidGroups(database, ctx.organisationId, detail.country),
-          listsForCountry(database, ctx.organisationId, detail.country),
-          listLinks(database, ctx.organisationId),
-          routesForCountry(database, ctx.organisationId, detail.country),
-          listAuditLog(database, ctx.organisationId, { targetType: "campaign", targetId: id }),
-        ]);
+        const [sidGroups, lists, links, routes, audit, conversions, resultRows, clicks] =
+          await Promise.all([
+            listSidGroups(database, ctx.organisationId, detail.country),
+            listsForCountry(database, ctx.organisationId, detail.country),
+            listLinks(database, ctx.organisationId),
+            routesForCountry(database, ctx.organisationId, detail.country),
+            listAuditLog(database, ctx.organisationId, { targetType: "campaign", targetId: id }),
+            conversionStats(database, ctx.organisationId, id),
+            campaignResults(database, ctx.organisationId, id),
+            clickStats(database, ctx.organisationId, id),
+          ]);
         const campaign = toCampaignView(detail);
+        const results = resultRows ? toResultsView(resultRows) : null;
         return (
           <section className="space-y-6">
             <nav aria-label="Breadcrumb" className="text-sm text-neutral-500">
@@ -83,7 +96,12 @@ export default async function CampaignPage({ params }: { params: Promise<{ id: s
               </Link>{" "}
               / {campaign.name}
             </nav>
-            <CampaignHeader campaign={campaign} />
+            <CampaignHeader campaign={campaign} {...(results ? { totals: results.totals } : {})} />
+            <CampaignControls
+              campaign={campaign}
+              canStop={can(ctx.role, "campaign.stop")}
+              canSend={can(ctx.role, "campaign.send")}
+            />
             <CampaignTabs
               panels={{
                 Status: (
@@ -98,9 +116,13 @@ export default async function CampaignPage({ params }: { params: Promise<{ id: s
                 ),
                 Logs: <LogsTab entries={audit.map(toAuditView)} timezone={campaign.timezone} />,
                 Analytics: (
-                  <p className="text-sm text-neutral-500">
-                    Analytics (clicks, conversions and route ranking charts) arrive on Day 3.
-                  </p>
+                  <div className="space-y-6">
+                    {results ? (
+                      <AnalyticsSection results={results} timezone={campaign.timezone} />
+                    ) : null}
+                    <ClicksSection stats={clicks} />
+                    <ConversionsSection stats={conversions} />
+                  </div>
                 ),
                 "Send Single": (
                   <p className="text-sm text-neutral-500">

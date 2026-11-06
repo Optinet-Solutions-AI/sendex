@@ -196,7 +196,7 @@ describe.skipIf(!reachable)("queues (integration, needs Redis)", () => {
       { defaultJobOptions: { attempts: 2, backoff: { type: "fixed", delay: 10 } } },
     );
 
-    await queues.scheduledSend.add("tick", { organisationId: "org_1", campaignId: "cmp_1" });
+    await queues.scheduledSend.add("tick", { kind: "dispatch-laps" });
     const entry = await withTimeout(deadLetters, 5000, "the dead-letter entry");
 
     expect(handlerCalls).toBe(2);

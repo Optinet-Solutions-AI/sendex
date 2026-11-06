@@ -13,6 +13,7 @@ apps/links      Hono on Cloudflare Workers: short link redirect + click capture.
 packages/db     Drizzle schema, migrations, seed. Postgres on Supabase.
 packages/core   Pure logic: send-count maths, GSM/UCS-2 counting, lap planning, ledger rules, Zod schemas. No I/O.
 packages/providers  Provider interface + SmppProvider, HttpProvider, FakeProvider.
+packages/redis-utils  Leader lock, sliding-window rate limiter (+ Hono middleware), emergency stop flag, fake Redis for tests.
 packages/ui     Shared shadcn components and chart wrappers.
 docs/           Starlight docs site, ADRs in docs/adr.
 ```

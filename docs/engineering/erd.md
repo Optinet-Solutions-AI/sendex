@@ -14,6 +14,18 @@ erDiagram
     integer position
     text text
   }
+  api_tokens {
+    timestamp_with_time_zone created_at
+    uuid created_by FK
+    uuid id PK
+    timestamp_with_time_zone last_used_at
+    text name
+    uuid organisation_id FK
+    text prefix
+    timestamp_with_time_zone revoked_at
+    text[] scopes
+    text token_hash UK
+  }
   audit_log {
     text action
     uuid actor_user_id FK
@@ -96,6 +108,9 @@ erDiagram
     uuid list_id FK
     uuid organisation_id FK
     integer rank
+    text refusal_reason
+    integer refused
+    bigint revenue_micro
     uuid route_id FK
     integer sales
     integer sent
@@ -150,6 +165,7 @@ erDiagram
     uuid user_id FK, UK "unique with organisation_id"
   }
   messages {
+    uuid ad_text_id FK
     uuid campaign_id FK
     uuid contact_id FK
     timestamp_with_time_zone created_at
@@ -161,6 +177,7 @@ erDiagram
     uuid id PK
     text idempotency_key UK
     uuid lap_id FK
+    uuid link_id FK
     uuid organisation_id FK
     integer parts
     text provider_message_id
@@ -170,6 +187,33 @@ erDiagram
     text short_code
     message_status status
     text text
+  }
+  organisation_alerts {
+    timestamp_with_time_zone acknowledged_at
+    uuid acknowledged_by FK
+    jsonb details
+    uuid id PK
+    text kind UK "unique with organisation_id, period_key"
+    text message
+    uuid organisation_id FK, UK "unique with kind, period_key"
+    text period_key UK "unique with kind, organisation_id"
+    timestamp_with_time_zone raised_at
+  }
+  organisation_postback_keys {
+    timestamp_with_time_zone created_at
+    uuid organisation_id PK, FK
+    timestamp_with_time_zone rotated_at
+    text secret
+  }
+  organisation_settings {
+    timestamp_with_time_zone created_at
+    integer daily_message_cap
+    bigint daily_spend_cap_micro
+    timestamp_with_time_zone low_balance_alerted_at
+    text[] low_balance_emails
+    bigint low_balance_threshold_micro
+    uuid organisation_id PK, FK
+    timestamp_with_time_zone updated_at
   }
   organisations {
     text clerk_org_id UK
@@ -239,6 +283,7 @@ erDiagram
     text name
   }
 
+  ad_texts ||--o{ messages : "ad_text_id"
   campaigns ||--o{ ad_texts : "campaign_id"
   campaigns ||--o{ campaign_links : "campaign_id"
   campaigns ||--o{ campaign_lists : "campaign_id"
@@ -253,12 +298,14 @@ erDiagram
   laps ||--o{ messages : "lap_id"
   laps ||--o{ postbacks : "lap_id"
   links ||--o{ campaign_links : "link_id"
+  links ||--o{ messages : "link_id"
   lists ||--o{ campaign_lists : "list_id"
   lists ||--o{ laps : "list_id"
   lists ||--o{ list_members : "list_id"
   messages ||--o{ clicks : "message_id"
   messages ||--o{ postbacks : "message_id"
   organisations ||--o{ ad_texts : "organisation_id"
+  organisations ||--o{ api_tokens : "organisation_id"
   organisations ||--o{ audit_log : "organisation_id"
   organisations ||--o{ campaign_links : "organisation_id"
   organisations ||--o{ campaign_lists : "organisation_id"
@@ -273,6 +320,9 @@ erDiagram
   organisations ||--o{ lists : "organisation_id"
   organisations ||--o{ memberships : "organisation_id"
   organisations ||--o{ messages : "organisation_id"
+  organisations ||--o{ organisation_alerts : "organisation_id"
+  organisations ||--o{ organisation_postback_keys : "organisation_id"
+  organisations ||--o{ organisation_settings : "organisation_id"
   organisations ||--o{ postbacks : "organisation_id"
   organisations ||--o{ routes : "organisation_id"
   organisations ||--o{ sender_ids : "organisation_id"
@@ -283,9 +333,11 @@ erDiagram
   routes ||--o{ route_prices : "route_id"
   sid_groups ||--o{ campaign_sid_group : "sid_group_id"
   sid_groups ||--o{ sender_ids : "sid_group_id"
+  users ||--o{ api_tokens : "created_by"
   users ||--o{ audit_log : "actor_user_id"
   users ||--o{ campaigns : "created_by"
   users ||--o{ memberships : "user_id"
+  users ||--o{ organisation_alerts : "acknowledged_by"
 ```
 
-Generated from the Drizzle schema by `pnpm --filter @sendex/db erd` (23 tables, 47 relationships). Do not edit by hand: regenerate after every schema change. CI runs `pnpm --filter @sendex/db erd:check` and fails when this file is stale.
+Generated from the Drizzle schema by `pnpm --filter @sendex/db erd` (27 tables, 55 relationships). Do not edit by hand: regenerate after every schema change. CI runs `pnpm --filter @sendex/db erd:check` and fails when this file is stale.

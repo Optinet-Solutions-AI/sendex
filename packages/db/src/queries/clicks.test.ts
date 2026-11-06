@@ -122,7 +122,7 @@ describe("findMessagesByShortCodes", () => {
 });
 
 describe("recordClicks", () => {
-  it("inserts the rows and adds the count to the lap, in one go", async () => {
+  it("inserts the rows and counts the message once on the lap, in one go", async () => {
     const at = new Date("2026-11-06T10:00:00.000Z");
     const inserted = await recordClicks(t.db, [
       {
@@ -162,6 +162,55 @@ describe("recordClicks", () => {
       device: "mobile",
       operator: "Vodafone Spain",
     });
+    // Two clicks on one message: two rows, one clicker.
+    const [lap] = await t.db.select({ clicks: laps.clicks }).from(laps).where(eq(laps.id, lapId));
+    expect(lap?.clicks).toBe(1);
+  });
+
+  it("counts a second message, and a replayed batch does not inflate the counter", async () => {
+    const [contact] = await t.db
+      .insert(contacts)
+      .values({ organisationId: org, e164: "+34600000002", country: "ES" })
+      .returning({ id: contacts.id });
+    const [route] = await t.db.select({ id: routes.id }).from(routes).limit(1);
+    if (!contact || !route) throw new Error("setup failed");
+    const [second] = await t.db
+      .insert(messages)
+      .values({
+        organisationId: org,
+        campaignId,
+        lapId,
+        contactId: contact.id,
+        routeId: route.id,
+        e164: "+34600000002",
+        senderId: "LUCKY777",
+        text: "Hello https://lnk.example/bcdefghj",
+        encoding: "GSM_7BIT",
+        parts: 1,
+        shortCode: "bcdefghj",
+        dynamicId: "dyn-2",
+        idempotencyKey: "lap:1:contact:2",
+      })
+      .returning({ id: messages.id });
+    if (!second) throw new Error("setup failed");
+    const batch = [
+      {
+        organisationId: org,
+        messageId: second.id,
+        campaignId,
+        lapId,
+        at: new Date("2026-11-06T10:05:00.000Z"),
+        ip: null,
+        country: null,
+        userAgent: null,
+        device: null,
+        operator: null,
+      },
+    ];
+    await recordClicks(t.db, batch);
+    await recordClicks(t.db, batch);
+    const rows = await t.db.select().from(clicks).where(eq(clicks.lapId, lapId));
+    expect(rows).toHaveLength(4);
     const [lap] = await t.db.select({ clicks: laps.clicks }).from(laps).where(eq(laps.id, lapId));
     expect(lap?.clicks).toBe(2);
   });

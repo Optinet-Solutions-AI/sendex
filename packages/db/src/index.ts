@@ -2,12 +2,19 @@ import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import * as schema from "./schema/index.js";
 
+export * from "./queries/alerts.js";
+export * from "./queries/api-tokens.js";
 export * from "./queries/audit.js";
 export * from "./queries/campaigns.js";
+export * from "./queries/caps.js";
+export * from "./queries/click-stats.js";
 export * from "./queries/clicks.js";
 export * from "./queries/ledger.js";
 export * from "./queries/lists.js";
+export * from "./queries/sending.js";
+export * from "./queries/settings.js";
 export * from "./queries/tenancy.js";
+export * from "./queries/usage.js";
 export * from "./schema/index.js";
 export type { Db } from "./types.js";
 export { schema };
@@ -31,3 +38,8 @@ export function db(): Database {
   shared ??= createDb();
   return shared;
 }
+export * from "./queries/campaign-control.js";
+export * from "./queries/postback-keys.js";
+export * from "./queries/postbacks.js";
+export * from "./queries/receipts.js";
+export * from "./queries/results.js";

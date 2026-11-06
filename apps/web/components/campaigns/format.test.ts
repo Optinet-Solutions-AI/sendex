@@ -42,13 +42,16 @@ describe("dates", () => {
 });
 
 describe("campaignTotals", () => {
-  it("sums laps and derives CTR, CPL and CPS", () => {
+  it("sums laps and derives delivery rate, CTR, CPC, CPL and CPS", () => {
     const totals = campaignTotals([
-      { sent: 100, clicks: 10, leads: 2, sales: 1, costMicro: 2_500_000 },
-      { sent: 100, clicks: 0, leads: 0, sales: 0, costMicro: 2_700_000 },
+      { sent: 100, delivered: 95, failed: 5, clicks: 10, leads: 2, sales: 1, costMicro: 2_500_000 },
+      { sent: 100, delivered: 85, failed: 10, clicks: 0, leads: 0, sales: 0, costMicro: 2_700_000 },
     ]);
     expect(totals).toEqual({
       sent: 200,
+      delivered: 180,
+      failed: 15,
+      deliveryRate: 0.9,
       clicks: 10,
       ctr: 0.05,
       leads: 2,
@@ -58,7 +61,26 @@ describe("campaignTotals", () => {
       cpsMicro: 5_200_000,
       cpcMicro: 520_000,
     });
-    expect(campaignTotals([])).toMatchObject({ ctr: 0, cplMicro: null, cpsMicro: null });
+    expect(campaignTotals([])).toMatchObject({
+      ctr: 0,
+      deliveryRate: 0,
+      cpcMicro: null,
+      cplMicro: null,
+      cpsMicro: null,
+    });
+  });
+
+  it("shows 127 clicks on 2,394 sent as 5.30% CTR", () => {
+    const lap = {
+      sent: 2394,
+      delivered: 2300,
+      failed: 40,
+      clicks: 127,
+      leads: 0,
+      sales: 0,
+      costMicro: 0,
+    };
+    expect(formatPercent(campaignTotals([lap]).ctr)).toBe("5.30%");
   });
 });
 

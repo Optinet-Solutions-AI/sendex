@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import {
   bigint,
   char,
@@ -11,7 +12,7 @@ import {
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
-import { campaigns, laps } from "./campaigns.js";
+import { adTexts, campaigns, laps, links } from "./campaigns.js";
 import { organisations } from "./core.js";
 import { contacts } from "./lists.js";
 import { routes } from "./routes.js";
@@ -70,6 +71,10 @@ export const messages = pgTable(
     shortCode: text("short_code"),
     /** Value substituted for {{dynamic}} in the tracked link; echoed back by postbacks. */
     dynamicId: text("dynamic_id"),
+    /** The ad text the message was rendered from, for per-text conversion stats. */
+    adTextId: uuid("ad_text_id").references(() => adTexts.id, { onDelete: "set null" }),
+    /** The tracked link embedded in the text, when the campaign had one. */
+    linkId: uuid("link_id").references(() => links.id, { onDelete: "set null" }),
     idempotencyKey: text("idempotency_key").notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     sentAt: timestamp("sent_at", { withTimezone: true }),
@@ -81,6 +86,10 @@ export const messages = pgTable(
     index("messages_org_created_idx").on(t.organisationId, t.createdAt),
     index("messages_short_code_idx").on(t.shortCode),
     index("messages_dynamic_id_idx").on(t.dynamicId),
+    /** Delivery receipts look a message up by the carrier's id (D3-01). */
+    index("messages_provider_message_id_idx").on(t.providerMessageId),
+    /** The expiry tick scans `sent` messages by age; nothing else needs this (D3-01). */
+    index("messages_sent_pending_receipt_idx").on(t.sentAt).where(sql`"status" = 'sent'`),
   ],
 );
 
@@ -145,5 +154,7 @@ export const postbacks = pgTable(
   (t) => [
     uniqueIndex("postbacks_event_key_idx").on(t.eventKey),
     index("postbacks_dynamic_id_idx").on(t.dynamicId),
+    index("postbacks_org_received_idx").on(t.organisationId, t.receivedAt),
+    index("postbacks_campaign_idx").on(t.campaignId),
   ],
 );

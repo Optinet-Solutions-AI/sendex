@@ -32,7 +32,9 @@ the error as a page instead of crashing.
 
 The middleware (`apps/web/middleware.ts`) protects every route except `/sign-in`, `/sign-up`,
 `/api/webhooks/*` and `/health`. When the Clerk keys are missing the middleware passes requests
-through and the root layout renders a setup page listing the variables to set.
+through and the root layout renders a setup page listing the variables to set. In every mode it
+also sets the security headers and a nonce-based Content Security Policy on the response and
+forwards the nonce to the app; see `security-headers.md`, which also covers CSRF.
 
 ## Auth modes
 

@@ -39,3 +39,6 @@ next-env.d.ts
 
 # agent worktrees
 .claude/worktrees/
+
+# Local secrets for wrangler dev (apps/links)
+.dev.vars

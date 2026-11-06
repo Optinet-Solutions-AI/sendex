@@ -89,7 +89,8 @@ beforeAll(async () => {
   orgA = await seedOrganisation(t.db, "org-a");
   orgB = await seedOrganisation(t.db, "org-b");
 
-  // 10 members: 2 already sent, 1 bad, 1 flushed, 1 suppressed -> 5 available.
+  // 10 members: 2 already sent, 1 bad, 1 sent then flushed (available again), 1 sent after a
+  // flush, 1 suppressed -> 5 available.
   const es = await seedList(orgA, "Roy Boy_ES", "ES", "+34600000", 10);
   listEs = es.id;
   const [c0, c1, c2, c3, c4] = es.contacts;
@@ -103,10 +104,16 @@ beforeAll(async () => {
     .set({ sentAt: new Date() })
     .where(eq(listMembers.contactId, c1.id));
   await t.db.update(listMembers).set({ bad: true }).where(eq(listMembers.contactId, c2.id));
+  const [c5] = es.contacts.slice(5);
+  if (!c5) throw new Error("setup failed");
   await t.db
     .update(listMembers)
-    .set({ flushedAt: new Date() })
+    .set({ sentAt: new Date(Date.now() - 60_000), flushedAt: new Date() })
     .where(eq(listMembers.contactId, c3.id));
+  await t.db
+    .update(listMembers)
+    .set({ sentAt: new Date(), flushedAt: new Date(Date.now() - 60_000) })
+    .where(eq(listMembers.contactId, c5.id));
   await t.db
     .insert(suppressions)
     .values({ organisationId: orgA, e164: c4.e164, reason: "unsubscribe", source: "sms" });

@@ -77,6 +77,9 @@ export interface LapView {
   sales: number;
   costMicro: number;
   rank: number | null;
+  /** Messages a daily cap refused (D3-11), with the cap that bound. */
+  refused: number;
+  refusalReason: string | null;
   startedAt: string | null;
   finishedAt: string | null;
   createdAt: string;
@@ -146,3 +149,70 @@ export interface CampaignSummaryView {
 }
 
 export type ActionResult<T> = { ok: true; data: T } | { ok: false; error: string };
+
+// ---------------------------------------------------------------------------
+// Campaign results (D3-05)
+// ---------------------------------------------------------------------------
+
+export interface ResultRatesView {
+  ctr: number;
+  deliveryRate: number;
+  failureRate: number;
+  cpcMicro: number | null;
+  cplMicro: number | null;
+  cpsMicro: number | null;
+}
+
+export interface ResultTotalsView extends ResultRatesView {
+  sent: number;
+  delivered: number;
+  failed: number;
+  clicks: number;
+  leads: number;
+  sales: number;
+  costMicro: number;
+  revenueMicro: number;
+}
+
+export interface LapResultView extends LapView, ResultRatesView {
+  on: boolean;
+}
+
+export interface NetworkRowView {
+  routeId: string;
+  name: string;
+  provider: string;
+  sent: number;
+  delivered: number;
+  failed: number;
+  clicks: number;
+  ctr: number;
+  deliveryRate: number;
+  costMicro: number;
+}
+
+export interface ClicksPerHourView {
+  hour: number;
+  at: string;
+  clicks: number;
+}
+
+export interface ClicksPerLinkView {
+  linkId: string | null;
+  name: string;
+  url: string | null;
+  sent: number;
+  clicks: number;
+  ctr: number;
+}
+
+export interface CampaignResultsView {
+  campaignId: string;
+  firstSentAt: string | null;
+  lastSentAt: string | null;
+  totals: ResultTotalsView;
+  laps: LapResultView[];
+  networks: { source: "route"; rows: NetworkRowView[] };
+  clicksPerHour: ClicksPerHourView[];
+  clicksPerLink: ClicksPerLinkView[];
+}

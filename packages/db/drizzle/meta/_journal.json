@@ -22,6 +22,41 @@
       "when": 1793908233082,
       "tag": "0002_tracking_and_ledger",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1793912251080,
+      "tag": "0003_settings_and_caps",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1793913778342,
+      "tag": "0004_postbacks_and_attribution",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1793914993234,
+      "tag": "0005_caps_and_alerts",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1793916384654,
+      "tag": "0006_delivery_status_indexes",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1793916523725,
+      "tag": "0007_api_tokens",
+      "breakpoints": true
     }
   ]
 }

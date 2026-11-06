@@ -5,29 +5,32 @@ BullMQ queue, the HTTP health endpoint and, in later cards, the public API and p
 Producers are the web app (campaign launch, scheduling), the links service (click batches) and
 the worker itself (scheduler ticks, provider receipts). Only the worker consumes.
 
-Cards: D2-01 (provider registry), D2-02 (queues, workers, health, logging).
+Cards: D2-01 (provider registry), D2-02 (queues, workers, health, logging), D2-04 to D2-07
+(send loop, dispatcher, progress, internal API: see `sending-engine.md`).
 
 ## Processes
 
 | Process | Role | Code |
 | --- | --- | --- |
-| `apps/worker` HTTP | `GET /health`; public API and postbacks later | `src/app.ts`, `src/index.ts` |
+| `apps/worker` HTTP | `GET /health`, `/internal/*` (progress, laps); public API and postbacks later | `src/app.ts`, `src/internal-api.ts`, `src/index.ts` |
 | `apps/worker` workers | One BullMQ `Worker` per queue, started at boot when `REDIS_URL` is set | `src/queues.ts`, `src/handlers.ts` |
+| `apps/worker` dispatcher | Repeatable `scheduled-send` job every `LAP_POLL_MS`, registered at boot | `src/send/dispatcher.ts` |
 
 Without `REDIS_URL` the process still serves `/health` (reporting `redis: false`) but starts no
-queues or workers. That keeps `pnpm dev` usable for the HTTP surface alone.
+queues or workers. That keeps `pnpm dev` usable for the HTTP surface alone. Without
+`DATABASE_URL` the workers run but the `send` and `scheduled-send` handlers are logging stubs.
 
 ## Queues
 
 Queue names live in `QUEUES` in `apps/worker/src/queues.ts`; never type a queue name by hand.
 
-| Key | Queue name | Payload | Produced by | Handler (D2-02 status) |
+| Key | Queue name | Payload | Produced by | Handler |
 | --- | --- | --- | --- | --- |
-| `send` | `send` | `SendLapJob` | campaign launch, scheduler, lap planner | stub, D2-04 |
-| `dlr` | `dlr` | `DlrJob` | provider adapters (SMPP `deliver_sm`, HTTP webhooks) | stub, D2-07 |
+| `send` | `send` | `SendLapJob` | the lap dispatcher (one job per claimed lap, job id `lap-<lapId>`) | `sendLap()`, D2-04 |
+| `dlr` | `dlr` | `DlrJob` | `subscribeDeliveryReceipts()` at boot: one job per SMPP `deliver_sm` receipt (HTTP webhooks later) | `createDlrHandler()`, D3-01 (see `sending-engine.md`) |
 | `clickIngest` | `click-ingest` | `ClickIngestJob` | links service batches | stub, D2-12 |
 | `postbackIngest` | `postback-ingest` | `PostbackIngestJob` | postback endpoint | stub, D2-14 |
-| `scheduledSend` | `scheduled-send` | `ScheduledSendJob` | scheduler ticks | stub, D2-05 |
+| `scheduledSend` | `scheduled-send` | `ScheduledSendJob` | the repeatable dispatcher tick (`upsertJobScheduler`, every `LAP_POLL_MS`) | `dispatchQueuedLaps()`, D2-04, then the receipt expiry sweep (at most once per `DLR_EXPIRY_POLL_MS`), D3-01 |
 
 Each queue has a dead-letter twin named `<queue>-dead` (`send-dead`, `click-ingest-dead`, ...).
 BullMQ forbids `:` in queue names, so the dash replaces the `<queue>:dead` convention from the card.
@@ -40,15 +43,19 @@ Use the `parse*Job` helpers (or `parseJob(key, data)`) when you need to validate
 they throw `Invalid "<queue>" job payload: ...` with the Zod issues.
 
 ```ts
-SendLapJob         { organisationId, campaignId, lapId, idempotencyKey }
-DlrJob             { provider, raw }                       // raw: whatever the provider got
+SendLapJob         { organisationId, campaignId, lapId, idempotencyKey }   // idempotencyKey = "lap:<lapId>"
+DlrJob             { provider, raw }                       // provider: registry name (routes.provider); raw: the JSON-safe receipt the provider parses again
 ClickIngestJob     { clicks: [{ shortCode, clickedAt, ip, userAgent }, ...] }  // at least one
 PostbackIngestJob  { eventKey, type: "registration" | "sale", dynamicId, valueMicro?, params }
-ScheduledSendJob   { organisationId, campaignId }
+ScheduledSendJob   { kind: "dispatch-laps" }               // the dispatcher tick; carries no ids
 ```
 
-`idempotencyKey` on `SendLapJob` is what the ledger debit and the carrier submit are keyed on
-(AGENTS.md rule 6). `valueMicro` is the sale value in micro-units of the organisation currency.
+`idempotencyKey` on `SendLapJob` is `lap:<lapId>`; the BullMQ job id is `lap-<lapId>` because
+BullMQ forbids `:` in custom ids. Inside the lap, every message and ledger entry carries its own
+key (`<lapId>:<contactId>`, `msg:<messageId>`, `refund:<messageId>`; AGENTS.md rule 6).
+`ScheduledSendJob` changed in D2-04: it used to name a campaign, now the dispatcher reads the
+`laps` table instead, so scheduled campaigns need no job of their own. `valueMicro` is the sale
+value in micro-units of the organisation currency.
 
 ## Retry policy
 
@@ -64,6 +71,11 @@ ScheduledSendJob   { organisationId, campaignId }
 A handler that throws a plain `Error` is retried. A handler that throws BullMQ's
 `UnrecoverableError` is not; the job fails at once. An invalid payload fails this way, since
 retrying cannot make it valid.
+
+A handler can also park its job without using an attempt: `JobMeta.delay(ms)` calls BullMQ's
+`moveToDelayed` and throws `DelayedError`, so the job comes back after `ms`. The send loop uses
+it while a campaign is paused. `delay` is absent when a handler is called outside a worker
+(unit tests), in which case the send loop simply returns.
 
 ## Dead letters
 
@@ -96,7 +108,9 @@ job is still in the source queue's failed set (`removeOnFail` permitting).
 `createWorkers(connection, handlers, options)` starts one `Worker` per queue and returns the
 workers, the dead-letter queues and a `close()` that stops taking jobs, waits for in-flight jobs,
 then closes the dead-letter queues. Handlers are injected (`JobHandlers`), so unit and integration
-tests pass fakes; `createHandlers()` in `src/handlers.ts` holds the real ones (stubs until D2-04).
+tests pass fakes; `createHandlers(deps)` in `src/handlers.ts` holds the real ones (`send` and
+`scheduledSend` since D2-04, the ingest handlers still stubs) and `createStubHandlers()` the
+logging stubs used when the worker has no database.
 
 | Queue | Concurrency | Rate limit |
 | --- | --- | --- |
@@ -139,17 +153,24 @@ Job payloads are never logged in full for the same reason; handlers log ids and 
 | `SEND_CONCURRENCY` | 5 | parallel `send` jobs per process |
 | `SEND_RATE_PER_SECOND` | 50 | `send` jobs started per second per process |
 | `INGEST_CONCURRENCY` | 5 | parallel jobs on the three ingest queues |
+| `LAP_POLL_MS` | 5000 | lap dispatcher tick interval |
+| `PAUSE_RETRY_MS` | 10000 | how long a paused lap's job is parked |
+| `LINKS_BASE_URL` | `http://localhost:8787` | base of the `{{domain}}` short links |
+| `INTERNAL_API_SECRET` | none (`/internal/*` answers 503) | shared secret for the internal API |
+| `DATABASE_URL` | none (send handlers are stubs) | Postgres for the send loop and `/health` |
 | `LOG_LEVEL` | `info` | minimum log level |
 | `SHUTDOWN_TIMEOUT_MS` | 30000 | hard limit on graceful shutdown |
 | `WORKER_PORT` | 4000 | HTTP port |
 
-Concurrency and rate values must be positive integers; the worker refuses to start otherwise.
+Concurrency, rate and interval values must be positive integers; the worker refuses to start
+otherwise.
 
 ## Tests
 
 - Unit: `pnpm --filter @sendex/worker test` (schemas, settings, dead-letter rules, health, logging).
-- Integration: `apps/worker/src/queues.integration.test.ts` runs only when `REDIS_URL` is set and
-  reachable (`describe.skipIf`), under a unique key prefix it obliterates afterwards:
+- Integration: `apps/worker/src/queues.integration.test.ts` and
+  `apps/worker/src/send/send.integration.test.ts` run only when `REDIS_URL` is set and
+  reachable (`describe.skipIf`), under a unique key prefix they obliterate afterwards:
   `REDIS_URL=redis://127.0.0.1:6379 pnpm test` (works through turbo too: `REDIS_URL` is declared
   on the `test` task in `turbo.json`, so it reaches the package and is part of the cache key).
 

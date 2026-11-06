@@ -28,6 +28,7 @@ pnpm test               Vitest in every package
 pnpm db:generate        drizzle-kit generate (after schema changes)
 pnpm db:migrate         apply migrations
 pnpm db:seed            demo organisations and data
+pnpm --filter @sendex/db erd   regenerate docs/engineering/erd.md after schema changes (CI checks it)
 ```
 
 ## Rules

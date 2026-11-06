@@ -40,6 +40,8 @@ jobs:
 
       - run: pnpm lint
       - run: pnpm typecheck
+      - name: ER diagram is current
+        run: pnpm --filter @sendex/db erd:check
       - run: pnpm test
 
       - name: Audit dependencies

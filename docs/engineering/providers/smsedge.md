@@ -29,7 +29,7 @@ Do this only with a sign-off on who pays and which numbers may receive messages;
 
 1. Make sure the `platform` route rows have `route_prices` for the countries that will be sent to; a lap on a route without a price cancels.
 2. Make sure every organisation that can reach the platform routes holds real money in its ledger. The seeded `external` organisation carries demo credit: re-seed it to zero or restrict its routes first.
-3. For the first sends, set `SEND_ALLOWLIST_E164` on the worker to the test numbers (comma separated E.164): every provider then refuses any other recipient before the carrier is called, so a seeded or mistaken list cannot go out. Remove it once real campaigns start.
+3. For the first sends, set `SEND_ALLOWLIST_E164` on the worker to the test numbers (comma separated E.164, or country prefixes such as `+356*,+63*` when the numbers are not known in advance): every provider then refuses any other recipient before the carrier is called, so a seeded or mistaken list cannot go out. Remove it once real campaigns start.
 4. `fly secrets set -a sendex-worker SMS_EDGE_API_KEY=…` (this restarts the worker).
 5. Send D2-18's first real message: a campaign with one test number of ours on one platform route with test size 1. Check `fly logs` for `batch submitted` with `provider: platform`, then `receipts polled` with `applied: 1` within `RECEIPT_POLL_AFTER_MS` plus one minute.
 6. To turn it off: `fly secrets unset -a sendex-worker SMS_EDGE_API_KEY`.

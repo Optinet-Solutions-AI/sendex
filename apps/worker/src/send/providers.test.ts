@@ -1,11 +1,23 @@
-import { SmppProvider, Telecom23Provider } from "@sendex/providers";
+import { FakeProvider, SmppProvider, SmsEdgeProvider, Telecom23Provider } from "@sendex/providers";
 import { describe, expect, it } from "vitest";
 import { createDefaultProviderRegistry, telecom23ProviderFromEnv } from "./providers.js";
 
 describe("createDefaultProviderRegistry", () => {
-  it("always has the platform and fake providers", () => {
+  it("always has the platform and fake providers; platform is fake without an SMS Edge key", () => {
     const registry = createDefaultProviderRegistry({});
     expect(registry.names()).toEqual(["platform", "fake"]);
+    expect(registry.get("platform")).toBeInstanceOf(FakeProvider);
+  });
+
+  it("serves platform routes through SMS Edge when SMS_EDGE_API_KEY is set", () => {
+    const registry = createDefaultProviderRegistry({ SMS_EDGE_API_KEY: " abc " });
+    expect(registry.names()).toEqual(["platform", "fake"]);
+    const platform = registry.get("platform");
+    expect(platform).toBeInstanceOf(SmsEdgeProvider);
+    expect(platform.name).toBe("platform");
+    expect(
+      createDefaultProviderRegistry({ SMS_EDGE_API_KEY: "  " }).get("platform"),
+    ).toBeInstanceOf(FakeProvider);
   });
 
   it("registers 23telecom when TELECOM23_API_KEY is set", () => {

@@ -48,6 +48,11 @@ erDiagram
     uuid list_id PK, FK
     uuid organisation_id FK
   }
+  campaign_segments {
+    uuid campaign_id PK, FK
+    uuid organisation_id FK
+    uuid segment_id PK, FK
+  }
   campaign_sid_group {
     uuid campaign_id PK, FK
     uuid organisation_id FK
@@ -286,6 +291,20 @@ erDiagram
     uuid organisation_id FK
     text provider
   }
+  segments {
+    timestamp_with_time_zone created_at
+    jsonb definition
+    boolean global_exclude
+    integer good
+    uuid id PK
+    boolean is_template
+    text name
+    uuid organisation_id FK
+    integer size
+    timestamp_with_time_zone stats_at
+    text summary
+    timestamp_with_time_zone updated_at
+  }
   sender_ids {
     boolean active
     uuid id PK
@@ -330,6 +349,7 @@ erDiagram
   campaigns ||--o{ ad_texts : "campaign_id"
   campaigns ||--o{ campaign_links : "campaign_id"
   campaigns ||--o{ campaign_lists : "campaign_id"
+  campaigns ||--o{ campaign_segments : "campaign_id"
   campaigns ||--o{ campaign_sid_group : "campaign_id"
   campaigns ||--o{ clicks : "campaign_id"
   campaigns ||--o{ laps : "campaign_id"
@@ -353,6 +373,7 @@ erDiagram
   organisations ||--o{ audit_log : "organisation_id"
   organisations ||--o{ campaign_links : "organisation_id"
   organisations ||--o{ campaign_lists : "organisation_id"
+  organisations ||--o{ campaign_segments : "organisation_id"
   organisations ||--o{ campaign_sid_group : "organisation_id"
   organisations ||--o{ campaigns : "organisation_id"
   organisations ||--o{ clicks : "organisation_id"
@@ -370,6 +391,7 @@ erDiagram
   organisations ||--o{ organisation_settings : "organisation_id"
   organisations ||--o{ postbacks : "organisation_id"
   organisations ||--o{ routes : "organisation_id"
+  organisations ||--o{ segments : "organisation_id"
   organisations ||--o{ sender_ids : "organisation_id"
   organisations ||--o{ sid_groups : "organisation_id"
   organisations ||--o{ suppression_imports : "organisation_id"
@@ -377,6 +399,7 @@ erDiagram
   routes ||--o{ laps : "route_id"
   routes ||--o{ messages : "route_id"
   routes ||--o{ route_prices : "route_id"
+  segments ||--o{ campaign_segments : "segment_id"
   sid_groups ||--o{ campaign_sid_group : "sid_group_id"
   sid_groups ||--o{ sender_ids : "sid_group_id"
   suppression_imports ||--o{ suppressions : "import_id"
@@ -387,4 +410,4 @@ erDiagram
   users ||--o{ organisation_alerts : "acknowledged_by"
 ```
 
-Generated from the Drizzle schema by `pnpm --filter @sendex/db erd` (29 tables, 59 relationships). Do not edit by hand: regenerate after every schema change. CI runs `pnpm --filter @sendex/db erd:check` and fails when this file is stale.
+Generated from the Drizzle schema by `pnpm --filter @sendex/db erd` (31 tables, 63 relationships). Do not edit by hand: regenerate after every schema change. CI runs `pnpm --filter @sendex/db erd:check` and fails when this file is stale.

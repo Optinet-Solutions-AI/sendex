@@ -557,3 +557,15 @@ export async function cleanupE2eSuppressions(e164Prefixes: readonly string[]): P
     await sql.end();
   }
 }
+
+/** Remove the segments the segments spec created (name prefix). */
+export async function cleanupE2eSegments(namePrefix: string): Promise<void> {
+  const url = process.env.DATABASE_URL;
+  if (!url) throw new Error("DATABASE_URL must be set to run the segments e2e spec");
+  const sql = postgres(url, { max: 1 });
+  try {
+    await sql`delete from segments where name like ${`${namePrefix}%`} or name like ${`Copy of ${namePrefix}%`}`;
+  } finally {
+    await sql.end();
+  }
+}

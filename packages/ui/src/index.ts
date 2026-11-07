@@ -16,6 +16,7 @@ export * from "./kpi-strip.js";
 export * from "./num.js";
 export * from "./page-header.js";
 export * from "./pagination.js";
+export * from "./popover.js";
 export * from "./segmented.js";
 export * from "./select.js";
 export * from "./skeleton.js";

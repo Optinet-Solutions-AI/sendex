@@ -154,6 +154,7 @@ export function SendForm({
 
   return (
     <div className="space-y-6">
+      <LapsTable campaign={campaign} canToggle={canSend} canFlush={canFlush} />
       <Card id="send-this-campaign" data-testid="send-form">
         <div className="flex items-center justify-between border-b border-rule px-4 py-3">
           <h2 className="flex items-center gap-2 text-sm font-semibold text-ink">
@@ -364,12 +365,6 @@ export function SendForm({
           onSend={send}
         />
       </Card>
-      <LapsTable
-        laps={campaign.laps}
-        timezone={campaign.timezone}
-        campaignId={campaign.id}
-        canToggle={canSend}
-      />
     </div>
   );
 }

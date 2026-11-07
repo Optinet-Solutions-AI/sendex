@@ -103,7 +103,7 @@ app.get("/:code", async (c) => {
 
   if (c.req.method !== "HEAD") {
     const click = buildClickRecord(code, c.req.raw, new Date());
-    if (click.device !== "bot") recordClick(c, click);
+    recordClick(c, click);
   }
 
   c.header("cache-control", "private, no-store");

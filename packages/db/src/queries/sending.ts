@@ -728,6 +728,8 @@ export function createSendingStore(db: Db): SendingStore {
           .where(
             and(
               eq(laps.status, "queued"),
+              eq(laps.active, true),
+              or(isNull(laps.scheduledAt), lte(laps.scheduledAt, now)),
               inArray(
                 laps.campaignId,
                 tx

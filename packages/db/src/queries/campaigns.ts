@@ -292,6 +292,8 @@ export interface CampaignLinkSummary {
 export interface LapSummary extends LapRow {
   routeName: string;
   listName: string;
+  /** The route's current price for the lap's list country, null when unpriced. */
+  priceMicro: bigint | null;
 }
 
 export interface CampaignDetail extends CampaignRow {
@@ -361,13 +363,32 @@ async function campaignLinkSummaries(db: Db, campaignId: string): Promise<Campai
 
 async function campaignLaps(db: Db, campaignId: string): Promise<LapSummary[]> {
   const rows = await db
-    .select({ lap: laps, routeName: routes.name, listName: lists.name })
+    .select({
+      lap: laps,
+      routeName: routes.name,
+      listName: lists.name,
+      priceMicro: lapPriceSql(),
+    })
     .from(laps)
     .innerJoin(routes, eq(routes.id, laps.routeId))
     .innerJoin(lists, eq(lists.id, laps.listId))
     .where(eq(laps.campaignId, campaignId))
     .orderBy(asc(laps.createdAt), asc(lists.name), asc(routes.name), asc(laps.id));
-  return rows.map((r) => ({ ...r.lap, routeName: r.routeName, listName: r.listName }));
+  return rows.map((r) => ({
+    ...r.lap,
+    routeName: r.routeName,
+    listName: r.listName,
+    priceMicro: r.priceMicro,
+  }));
+}
+
+/** The route's current price for the lap's list country; for selects joining `laps` and `lists`. */
+export function lapPriceSql(): SQL<bigint | null> {
+  return sql<bigint | null>`(select rp.price_micro from route_prices rp
+    where rp.route_id = laps.route_id
+      and rp.country = lists.country
+      and rp.valid_from <= now()
+    order by rp.valid_from desc limit 1)`.mapWith(toNullableBigInt);
 }
 
 /** The campaign with everything the send form shows, or null when it is not the organisation's. */

@@ -206,6 +206,16 @@ export const laps = pgTable(
     refusalReason: text("refusal_reason"),
     /** 1 = best route of the test round; null until ranked. */
     rank: integer("rank"),
+    /** Micro-EUR added by budget top-ups; each top-up also raises `test_size` by amount / price. */
+    budgetMicro: bigint("budget_micro", { mode: "bigint" }).notNull().default(sql`0`),
+    /** Link-preview bot hits on this lap's links (never counted as clicks). */
+    previews: integer("previews").notNull().default(0),
+    /** A note from the lap menu ("Add comment"). */
+    comment: text("comment"),
+    /** The lap's On switch; off cancels sending, on re-queues it. */
+    active: boolean("active").notNull().default(true),
+    /** A rescheduled lap is not claimed before this time. */
+    scheduledAt: timestamp("scheduled_at", { withTimezone: true }),
     startedAt: timestamp("started_at", { withTimezone: true }),
     finishedAt: timestamp("finished_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

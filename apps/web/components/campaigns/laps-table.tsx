@@ -1,12 +1,61 @@
 "use client";
 
-import { resultRates } from "@sendex/core";
+import {
+  countryName,
+  flagEmoji,
+  resultRates,
+  TOP_UP_AMOUNTS_EUR,
+  topUpPlan,
+  topUpTooltip,
+} from "@sendex/core";
+import {
+  Button,
+  ConfirmDialog,
+  CountPill,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+  IconButton,
+  Toggle,
+  Tooltip,
+  useToast,
+} from "@sendex/ui";
+import { formatInTimeZone } from "date-fns-tz";
+import {
+  CalendarClock,
+  ExternalLink,
+  FastForward,
+  Info,
+  MessageSquarePlus,
+  MoreVertical,
+  Plus,
+  RotateCcw,
+  SlidersHorizontal,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
-import { toggleLapAction } from "../../app/(dashboard)/campaigns/actions";
-import { formatMicro, formatPer, formatPercent, formatPeriod, shortId } from "./format";
-import type { LapView } from "./types";
-import { ErrorText, StatusBadge, Toggle } from "./ui";
+import { useEffect, useId, useState, useTransition } from "react";
+import {
+  flushLapAction,
+  rescheduleLapAction,
+  sendCampaignAction,
+  setLapCommentAction,
+  toggleAllLapsAction,
+  toggleLapAction,
+  topUpLapsAction,
+} from "../../app/(dashboard)/campaigns/actions";
+import {
+  formatDateTime,
+  formatMicro,
+  formatPer,
+  formatPercent,
+  formatPeriod,
+  formatPricePerSms,
+  shortId,
+} from "./format";
+import { isoToLocalInput, localInputToIso } from "./schedule";
+import type { CampaignView, LapView } from "./types";
+import { ErrorText, inputClass } from "./ui";
 
 /** Columns the table can be sorted by; `rank` is the default (unranked laps last). */
 export type LapSortKey =
@@ -15,6 +64,7 @@ export type LapSortKey =
   | "delivered"
   | "failed"
   | "delivery"
+  | "previews"
   | "clicks"
   | "ctr"
   | "cost"
@@ -68,6 +118,8 @@ function sortValue(row: LapRow, key: LapSortKey): number | null {
       return row.failed;
     case "delivery":
       return row.deliveryRate;
+    case "previews":
+      return row.previews;
     case "clicks":
       return row.clicks;
     case "ctr":
@@ -108,6 +160,7 @@ const SORTABLE: ReadonlyArray<{ key: LapSortKey; label: string }> = [
   { key: "delivered", label: "Delivered" },
   { key: "failed", label: "Failed" },
   { key: "delivery", label: "Delivery" },
+  { key: "previews", label: "Previews" },
   { key: "clicks", label: "Clicks" },
   { key: "ctr", label: "CTR" },
   { key: "cost", label: "Cost" },
@@ -119,6 +172,10 @@ const SORTABLE: ReadonlyArray<{ key: LapSortKey; label: string }> = [
   { key: "rank", label: "Rank" },
 ];
 
+const TH =
+  "whitespace-nowrap px-3 py-2 font-mono text-[11px] font-medium uppercase tracking-[0.06em] text-muted";
+const TD = "whitespace-nowrap px-3 py-2 text-sm";
+
 function SortHeader({
   sortable,
   label,
@@ -128,21 +185,21 @@ function SortHeader({
 }: {
   sortable: LapSortKey;
   label: string;
-  sortKey: LapSortKey;
+  sortKey: LapSortKey | null;
   dir: "asc" | "desc";
   onSort: (key: LapSortKey) => void;
 }) {
   const active = sortable === sortKey;
   return (
     <th
-      className="px-2 py-2 text-right"
+      className={`${TH} text-right`}
       aria-sort={active ? (dir === "asc" ? "ascending" : "descending") : "none"}
     >
       <button
         type="button"
         onClick={() => onSort(sortable)}
         data-testid={`sort-${sortable}`}
-        className={`uppercase ${active ? "font-semibold text-neutral-900" : ""}`}
+        className={`uppercase hover:text-ink ${active ? "font-semibold text-ink" : ""}`}
       >
         {label}
         {active ? (dir === "asc" ? " ▲" : " ▼") : ""}
@@ -158,31 +215,79 @@ function refusalLabel(reason: string | null): string {
   return reason ?? "cap";
 }
 
+const STATUS_LABEL: Record<LapView["status"], string> = {
+  queued: "Queued",
+  sending: "Sending",
+  done: "Done",
+  cancelled: "Off",
+};
+
+/** "09:09 (CET)" in the campaign's timezone, ticking every half minute; empty until mounted. */
+function useLocalClock(timezone: string): string {
+  const [now, setNow] = useState<string>("");
+  useEffect(() => {
+    const tick = () => setNow(formatInTimeZone(new Date(), timezone, "HH:mm (zzz)"));
+    tick();
+    const id = window.setInterval(tick, 30_000);
+    return () => window.clearInterval(id);
+  }, [timezone]);
+  return now;
+}
+
+type LapDialog =
+  | { kind: "topup"; amountEur: number }
+  | { kind: "custom" }
+  | { kind: "finish" }
+  | { kind: "comment"; lap: LapRow }
+  | { kind: "reschedule"; lap: LapRow }
+  | { kind: "flush"; lap: LapRow }
+  | null;
+
 /**
- * The laps of a campaign with every SMS Edge column, sortable by rank (default) or any
- * counter, and a per-lap on/off switch. Off cancels a queued or sending lap; on re-queues a
+ * The laps of a running campaign, as the spec draws them: a header with the country and its
+ * local time, the lap count, Custom and €5–€200 budget top-ups (the tooltip spells out the
+ * maths), Finish List, Sort by rank and Show comments; then the table with every SMS Edge
+ * column plus Delivered and Failed, an All switch, a per-lap switch, an ⓘ and a ⋮ menu with
+ * Reschedule, Flush lap and Add comment. Off cancels a queued or sending lap; on re-queues a
  * cancelled one; a finished lap keeps its switch disabled.
  */
 export function LapsTable({
-  laps,
-  timezone,
-  campaignId,
+  campaign,
   canToggle = false,
+  canFlush = false,
 }: {
-  laps: LapView[];
-  timezone: string;
-  campaignId?: string;
+  campaign: CampaignView;
   canToggle?: boolean;
+  canFlush?: boolean;
 }) {
   const router = useRouter();
-  const [sortKey, setSortKey] = useState<LapSortKey>("rank");
+  const { toast } = useToast();
+  const id = useId();
+  const [byRank, setByRank] = useState(true);
+  const [sortKey, setSortKey] = useState<LapSortKey | null>("rank");
   const [dir, setDir] = useState<"asc" | "desc">("asc");
+  const [showComments, setShowComments] = useState(false);
+  const [menuFor, setMenuFor] = useState<string | null>(null);
+  const [dialog, setDialog] = useState<LapDialog>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
+  const clock = useLocalClock(campaign.timezone);
+  const { laps, timezone } = campaign;
+
   if (laps.length === 0) return null;
-  const rows = sortLaps(laps.map(toRow), sortKey, dir);
+
+  const rows = sortKey ? sortLaps(laps.map(toRow), sortKey, dir) : laps.map(toRow);
+  const activeRows = rows.filter((r) => r.on && r.status !== "done");
+  const allOn = rows.filter((r) => r.status !== "done").every((r) => r.on);
+  const remaining = campaign.lists.reduce((sum, l) => sum + l.available, 0);
+  const plan = (amountEur: number) =>
+    topUpPlan({
+      amountMicro: Math.round(amountEur * 1_000_000),
+      laps: rows.map((r) => ({ id: r.id, active: r.on, priceMicro: r.priceMicro })),
+    });
 
   function sortBy(key: LapSortKey) {
+    setByRank(false);
     if (key === sortKey) {
       setDir(dir === "asc" ? "desc" : "asc");
       return;
@@ -191,32 +296,149 @@ export function LapsTable({
     setDir(key === "rank" ? "asc" : "desc");
   }
 
+  function sortByRank(on: boolean) {
+    setByRank(on);
+    setSortKey(on ? "rank" : null);
+    setDir("asc");
+  }
+
+  function refresh() {
+    router.refresh();
+  }
+
   function toggle(lap: LapRow, on: boolean) {
-    if (!campaignId) return;
     setError(null);
     start(async () => {
-      const result = await toggleLapAction({ campaignId, lapId: lap.id, on });
+      const result = await toggleLapAction({ campaignId: campaign.id, lapId: lap.id, on });
       if (!result.ok) {
         setError(result.error);
         return;
       }
-      router.refresh();
+      refresh();
     });
   }
 
+  function toggleAll(on: boolean) {
+    setError(null);
+    start(async () => {
+      const result = await toggleAllLapsAction({ campaignId: campaign.id, on });
+      if (!result.ok) {
+        setError(result.error);
+        return;
+      }
+      toast({
+        title: `${result.data} lap${result.data === 1 ? "" : "s"} switched ${on ? "on" : "off"}`,
+      });
+      refresh();
+    });
+  }
+
+  async function topUp(amountEur: number) {
+    const result = await topUpLapsAction({ campaignId: campaign.id, amountEur });
+    if (!result.ok) throw new Error(result.error);
+    toast({
+      title: `Topped up ${result.data.laps} lap${result.data.laps === 1 ? "" : "s"}`,
+      description: `${formatMicro(result.data.totalMicro)} of budget, about ${result.data.newSms.toLocaleString("en-GB")} more SMS.`,
+      variant: "success",
+    });
+    refresh();
+  }
+
+  async function finishList() {
+    const routeIds = [...new Set(activeRows.map((r) => r.routeId))];
+    const result = await sendCampaignAction({ campaignId: campaign.id, routeIds, sendAll: true });
+    if (!result.ok) throw new Error(result.error);
+    toast({
+      title: `${result.data.length} lap${result.data.length === 1 ? "" : "s"} queued`,
+      description: "The rest of the list is on its way.",
+      variant: "success",
+    });
+    refresh();
+  }
+
+  async function flush(lap: LapRow) {
+    const result = await flushLapAction({ campaignId: campaign.id, lapId: lap.id });
+    if (!result.ok) throw new Error(result.error);
+    toast({
+      title: `Flushed ${lap.listName}`,
+      description: `${result.data.members.toLocaleString("en-GB")} numbers reset.`,
+    });
+    refresh();
+  }
+
+  const topUpButton = (amountEur: number) => {
+    const p = plan(amountEur);
+    return (
+      <Tooltip key={amountEur} content={topUpTooltip(p, Math.round(amountEur * 1_000_000))}>
+        <button
+          type="button"
+          data-testid={`top-up-${amountEur}`}
+          disabled={!canToggle || pending || p.activeLaps === 0}
+          onClick={() => setDialog({ kind: "topup", amountEur })}
+          className="h-8 rounded-md border border-neutral-300 bg-surface px-2.5 font-mono text-xs text-ink hover:border-navy hover:bg-navy-soft disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          €{amountEur}
+        </button>
+      </Tooltip>
+    );
+  };
+
   return (
-    <section className="space-y-2" data-testid="laps-section">
-      <h3 className="text-sm font-semibold">Laps</h3>
+    <section className="space-y-3" data-testid="laps-section">
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="inline-flex items-center gap-1.5 text-sm font-medium text-ink">
+          <span aria-hidden="true">{flagEmoji(campaign.country)}</span>
+          <span data-testid="laps-local-time">
+            {campaign.country.toUpperCase()} {clock}
+          </span>
+          <span className="sr-only">{countryName(campaign.country)} local time</span>
+        </span>
+        <CountPill count={laps.length} noun="lap" testId="laps-count" />
+        <div className="ml-auto flex flex-wrap items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={!canToggle || pending}
+            onClick={() => setDialog({ kind: "custom" })}
+            data-testid="top-up-custom"
+          >
+            <SlidersHorizontal className="h-3.5 w-3.5" aria-hidden="true" /> Custom
+          </Button>
+          <fieldset
+            className="inline-flex items-center gap-1 border-0 p-0"
+            aria-label="Budget top-up"
+          >
+            <Plus className="h-3.5 w-3.5 text-muted" aria-hidden="true" />
+            {TOP_UP_AMOUNTS_EUR.map(topUpButton)}
+          </fieldset>
+          <Tooltip content="Send everything left on the lists through the active routes">
+            <Button
+              size="sm"
+              className="bg-good text-white hover:bg-emerald-700"
+              disabled={!canToggle || pending || remaining === 0 || activeRows.length === 0}
+              onClick={() => setDialog({ kind: "finish" })}
+              data-testid="finish-list"
+            >
+              <FastForward className="h-3.5 w-3.5" aria-hidden="true" /> Finish List
+            </Button>
+          </Tooltip>
+          <Toggle label="Sort by rank" checked={byRank} onCheckedChange={sortByRank} />
+          <Toggle
+            label="Show comments"
+            checked={showComments}
+            onCheckedChange={setShowComments}
+            testId="show-comments"
+          />
+        </div>
+      </div>
       <ErrorText error={error} />
-      <div className="overflow-x-auto rounded border border-neutral-200 bg-white">
+      <div className="overflow-x-auto rounded-lg border border-rule bg-surface">
         <table className="w-full text-sm" data-testid="laps-table">
-          <thead className="bg-neutral-50 text-left text-xs uppercase text-neutral-500">
+          <thead className="border-b border-rule bg-page text-left">
             <tr>
-              <th className="px-2 py-2">Lap ID</th>
-              <th className="px-2 py-2">Route</th>
-              <th className="px-2 py-2">List</th>
-              <th className="px-2 py-2">Status</th>
-              <th className="px-2 py-2 text-right">Size</th>
+              <th className={TH}>Lap ID</th>
+              <th className={TH}>Route</th>
+              <th className={TH}>List</th>
               {SORTABLE.map((c) => (
                 <SortHeader
                   key={c.key}
@@ -227,84 +449,547 @@ export function LapsTable({
                   onSort={sortBy}
                 />
               ))}
-              <th className="px-2 py-2">Period</th>
-              <th className="px-2 py-2">On</th>
+              <th className={TH}>Sending Period</th>
+              <th className={TH}>
+                <Toggle
+                  label="All laps"
+                  labelHidden
+                  checked={allOn}
+                  onCheckedChange={toggleAll}
+                  disabled={!canToggle || pending}
+                  testId="all-laps-toggle"
+                />
+              </th>
+              <th className={TH}>
+                <span className="sr-only">Details</span>
+              </th>
+              <th className={TH}>
+                <span className="sr-only">Actions</span>
+              </th>
             </tr>
           </thead>
           <tbody>
             {rows.map((lap) => (
-              <tr
+              <LapTr
                 key={lap.id}
-                className="border-t border-neutral-100"
-                data-testid="lap-row"
-                data-lap-id={lap.id}
-                data-lap-status={lap.status}
-                data-lap-rank={lap.rank ?? ""}
-              >
-                <td className="px-2 py-1.5 font-mono text-xs text-neutral-500" title={lap.id}>
-                  {shortId(lap.id)}
-                </td>
-                <td className="px-2 py-1.5 font-medium">{lap.routeName}</td>
-                <td className="px-2 py-1.5">{lap.listName}</td>
-                <td className="px-2 py-1.5">
-                  <StatusBadge status={lap.status} />
-                  {lap.refused > 0 ? (
-                    <span
-                      data-testid="lap-refused"
-                      title="A daily cap refused these messages; raise the cap under Settings, Billing and resume the campaign."
-                      className="mt-1 block whitespace-nowrap text-xs text-orange-800"
-                    >
-                      refused: {refusalLabel(lap.refusalReason)} ({lap.refused})
-                    </span>
-                  ) : null}
-                </td>
-                <td className="px-2 py-1.5 text-right tabular-nums">{lap.testSize}</td>
-                <td className="px-2 py-1.5 text-right tabular-nums" data-testid="lap-sent">
-                  {lap.sent}
-                </td>
-                <td className="px-2 py-1.5 text-right tabular-nums" data-testid="lap-delivered">
-                  {lap.delivered}
-                </td>
-                <td className="px-2 py-1.5 text-right tabular-nums" data-testid="lap-failed">
-                  {lap.failed}
-                </td>
-                <td className="px-2 py-1.5 text-right tabular-nums" data-testid="lap-delivery-rate">
-                  {formatPercent(lap.deliveryRate)}
-                </td>
-                <td className="px-2 py-1.5 text-right tabular-nums" data-testid="lap-clicks">
-                  {lap.clicks}
-                </td>
-                <td className="px-2 py-1.5 text-right tabular-nums" data-testid="lap-ctr">
-                  {formatPercent(lap.ctr)}
-                </td>
-                <td className="px-2 py-1.5 text-right tabular-nums">
-                  {formatMicro(lap.costMicro)}
-                </td>
-                <td className="px-2 py-1.5 text-right tabular-nums">{formatPer(lap.cpcMicro)}</td>
-                <td className="px-2 py-1.5 text-right tabular-nums">{lap.leads}</td>
-                <td className="px-2 py-1.5 text-right tabular-nums">{formatPer(lap.cplMicro)}</td>
-                <td className="px-2 py-1.5 text-right tabular-nums">{lap.sales}</td>
-                <td className="px-2 py-1.5 text-right tabular-nums">{formatPer(lap.cpsMicro)}</td>
-                <td className="px-2 py-1.5 text-right tabular-nums" data-testid="lap-rank">
-                  {lap.rank ?? "–"}
-                </td>
-                <td className="px-2 py-1.5 whitespace-nowrap text-xs text-neutral-600">
-                  {formatPeriod(lap.startedAt, lap.finishedAt, timezone)}
-                </td>
-                <td className="px-2 py-1.5">
-                  <Toggle
-                    checked={lap.on}
-                    onChange={(next) => toggle(lap, next)}
-                    label={`Lap ${lap.routeName} ${lap.on ? "on" : "off"}`}
-                    name="lap-toggle"
-                    disabled={!canToggle || !campaignId || pending || lap.status === "done"}
-                  />
-                </td>
-              </tr>
+                lap={lap}
+                timezone={timezone}
+                canToggle={canToggle}
+                canFlush={canFlush}
+                pending={pending}
+                showComments={showComments}
+                menuOpen={menuFor === lap.id}
+                onMenu={(open) => setMenuFor(open ? lap.id : null)}
+                onToggle={(on) => toggle(lap, on)}
+                onAction={(kind) => {
+                  setMenuFor(null);
+                  setDialog({ kind, lap });
+                }}
+              />
             ))}
           </tbody>
         </table>
       </div>
+
+      <ConfirmDialog
+        open={dialog?.kind === "topup"}
+        onOpenChange={(open) => {
+          if (!open) setDialog(null);
+        }}
+        title={dialog?.kind === "topup" ? `Top up €${dialog.amountEur}` : "Top up"}
+        description={
+          dialog?.kind === "topup"
+            ? topUpTooltip(plan(dialog.amountEur), Math.round(dialog.amountEur * 1_000_000))
+            : null
+        }
+        confirmLabel="Top up"
+        onConfirm={async () => {
+          if (dialog?.kind === "topup") await topUp(dialog.amountEur);
+        }}
+      />
+      <CustomTopUpDialog
+        open={dialog?.kind === "custom"}
+        onClose={() => setDialog(null)}
+        plan={plan}
+        onConfirm={topUp}
+      />
+      <ConfirmDialog
+        open={dialog?.kind === "finish"}
+        onOpenChange={(open) => {
+          if (!open) setDialog(null);
+        }}
+        title="Finish List"
+        description={`Send the remaining ${remaining.toLocaleString("en-GB")} contacts through ${
+          [...new Set(activeRows.map((r) => r.routeName))].join(", ") || "the active routes"
+        }? One lap per list and route is queued and charged as it sends.`}
+        confirmLabel="Finish List"
+        onConfirm={finishList}
+      />
+      <CommentDialog
+        key={dialog?.kind === "comment" ? dialog.lap.id : "comment"}
+        open={dialog?.kind === "comment"}
+        lap={dialog?.kind === "comment" ? dialog.lap : null}
+        campaignId={campaign.id}
+        onClose={() => setDialog(null)}
+        onSaved={refresh}
+      />
+      <RescheduleDialog
+        key={dialog?.kind === "reschedule" ? dialog.lap.id : "reschedule"}
+        open={dialog?.kind === "reschedule"}
+        lap={dialog?.kind === "reschedule" ? dialog.lap : null}
+        campaignId={campaign.id}
+        timezone={timezone}
+        onClose={() => setDialog(null)}
+        onSaved={refresh}
+      />
+      <ConfirmDialog
+        open={dialog?.kind === "flush"}
+        onOpenChange={(open) => {
+          if (!open) setDialog(null);
+        }}
+        title="Flush lap"
+        description={
+          dialog?.kind === "flush"
+            ? `Reset the sending progress of "${dialog.lap.listName}"? Its sent numbers become available again for every campaign.`
+            : null
+        }
+        confirmLabel="Flush lap"
+        destructive
+        onConfirm={async () => {
+          if (dialog?.kind === "flush") await flush(dialog.lap);
+        }}
+      />
+      <span id={id} hidden />
     </section>
+  );
+}
+
+function LapTr({
+  lap,
+  timezone,
+  canToggle,
+  canFlush,
+  pending,
+  showComments,
+  menuOpen,
+  onMenu,
+  onToggle,
+  onAction,
+}: {
+  lap: LapRow;
+  timezone: string;
+  canToggle: boolean;
+  canFlush: boolean;
+  pending: boolean;
+  showComments: boolean;
+  menuOpen: boolean;
+  onMenu: (open: boolean) => void;
+  onToggle: (on: boolean) => void;
+  onAction: (kind: "comment" | "reschedule" | "flush") => void;
+}) {
+  const info = (
+    <div className="space-y-0.5">
+      <div>Status: {STATUS_LABEL[lap.status]}</div>
+      <div>Size: {lap.testSize.toLocaleString("en-GB")}</div>
+      {lap.budgetMicro > 0 ? <div>Budget top-ups: {formatMicro(lap.budgetMicro)}</div> : null}
+      {lap.scheduledAt ? <div>Starts: {formatDateTime(lap.scheduledAt, timezone)}</div> : null}
+      {lap.refused > 0 ? (
+        <div>
+          Refused by {refusalLabel(lap.refusalReason)}: {lap.refused}
+        </div>
+      ) : null}
+      <div className="font-mono text-[11px] opacity-80">{lap.id}</div>
+    </div>
+  );
+  return (
+    <>
+      <tr
+        className="border-t border-rule hover:bg-neutral-50"
+        data-testid="lap-row"
+        data-lap-id={lap.id}
+        data-lap-status={lap.status}
+        data-lap-rank={lap.rank ?? ""}
+      >
+        <td className={`${TD} font-mono text-xs text-muted`} title={lap.id}>
+          {shortId(lap.id)}
+        </td>
+        <td className={`${TD} font-medium`}>
+          Route {lap.routeName}
+          {lap.priceMicro !== null ? (
+            <span className="ml-1 font-mono text-xs text-muted">
+              ({formatPricePerSms(lap.priceMicro)})
+            </span>
+          ) : null}
+        </td>
+        <td className={TD}>
+          <Tooltip content={lap.listName}>
+            <a
+              href={`/lists/${lap.listId}`}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex max-w-[14rem] items-center gap-1 text-navy hover:underline"
+            >
+              <span className="truncate">{lap.listName}</span>
+              <ExternalLink className="h-3 w-3 shrink-0" aria-hidden="true" />
+            </a>
+          </Tooltip>
+          {lap.refused > 0 ? (
+            <span
+              data-testid="lap-refused"
+              title="A daily cap refused these messages; raise the cap under Settings, Billing and resume the campaign."
+              className="block text-xs text-amber"
+            >
+              refused: {refusalLabel(lap.refusalReason)} ({lap.refused})
+            </span>
+          ) : null}
+        </td>
+        <td className={`${TD} text-right tabular-nums`} data-testid="lap-sent">
+          {lap.sent}
+        </td>
+        <td className={`${TD} text-right tabular-nums`} data-testid="lap-delivered">
+          {lap.delivered}
+        </td>
+        <td className={`${TD} text-right tabular-nums`} data-testid="lap-failed">
+          {lap.failed}
+        </td>
+        <td className={`${TD} text-right tabular-nums`} data-testid="lap-delivery-rate">
+          {formatPercent(lap.deliveryRate)}
+        </td>
+        <td className={`${TD} text-right tabular-nums`} data-testid="lap-previews">
+          {lap.previews}
+        </td>
+        <td className={`${TD} text-right tabular-nums`} data-testid="lap-clicks">
+          {lap.clicks}
+        </td>
+        <td className={`${TD} text-right tabular-nums`} data-testid="lap-ctr">
+          {formatPercent(lap.ctr)}
+        </td>
+        <td className={`${TD} text-right tabular-nums`}>{formatMicro(lap.costMicro)}</td>
+        <td className={`${TD} text-right tabular-nums`}>{formatPer(lap.cpcMicro)}</td>
+        <td className={`${TD} text-right tabular-nums`}>{lap.leads}</td>
+        <td className={`${TD} text-right tabular-nums`}>{formatPer(lap.cplMicro)}</td>
+        <td className={`${TD} text-right tabular-nums`}>{lap.sales}</td>
+        <td className={`${TD} text-right tabular-nums`}>{formatPer(lap.cpsMicro)}</td>
+        <td className={`${TD} text-right tabular-nums`} data-testid="lap-rank">
+          {lap.rank ?? "–"}
+        </td>
+        <td className={`${TD} text-xs text-muted`}>
+          {formatPeriod(lap.startedAt, lap.finishedAt, timezone)}
+        </td>
+        <td className={TD}>
+          <Toggle
+            checked={lap.on}
+            onCheckedChange={onToggle}
+            label={`Lap ${lap.routeName} ${lap.on ? "on" : "off"}`}
+            labelHidden
+            testId="lap-toggle"
+            disabled={!canToggle || pending || lap.status === "done"}
+          />
+        </td>
+        <td className={TD}>
+          <Tooltip content={info}>
+            <span className="inline-flex h-8 w-8 items-center justify-center text-muted hover:text-ink">
+              <Info className="h-4 w-4" aria-hidden="true" />
+              <span className="sr-only">Lap details</span>
+            </span>
+          </Tooltip>
+        </td>
+        <td className={`${TD} relative`}>
+          <IconButton
+            label={`Lap ${shortId(lap.id)} actions`}
+            tooltip="Lap actions"
+            icon={<MoreVertical />}
+            aria-haspopup="menu"
+            aria-expanded={menuOpen}
+            onClick={() => onMenu(!menuOpen)}
+            data-testid="lap-menu"
+          />
+          {menuOpen ? (
+            <>
+              <button
+                type="button"
+                aria-label="Close menu"
+                className="fixed inset-0 z-10 cursor-default"
+                onClick={() => onMenu(false)}
+              />
+              <div
+                role="menu"
+                className="absolute right-2 z-20 mt-1 w-44 rounded-md border border-rule bg-surface py-1 text-left text-sm shadow-md"
+              >
+                <button
+                  type="button"
+                  role="menuitem"
+                  className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-neutral-100 disabled:text-muted"
+                  onClick={() => onAction("reschedule")}
+                  disabled={!canToggle || lap.status !== "queued"}
+                  title={
+                    lap.status === "queued" ? undefined : "Only a queued lap can be rescheduled"
+                  }
+                >
+                  <CalendarClock className="h-4 w-4" aria-hidden="true" /> Reschedule
+                </button>
+                <button
+                  type="button"
+                  role="menuitem"
+                  className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-neutral-100 disabled:text-muted"
+                  onClick={() => onAction("flush")}
+                  disabled={!canFlush}
+                >
+                  <RotateCcw className="h-4 w-4" aria-hidden="true" /> Flush lap
+                </button>
+                <button
+                  type="button"
+                  role="menuitem"
+                  className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-neutral-100"
+                  onClick={() => onAction("comment")}
+                >
+                  <MessageSquarePlus className="h-4 w-4" aria-hidden="true" />
+                  {lap.comment ? "Edit comment" : "Add comment"}
+                </button>
+              </div>
+            </>
+          ) : null}
+        </td>
+      </tr>
+      {showComments ? (
+        <tr className="bg-page" data-testid="lap-comment-row">
+          <td colSpan={21} className="px-3 py-1.5 text-xs text-muted">
+            <span className="font-mono uppercase tracking-[0.06em]">Comment</span>{" "}
+            <span className="text-ink" data-testid="lap-comment">
+              {lap.comment ?? "–"}
+            </span>
+          </td>
+        </tr>
+      ) : null}
+    </>
+  );
+}
+
+function CustomTopUpDialog({
+  open,
+  onClose,
+  plan,
+  onConfirm,
+}: {
+  open: boolean;
+  onClose: () => void;
+  plan: (amountEur: number) => ReturnType<typeof topUpPlan>;
+  onConfirm: (amountEur: number) => Promise<void>;
+}) {
+  const id = useId();
+  const [amount, setAmount] = useState("25");
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const eur = Number(amount);
+  const valid = Number.isFinite(eur) && eur > 0;
+  const preview = valid ? topUpTooltip(plan(eur), Math.round(eur * 1_000_000)) : null;
+
+  async function submit() {
+    if (!valid) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await onConfirm(eur);
+      onClose();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Something went wrong");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={(o) => (o ? undefined : onClose())}>
+      <DialogContent>
+        <DialogTitle className="text-lg font-semibold">Custom top-up</DialogTitle>
+        <DialogDescription className="mt-1 text-sm text-muted">
+          Add a budget of your choice to every active lap.
+        </DialogDescription>
+        <form
+          className="mt-4 space-y-3"
+          onSubmit={(e) => {
+            e.preventDefault();
+            void submit();
+          }}
+        >
+          <label htmlFor={`${id}-amount`} className="block text-sm font-medium text-ink">
+            Amount (€)
+          </label>
+          <input
+            id={`${id}-amount`}
+            type="number"
+            min={1}
+            step="1"
+            className={`${inputClass} w-40`}
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            data-testid="custom-top-up-amount"
+          />
+          {preview ? <p className="text-xs text-muted">{preview}</p> : null}
+          <ErrorText error={error} />
+          <div className="flex justify-end gap-2 pt-2">
+            <Button type="button" variant="outline" onClick={onClose} disabled={busy}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={busy || !valid} data-testid="custom-top-up-confirm">
+              {busy ? "Working…" : "Top up"}
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function CommentDialog({
+  open,
+  lap,
+  campaignId,
+  onClose,
+  onSaved,
+}: {
+  open: boolean;
+  lap: LapRow | null;
+  campaignId: string;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const id = useId();
+  const [comment, setComment] = useState(lap?.comment ?? "");
+  const [error, setError] = useState<string | null>(null);
+  const [pending, start] = useTransition();
+
+  function submit() {
+    if (!lap) return;
+    setError(null);
+    start(async () => {
+      const result = await setLapCommentAction({ campaignId, lapId: lap.id, comment });
+      if (!result.ok) {
+        setError(result.error);
+        return;
+      }
+      onSaved();
+      onClose();
+    });
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={(o) => (o ? undefined : onClose())}>
+      <DialogContent>
+        <DialogTitle className="text-lg font-semibold">
+          {lap?.comment ? "Edit comment" : "Add comment"}
+        </DialogTitle>
+        <DialogDescription className="mt-1 text-sm text-muted">
+          A note on this lap, shown under it with "Show comments".
+        </DialogDescription>
+        <form
+          className="mt-4 space-y-3"
+          onSubmit={(e) => {
+            e.preventDefault();
+            submit();
+          }}
+        >
+          <label htmlFor={`${id}-comment`} className="sr-only">
+            Comment
+          </label>
+          <textarea
+            id={`${id}-comment`}
+            className={`${inputClass} min-h-24`}
+            value={comment}
+            onChange={(e) => setComment(e.target.value)}
+            maxLength={500}
+            data-testid="lap-comment-input"
+          />
+          <ErrorText error={error} />
+          <div className="flex justify-end gap-2 pt-2">
+            <Button type="button" variant="outline" onClick={onClose} disabled={pending}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={pending} data-testid="lap-comment-save">
+              {pending ? "Saving…" : "Save comment"}
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function RescheduleDialog({
+  open,
+  lap,
+  campaignId,
+  timezone,
+  onClose,
+  onSaved,
+}: {
+  open: boolean;
+  lap: LapRow | null;
+  campaignId: string;
+  timezone: string;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const id = useId();
+  const [local, setLocal] = useState(isoToLocalInput(lap?.scheduledAt ?? null, timezone));
+  const [error, setError] = useState<string | null>(null);
+  const [pending, start] = useTransition();
+
+  function submit() {
+    if (!lap) return;
+    const scheduledAt = localInputToIso(local, timezone);
+    if (scheduledAt === null) {
+      setError("Pick a start date and time");
+      return;
+    }
+    setError(null);
+    start(async () => {
+      const result = await rescheduleLapAction({ campaignId, lapId: lap.id, scheduledAt });
+      if (!result.ok) {
+        setError(result.error);
+        return;
+      }
+      onSaved();
+      onClose();
+    });
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={(o) => (o ? undefined : onClose())}>
+      <DialogContent>
+        <DialogTitle className="text-lg font-semibold">Reschedule lap</DialogTitle>
+        <DialogDescription className="mt-1 text-sm text-muted">
+          The lap waits until this time ({timezone}) before it is picked up.
+        </DialogDescription>
+        <form
+          className="mt-4 space-y-3"
+          onSubmit={(e) => {
+            e.preventDefault();
+            submit();
+          }}
+        >
+          <label htmlFor={`${id}-at`} className="block text-sm font-medium text-ink">
+            Start time
+          </label>
+          <input
+            id={`${id}-at`}
+            type="datetime-local"
+            className={`${inputClass} w-auto`}
+            value={local}
+            onChange={(e) => setLocal(e.target.value)}
+            data-testid="lap-reschedule-input"
+          />
+          <ErrorText error={error} />
+          <div className="flex justify-end gap-2 pt-2">
+            <Button type="button" variant="outline" onClick={onClose} disabled={pending}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={pending} data-testid="lap-reschedule-save">
+              {pending ? "Saving…" : "Reschedule"}
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }

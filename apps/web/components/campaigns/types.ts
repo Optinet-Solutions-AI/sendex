@@ -94,6 +94,17 @@ export interface LapView {
   startedAt: string | null;
   finishedAt: string | null;
   createdAt: string;
+  /** The route's price per SMS for the lap's country; null when unpriced. */
+  priceMicro: number | null;
+  /** Micro-EUR added by budget top-ups. */
+  budgetMicro: number;
+  /** Link-preview bot hits, never counted as clicks. */
+  previews: number;
+  comment: string | null;
+  /** The On switch. */
+  active: boolean;
+  /** A rescheduled lap waits until this time. */
+  scheduledAt: string | null;
 }
 
 export interface CampaignView {

@@ -27,6 +27,10 @@ const ACTION_LABELS: Record<string, string> = {
   "campaign.delete": "Deleted",
   "lap.toggle": "Lap switched",
   "lap.finish": "Lap finished",
+  "lap.topup": "Budget top-up",
+  "lap.comment": "Lap comment",
+  "lap.reschedule": "Lap rescheduled",
+  "lap.flush": "Lap flushed",
 };
 
 function actionLabel(action: string): string {

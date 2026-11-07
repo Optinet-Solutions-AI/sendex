@@ -95,6 +95,12 @@ export function toLapView(lap: LapSummary): LapView {
     startedAt: iso(lap.startedAt),
     finishedAt: iso(lap.finishedAt),
     createdAt: lap.createdAt.toISOString(),
+    priceMicro: lap.priceMicro === null ? null : Number(lap.priceMicro),
+    budgetMicro: Number(lap.budgetMicro),
+    previews: lap.previews,
+    comment: lap.comment,
+    active: lap.active,
+    scheduledAt: iso(lap.scheduledAt),
   };
 }
 

@@ -41,6 +41,7 @@ export function db(): Database {
   return shared;
 }
 export * from "./queries/campaign-control.js";
+export * from "./queries/laps.js";
 export * from "./queries/postback-keys.js";
 export * from "./queries/postbacks.js";
 export * from "./queries/receipts.js";

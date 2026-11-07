@@ -278,3 +278,23 @@ export function renderPreview(text: string, sample: PreviewSample): string {
       return first ?? "";
     });
 }
+
+// ---------------------------------------------------------------------------
+// Laps: budget top-up, comment, reschedule
+// ---------------------------------------------------------------------------
+
+/** A budget top-up in EUR (the €5–€200 buttons or the Custom dialog). */
+export const topUpSchema = z.object({
+  amountEur: z.coerce.number().positive().max(100_000),
+});
+export type TopUpInput = z.infer<typeof topUpSchema>;
+
+/** The lap note from "Add comment"; blank clears it. */
+export const lapCommentSchema = z.object({
+  comment: z.string().trim().max(500),
+});
+
+/** "Reschedule" a queued lap to a later start. */
+export const lapScheduleSchema = z.object({
+  scheduledAt: z.iso.datetime({ offset: true }),
+});

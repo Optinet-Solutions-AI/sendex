@@ -15,6 +15,8 @@ export interface ToggleProps {
   labelHidden?: boolean;
   className?: string;
   name?: string;
+  /** `data-testid` on the switch itself. */
+  testId?: string;
 }
 
 /** A pill switch, navy when on. */
@@ -27,6 +29,7 @@ export function Toggle({
   labelHidden,
   className,
   name,
+  testId,
 }: ToggleProps) {
   const id = useId();
   return (
@@ -38,6 +41,7 @@ export function Toggle({
         onCheckedChange={onCheckedChange}
         disabled={disabled}
         aria-label={labelHidden ? label : undefined}
+        data-testid={testId}
         className={cn(
           "relative h-5 w-9 shrink-0 rounded-full border border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy/40 disabled:cursor-not-allowed disabled:opacity-50",
           checked ? "bg-navy" : "bg-neutral-300",

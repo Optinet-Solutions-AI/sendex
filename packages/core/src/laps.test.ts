@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { budgetPlan, finishListPlan, planLaps, rankLaps } from "./laps.js";
+import { budgetPlan, finishListPlan, planLaps, rankLaps, topUpPlan, topUpTooltip } from "./laps.js";
 
 const route = (routeId: string, priceMicro = 25_000) => ({ routeId, priceMicro });
 
@@ -195,5 +195,52 @@ describe("rankLaps", () => {
 
   it("returns an empty ranking for no laps", () => {
     expect(rankLaps([])).toEqual([]);
+  });
+});
+
+describe("topUpPlan", () => {
+  it("adds the amount to every active lap and counts the new SMS at each lap's price", () => {
+    const plan = topUpPlan({
+      amountMicro: 50_000_000,
+      laps: [
+        { id: "a", active: true, priceMicro: 25_000 },
+        { id: "b", active: true, priceMicro: 25_000 },
+        { id: "c", active: true, priceMicro: 25_000 },
+        { id: "d", active: false, priceMicro: 25_000 },
+        { id: "e", active: true, priceMicro: null },
+      ],
+    });
+    expect(plan.activeLaps).toBe(3);
+    expect(plan.totalMicro).toBe(150_000_000);
+    expect(plan.newSms).toBe(6_000);
+    expect(plan.laps).toEqual([
+      { id: "a", extra: 2_000 },
+      { id: "b", extra: 2_000 },
+      { id: "c", extra: 2_000 },
+    ]);
+  });
+
+  it("spells the tooltip out: 3 active sends × €50 = €150 · New SMS sent: ~6,000", () => {
+    const plan = topUpPlan({
+      amountMicro: 50_000_000,
+      laps: [
+        { id: "a", active: true, priceMicro: 25_000 },
+        { id: "b", active: true, priceMicro: 25_000 },
+        { id: "c", active: true, priceMicro: 25_000 },
+      ],
+    });
+    expect(topUpTooltip(plan, 50_000_000)).toBe(
+      "3 active sends × €50 = €150 · New SMS sent: ~6,000 · Will spend an additional €50 per each highlighted lap",
+    );
+  });
+
+  it("with no active lap the tooltip says so", () => {
+    const plan = topUpPlan({ amountMicro: 5_000_000, laps: [] });
+    expect(plan.activeLaps).toBe(0);
+    expect(topUpTooltip(plan, 5_000_000)).toBe("No active lap to top up");
+  });
+
+  it("rejects a non-positive amount", () => {
+    expect(() => topUpPlan({ amountMicro: 0, laps: [] })).toThrow(RangeError);
   });
 });

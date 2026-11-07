@@ -37,7 +37,7 @@ describe("parseBillingQuery", () => {
 
   it("drops unknown tabs, kinds, malformed dates and bad pages", () => {
     expect(
-      parseBillingQuery({ tab: "invoices", kind: "fee", from: "06/11/2026", to: "x", page: "0" }),
+      parseBillingQuery({ tab: "invoices", kind: "bonus", from: "06/11/2026", to: "x", page: "0" }),
     ).toEqual({ tab: "deposits", kind: "", from: "", to: "", page: 1 });
     expect(parseBillingQuery({ page: ["2", "9"] }).page).toBe(2);
   });

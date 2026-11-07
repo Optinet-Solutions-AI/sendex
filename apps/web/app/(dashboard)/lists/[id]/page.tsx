@@ -8,6 +8,7 @@ import {
   listKpis,
   listListImports,
   listLookupBreakdown,
+  listLookupCounts,
   listMembersPage,
   type MemberStatusFilter,
   maskRecipient,
@@ -168,8 +169,26 @@ export default async function ListDetailPage({
       />
     );
   } else {
-    const rows = await listLookupBreakdown(database, ctx.organisationId, id);
-    panel = <LookupTab rows={rows} />;
+    const [breakdown, lookups] = await Promise.all([
+      listLookupBreakdown(database, ctx.organisationId, id),
+      listLookupCounts(database, ctx.organisationId, id),
+    ]);
+    const byCountry = new Map(lookups.map((l) => [l.country, l]));
+    const rows = breakdown.map((r) => {
+      const l = byCountry.get(r.country);
+      return l
+        ? {
+            ...r,
+            hlr: l.hlr,
+            mnp: l.mnp,
+            localOnly: l.localOnly,
+            checking: l.checking,
+            cached: l.cached,
+            unresolved: r.total - r.bad - l.hlr - l.mnp - l.localOnly - l.checking,
+          }
+        : r;
+    });
+    panel = <LookupTab rows={rows} listId={id} canVerify={can(ctx.role, "list.upload")} />;
   }
 
   return (

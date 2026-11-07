@@ -10,7 +10,14 @@ import {
 } from "drizzle-orm/pg-core";
 import { organisations } from "./core.js";
 
-export const ledgerKindEnum = pgEnum("ledger_kind", ["deposit", "debit", "refund", "adjustment"]);
+export const ledgerKindEnum = pgEnum("ledger_kind", [
+  "deposit",
+  "debit",
+  "refund",
+  "adjustment",
+  /** The per-message platform fee on a custom route (D4-06). */
+  "fee",
+]);
 
 /**
  * Append-only money ledger. The balance of an organisation is the sum of its
@@ -39,5 +46,7 @@ export const ledgerEntries = pgTable(
   (t) => [
     uniqueIndex("ledger_entries_idempotency_key_idx").on(t.idempotencyKey),
     index("ledger_entries_org_created_idx").on(t.organisationId, t.createdAt),
+    /** Spend per message for the send log and route statistics (D4-05). */
+    index("ledger_entries_reference_idx").on(t.referenceType, t.referenceId),
   ],
 );

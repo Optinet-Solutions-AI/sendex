@@ -79,7 +79,10 @@ test.describe("full flow: send, progress, click", () => {
     await page.getByRole("switch", { name: "Advanced Settings" }).click();
     await page.getByTestId("test-size").fill(String(TEST_SIZE));
     await page.getByTestId("test-size").blur();
-    await page.getByRole("button", { name: "Routes", exact: true }).click();
+    await page
+      .getByTestId("schedule-panel")
+      .getByRole("button", { name: "Routes", exact: true })
+      .click();
     await page.getByTestId("route-405").check();
     await expect(page.getByTestId("footer-sms")).toHaveText(String(TEST_SIZE));
     await expect(page.getByTestId("footer-cost")).toHaveText("~€0.50");

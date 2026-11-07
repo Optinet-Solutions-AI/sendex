@@ -73,7 +73,7 @@ export async function listCampaignMessages(
       id: r.id,
       sentAt: r.sentAt,
       createdAt: r.createdAt,
-      lapId: r.lapId,
+      lapId: r.lapId ?? "",
       routeName: r.routeName,
       senderId: r.senderId,
       recipient: maskRecipient(r.e164),

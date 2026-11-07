@@ -24,6 +24,9 @@ export const ACTIONS = [
   "member.manage",
   "emergency.stop",
   "audit.view",
+  "route.view",
+  "route.manage",
+  "test.send",
 ] as const;
 export type Action = (typeof ACTIONS)[number];
 
@@ -35,6 +38,7 @@ const OWNER_ONLY: ReadonlySet<Action> = new Set<Action>([
   "member.manage",
   "emergency.stop",
   "audit.view",
+  "route.manage",
 ]);
 
 /** The read-only subset a viewer gets. `audit.view` is deliberately not here. */
@@ -42,6 +46,7 @@ const VIEWER_ALLOWED: ReadonlySet<Action> = new Set<Action>([
   "campaign.view",
   "list.view",
   "settings.view",
+  "route.view",
 ]);
 
 export function isRole(value: unknown): value is Role {

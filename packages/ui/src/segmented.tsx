@@ -15,6 +15,7 @@ export function SegmentedControl<T extends string>({
   onChange,
   size = "md",
   className,
+  testIdPrefix,
 }: {
   label: string;
   value: T;
@@ -22,6 +23,8 @@ export function SegmentedControl<T extends string>({
   onChange: (value: T) => void;
   size?: "sm" | "md";
   className?: string;
+  /** Gives each option `data-testid="<prefix>-<value>"`. */
+  testIdPrefix?: string;
 }) {
   return (
     <fieldset
@@ -38,6 +41,7 @@ export function SegmentedControl<T extends string>({
             key={o.value}
             type="button"
             aria-pressed={active}
+            data-testid={testIdPrefix ? `${testIdPrefix}-${o.value}` : undefined}
             onClick={() => onChange(o.value)}
             className={cn(
               "rounded-md font-medium transition-colors",

@@ -29,6 +29,8 @@ export interface ParsedReceipt {
   errorCode?: string | undefined;
   /** When the carrier says the final state was reached. */
   at: Date;
+  /** The mobile operator that delivered it, when the carrier reports one. */
+  operator?: string | undefined;
 }
 
 export interface ApplyReceiptInput {
@@ -42,8 +44,9 @@ export interface ApplyReceiptInput {
 export interface ReceiptTarget {
   messageId: string;
   organisationId: string;
-  campaignId: string;
-  lapId: string;
+  /** Null for a Send Single / Test SMS message. */
+  campaignId: string | null;
+  lapId: string | null;
 }
 
 export type ApplyReceiptResult =
@@ -93,26 +96,29 @@ export async function applyDeliveryReceipt(
     };
     if (found.status !== "sent") return { outcome: "ignored", status: found.status, ...target };
 
+    const operator = receipt.operator ? { operator: receipt.operator } : {};
     const [updated] = await tx
       .update(messages)
       .set(
         receipt.status === "delivered"
-          ? { status: "delivered", deliveredAt: receipt.at }
-          : { status: receipt.status, errorCode: receipt.errorCode ?? null },
+          ? { status: "delivered", deliveredAt: receipt.at, ...operator }
+          : { status: receipt.status, errorCode: receipt.errorCode ?? null, ...operator },
       )
       .where(and(eq(messages.id, found.messageId), eq(messages.status, "sent")))
       .returning({ id: messages.id });
     // Lost a race with another receipt for the same message: it is final now.
     if (!updated) return { outcome: "ignored", status: "final", ...target };
 
-    await tx
-      .update(laps)
-      .set(
-        receipt.status === "delivered"
-          ? { delivered: sql`${laps.delivered} + 1` }
-          : { failed: sql`${laps.failed} + 1` },
-      )
-      .where(eq(laps.id, found.lapId));
+    if (found.lapId !== null) {
+      await tx
+        .update(laps)
+        .set(
+          receipt.status === "delivered"
+            ? { delivered: sql`${laps.delivered} + 1` }
+            : { failed: sql`${laps.failed} + 1` },
+        )
+        .where(eq(laps.id, found.lapId));
+    }
     return { outcome: "applied", status: receipt.status, ...target };
   });
 }
@@ -161,7 +167,9 @@ export async function expireStaleMessages(
       .where(and(eq(messages.status, "sent"), inArray(messages.id, stale)))
       .returning({ lapId: messages.lapId });
     const perLap = new Map<string, number>();
-    for (const row of expired) perLap.set(row.lapId, (perLap.get(row.lapId) ?? 0) + 1);
+    for (const row of expired) {
+      if (row.lapId) perLap.set(row.lapId, (perLap.get(row.lapId) ?? 0) + 1);
+    }
     for (const [lapId, count] of perLap) {
       await tx
         .update(laps)

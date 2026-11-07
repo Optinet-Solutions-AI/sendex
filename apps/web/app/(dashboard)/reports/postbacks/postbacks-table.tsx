@@ -1,13 +1,27 @@
 "use client";
 
-import { Badge, Button, Input, SimpleSelect } from "@sendex/ui";
+import {
+  Badge,
+  Button,
+  CountPill,
+  cn,
+  Input,
+  PageHeader,
+  PaginationBar,
+  SegmentedControl,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@sendex/ui";
+import { ChevronDown, Download, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { type FormEvent, useState } from "react";
+import { type FormEvent, Fragment, useState } from "react";
 import { formatMicro } from "../../../../components/campaigns/format";
-import { formatDateTime, formatNumber } from "../../../../lib/format";
 import {
-  POSTBACK_TYPE_FILTERS,
   type PostbackRange,
   type PostbacksQuery,
   type PostbackTypeFilter,
@@ -33,20 +47,19 @@ interface PostbacksTableProps {
   query: PostbacksQuery;
 }
 
-const RANGE_OPTIONS: ReadonlyArray<{ value: PostbackRange; label: string }> = [
-  { value: "all", label: "All time" },
-  { value: "today", label: "Today" },
-  { value: "7d", label: "Last 7 days" },
-  { value: "30d", label: "Last 30 days" },
-  { value: "90d", label: "Last 90 days" },
-  { value: "custom", label: "Custom dates" },
+const TYPE_OPTIONS: ReadonlyArray<{ value: PostbackTypeFilter; label: string }> = [
+  { value: "all", label: "All events" },
+  { value: "lead", label: "Leads" },
+  { value: "sale", label: "Sales" },
 ];
 
-const TYPE_LABELS: Record<PostbackTypeFilter, string> = {
-  all: "All",
-  lead: "Leads",
-  sale: "Sales",
-};
+const RANGE_OPTIONS: ReadonlyArray<{ value: Exclude<PostbackRange, "custom">; label: string }> = [
+  { value: "all", label: "All time" },
+  { value: "today", label: "Today" },
+  { value: "7d", label: "7 days" },
+  { value: "30d", label: "30 days" },
+  { value: "90d", label: "90 days" },
+];
 
 /** Parameters other than the ones shown in their own columns, as `key=value` pairs. */
 export function summariseParams(params: Record<string, unknown>): string {
@@ -56,221 +69,267 @@ export function summariseParams(params: Record<string, unknown>): string {
     .join(" ");
 }
 
+/** "2026-11-07 08:15:18" in UTC, split so the time can render lighter. */
+export function splitReceived(iso: string): { date: string; time: string } {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return { date: "—", time: "" };
+  const s = d.toISOString();
+  return { date: s.slice(0, 10), time: s.slice(11, 19) };
+}
+
+/**
+ * The Postback Logs of the spec: search, All events | Leads | Sales, All time | Today | 7 |
+ * 30 | 90 days, a date range, Reset once a filter is set, the event count, Export CSV, and
+ * the table with Lead / Sale badges, two-line campaign, parameters, received time and a
+ * chevron that expands the row.
+ */
 export function PostbacksTable({ rows, total, pageSize, query }: PostbacksTableProps) {
   const router = useRouter();
   const [search, setSearch] = useState(query.search);
   const [from, setFrom] = useState(query.from);
   const [to, setTo] = useState(query.to);
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
   const navigate = (next: Partial<PostbacksQuery>) => {
     router.push(`/reports/postbacks${postbacksQueryString({ ...query, page: 1, ...next })}`);
   };
-
   const onSearch = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     navigate({ search: search.trim() });
   };
-
-  const onCustomDates = (event: FormEvent<HTMLFormElement>) => {
+  const onDates = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    navigate({ range: "custom", from, to });
+    if (!from && !to) navigate({ range: "all", from: "", to: "" });
+    else navigate({ range: "custom", from, to });
   };
-
-  const first = total === 0 ? 0 : (query.page - 1) * pageSize + 1;
-  const last = Math.min(total, query.page * pageSize);
-  const pages = Math.max(1, Math.ceil(total / pageSize));
+  const filtersActive =
+    query.type !== "all" || query.range !== "all" || query.search !== "" || !!from || !!to;
+  const reset = () => {
+    setSearch("");
+    setFrom("");
+    setTo("");
+    router.push("/reports/postbacks");
+  };
+  const toggle = (id: string) =>
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
 
   return (
-    <section>
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold">Postback Logs</h1>
-          <p className="mt-1 text-sm text-neutral-600" data-testid="postbacks-count">
-            {formatNumber(total)} {total === 1 ? "event" : "events"}
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <a
-            href={`/reports/postbacks/export${postbacksQueryString(query)}`}
-            className="inline-flex h-9 items-center rounded-md border border-neutral-300 bg-white px-4 text-sm font-medium hover:bg-neutral-100"
-          >
-            Export CSV
-          </a>
-          <Link
-            href="/settings/postbacks"
-            className="inline-flex h-9 items-center rounded-md border border-neutral-300 bg-white px-4 text-sm font-medium hover:bg-neutral-100"
-          >
-            Postback URL
-          </Link>
-        </div>
-      </div>
-
-      <div className="mt-4 flex flex-wrap items-center gap-2">
-        <fieldset aria-label="Type" className="inline-flex rounded-md border border-neutral-300">
-          {POSTBACK_TYPE_FILTERS.map((type) => (
-            <button
-              key={type}
-              type="button"
-              aria-pressed={query.type === type}
-              data-testid={`type-filter-${type}`}
-              onClick={() => navigate({ type })}
-              className={`px-3 py-1.5 text-sm first:rounded-l-md last:rounded-r-md ${
-                query.type === type
-                  ? "bg-neutral-900 text-white"
-                  : "bg-white text-neutral-700 hover:bg-neutral-100"
-              }`}
-            >
-              {TYPE_LABELS[type]}
-            </button>
-          ))}
-        </fieldset>
-        <SimpleSelect
-          aria-label="Period"
-          className="w-44"
-          value={query.range}
-          onValueChange={(value) => {
-            const range = RANGE_OPTIONS.find((o) => o.value === value)?.value ?? "all";
-            if (range === "custom") navigate({ range, from, to });
-            else navigate({ range });
-          }}
-          options={RANGE_OPTIONS}
-        />
-        {query.range === "custom" ? (
-          <form onSubmit={onCustomDates} className="flex items-center gap-2">
-            <Input
-              type="date"
-              aria-label="From"
-              value={from}
-              onChange={(e) => setFrom(e.target.value)}
-              className="w-40"
-            />
-            <span className="text-sm text-neutral-500">to</span>
-            <Input
-              type="date"
-              aria-label="To"
-              value={to}
-              onChange={(e) => setTo(e.target.value)}
-              className="w-40"
-            />
-            <Button type="submit" variant="outline">
-              Apply
+    <section className="space-y-4" data-testid="postback-logs">
+      <PageHeader
+        breadcrumb={[
+          { label: "Campaigns", href: "/campaigns" },
+          { label: "Reports" },
+          { label: "Postback Logs" },
+        ]}
+        title="Postback Logs"
+        subtitle="Every lead and sale your tracker reported, matched to its campaign."
+        actions={
+          <>
+            <Button variant="outline" asChild>
+              <Link href="/settings/postbacks">Postback URL</Link>
             </Button>
-          </form>
-        ) : null}
+            <Button variant="outline" asChild>
+              <a href={`/reports/postbacks/export${postbacksQueryString(query)}`}>
+                <Download className="h-4 w-4" aria-hidden="true" /> Export CSV
+              </a>
+            </Button>
+          </>
+        }
+      />
+
+      <div className="flex flex-wrap items-center gap-2" data-testid="postback-filters">
         <form onSubmit={onSearch} className="flex items-center gap-2">
           <Input
             type="search"
             name="search"
-            placeholder="Search event key or dynamic id"
+            placeholder="Search event key…"
             aria-label="Search postbacks"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-72"
+            className="w-56"
           />
-          <Button type="submit" variant="outline">
+          <Button type="submit" variant="outline" size="sm">
             Search
           </Button>
         </form>
+        <SegmentedControl
+          label="Type"
+          size="sm"
+          testIdPrefix="type-filter"
+          value={query.type}
+          options={TYPE_OPTIONS}
+          onChange={(type) => navigate({ type })}
+        />
+        <SegmentedControl
+          label="Period"
+          size="sm"
+          testIdPrefix="range-filter"
+          value={query.range === "custom" ? "all" : query.range}
+          options={RANGE_OPTIONS}
+          onChange={(range) => {
+            setFrom("");
+            setTo("");
+            navigate({ range, from: "", to: "" });
+          }}
+        />
+        <form onSubmit={onDates} className="flex items-center gap-1.5">
+          <Input
+            type="date"
+            aria-label="From"
+            value={from}
+            onChange={(e) => setFrom(e.target.value)}
+            className="h-8 w-36 text-xs"
+          />
+          <span className="text-xs text-muted">to</span>
+          <Input
+            type="date"
+            aria-label="To"
+            value={to}
+            onChange={(e) => setTo(e.target.value)}
+            className="h-8 w-36 text-xs"
+          />
+          <Button type="submit" variant="outline" size="sm">
+            Apply
+          </Button>
+        </form>
+        {filtersActive ? (
+          <Button variant="ghost" size="sm" onClick={reset} data-testid="postbacks-reset">
+            <X className="h-3.5 w-3.5" aria-hidden="true" /> Reset
+          </Button>
+        ) : null}
+        <CountPill count={total} noun="event" className="ml-auto" testId="postbacks-count" />
       </div>
 
-      <div className="mt-4 overflow-x-auto rounded border border-neutral-200 bg-white">
-        <table className="w-full text-sm" data-testid="postbacks-table">
-          <thead className="bg-neutral-50 text-left text-xs uppercase text-neutral-500">
-            <tr>
-              <th className="px-3 py-2">Event key</th>
-              <th className="px-3 py-2">Type</th>
-              <th className="px-3 py-2">Campaign</th>
-              <th className="px-3 py-2">Dynamic id</th>
-              <th className="px-3 py-2">Parameters</th>
-              <th className="px-3 py-2 text-right">Value</th>
-              <th className="px-3 py-2">Received</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.length === 0 ? (
-              <tr>
-                <td colSpan={7} className="px-3 py-6 text-center text-neutral-500">
-                  No postbacks match.
-                </td>
-              </tr>
-            ) : (
-              rows.map((row) => (
-                <tr
-                  key={row.id}
-                  className="border-t border-neutral-100 align-top"
-                  data-testid={`postback-row-${row.eventKey}`}
-                >
-                  <td className="px-3 py-2 font-mono text-xs">{row.eventKey}</td>
-                  <td className="px-3 py-2">
-                    <Badge variant={row.type === "sale" ? "success" : "secondary"}>
-                      {row.type}
-                    </Badge>
-                  </td>
-                  <td className="px-3 py-2">
-                    {row.campaignId ? (
-                      <Link href={`/campaigns/${row.campaignId}`} className="hover:underline">
-                        {row.campaignName ?? row.campaignId}
-                      </Link>
-                    ) : (
-                      <span className="text-neutral-400" title="No message carried this dynamic id">
-                        unattributed
-                      </span>
-                    )}
-                  </td>
-                  <td className="px-3 py-2 font-mono text-xs text-neutral-600">{row.dynamicId}</td>
-                  <td
-                    className="max-w-xs truncate px-3 py-2 font-mono text-xs text-neutral-600"
-                    title={summariseParams(row.params)}
+      <Table data-testid="postbacks-table">
+        <TableHeader>
+          <TableRow className="hover:bg-transparent">
+            <TableHead>Event Key</TableHead>
+            <TableHead>Type</TableHead>
+            <TableHead>Campaign</TableHead>
+            <TableHead>Parameters</TableHead>
+            <TableHead>Received</TableHead>
+            <TableHead className="w-10" />
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {rows.length === 0 ? (
+            <TableRow>
+              <TableCell colSpan={6} className="py-10 text-center text-muted">
+                No postbacks match.
+              </TableCell>
+            </TableRow>
+          ) : (
+            rows.map((row) => {
+              const open = expanded.has(row.id);
+              const received = splitReceived(row.receivedAt);
+              const extra = summariseParams(row.params);
+              return (
+                <Fragment key={row.id}>
+                  <TableRow
+                    data-testid={`postback-row-${row.eventKey}`}
+                    data-expanded={open}
+                    className="align-top"
                   >
-                    {summariseParams(row.params)}
-                  </td>
-                  <td className="px-3 py-2 text-right tabular-nums">
-                    {row.valueMicro === null ? "–" : formatMicro(row.valueMicro)}
-                  </td>
-                  <td className="whitespace-nowrap px-3 py-2 text-neutral-600">
-                    {formatDateTime(row.receivedAt)}
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+                    <TableCell className="font-mono text-xs">{row.eventKey}</TableCell>
+                    <TableCell>
+                      <Badge variant={row.type === "sale" ? "sale" : "lead"} data-type={row.type}>
+                        {row.type === "sale" ? "Sale" : "Lead"}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="whitespace-normal">
+                      {row.campaignId ? (
+                        <div className="max-w-[18rem]">
+                          <Link
+                            href={`/campaigns/${row.campaignId}`}
+                            className="block truncate font-medium text-ink hover:underline"
+                            title={row.campaignName ?? row.campaignId}
+                          >
+                            {row.campaignName ?? row.campaignId}
+                          </Link>
+                          <div className="truncate font-mono text-[11px] text-muted">
+                            {row.dynamicId}
+                          </div>
+                        </div>
+                      ) : (
+                        <span className="text-muted" title="No message carried this dynamic id">
+                          unattributed
+                        </span>
+                      )}
+                    </TableCell>
+                    <TableCell
+                      className="max-w-xs truncate font-mono text-xs text-muted"
+                      title={extra}
+                    >
+                      {extra || <span className="font-sans">No extra parameters</span>}
+                    </TableCell>
+                    <TableCell className="tabular-nums">
+                      {received.date} <span className="text-muted">{received.time}</span>
+                    </TableCell>
+                    <TableCell>
+                      <button
+                        type="button"
+                        aria-expanded={open}
+                        aria-label={open ? "Collapse" : "Expand"}
+                        onClick={() => toggle(row.id)}
+                        className="inline-flex h-7 w-7 items-center justify-center rounded-md text-muted hover:bg-neutral-100 hover:text-ink"
+                        data-testid="postback-expand"
+                      >
+                        <ChevronDown
+                          className={cn("h-4 w-4 transition-transform", open && "rotate-180")}
+                          aria-hidden="true"
+                        />
+                      </button>
+                    </TableCell>
+                  </TableRow>
+                  {open ? (
+                    <TableRow className="bg-page hover:bg-page" data-testid="postback-details">
+                      <TableCell colSpan={6} className="whitespace-normal">
+                        <dl className="grid gap-x-6 gap-y-1 text-xs sm:grid-cols-[auto_1fr]">
+                          <dt className="font-mono uppercase tracking-[0.06em] text-muted">
+                            Dynamic id
+                          </dt>
+                          <dd className="font-mono">{row.dynamicId}</dd>
+                          <dt className="font-mono uppercase tracking-[0.06em] text-muted">
+                            Value
+                          </dt>
+                          <dd className="tabular-nums">
+                            {row.valueMicro === null ? "—" : formatMicro(row.valueMicro)}
+                          </dd>
+                          <dt className="font-mono uppercase tracking-[0.06em] text-muted">
+                            Received
+                          </dt>
+                          <dd className="tabular-nums">{row.receivedAt}</dd>
+                          {Object.entries(row.params).map(([key, value]) => (
+                            <Fragment key={key}>
+                              <dt className="font-mono text-muted">{key}</dt>
+                              <dd className="break-all font-mono">{String(value)}</dd>
+                            </Fragment>
+                          ))}
+                        </dl>
+                      </TableCell>
+                    </TableRow>
+                  ) : null}
+                </Fragment>
+              );
+            })
+          )}
+        </TableBody>
+      </Table>
 
-      <div className="mt-3 flex items-center justify-between text-sm text-neutral-600">
-        <span>
-          Showing {formatNumber(first)}–{formatNumber(last)} of {formatNumber(total)}
-        </span>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={query.page <= 1}
-            onClick={() =>
-              router.push(
-                `/reports/postbacks${postbacksQueryString({ ...query, page: query.page - 1 })}`,
-              )
-            }
-          >
-            Previous
-          </Button>
-          <span>
-            Page {query.page} of {pages}
-          </span>
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={query.page >= pages}
-            onClick={() =>
-              router.push(
-                `/reports/postbacks${postbacksQueryString({ ...query, page: query.page + 1 })}`,
-              )
-            }
-          >
-            Next
-          </Button>
-        </div>
-      </div>
+      <PaginationBar
+        style="page-of"
+        page={query.page}
+        pageSize={pageSize}
+        total={total}
+        onPageChange={(page) =>
+          router.push(`/reports/postbacks${postbacksQueryString({ ...query, page })}`)
+        }
+      />
     </section>
   );
 }

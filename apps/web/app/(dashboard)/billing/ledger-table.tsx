@@ -8,6 +8,7 @@ const KIND_VARIANT: Record<LedgerKind, "success" | "destructive" | "warning" | "
   debit: "destructive",
   refund: "warning",
   adjustment: "secondary",
+  fee: "destructive",
 };
 
 /** Server-rendered table of ledger entries: kind, amount, reference, note and date. */

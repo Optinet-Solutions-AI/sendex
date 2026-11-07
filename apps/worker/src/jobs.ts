@@ -67,8 +67,22 @@ export const scheduledSendJobSchema = z.object({
 });
 export type ScheduledSendJob = z.infer<typeof scheduledSendJobSchema>;
 
+/** One Send Single / Test SMS run (D4-06); `slotKey` names the schedule slot it fires for. */
+export const smsTestJobSchema = z.object({
+  organisationId: nonEmpty,
+  testId: nonEmpty,
+  slotKey: z.string().nullable(),
+});
+export type SmsTestJob = z.infer<typeof smsTestJobSchema>;
+
+/** One Numbers Verification request (D4-07). */
+export const verifyJobSchema = z.object({ organisationId: nonEmpty, requestId: nonEmpty });
+export type VerifyJob = z.infer<typeof verifyJobSchema>;
+
 export const jobSchemas = {
   send: sendLapJobSchema,
+  smsTests: smsTestJobSchema,
+  verify: verifyJobSchema,
   dlr: dlrJobSchema,
   clickIngest: clickIngestJobSchema,
   postbackIngest: postbackIngestJobSchema,

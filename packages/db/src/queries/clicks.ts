@@ -1,4 +1,4 @@
-import { and, eq, inArray, sql } from "drizzle-orm";
+import { and, eq, inArray, isNull, sql } from "drizzle-orm";
 import { campaignLinks, campaigns, laps, links } from "../schema/campaigns.js";
 import { routes } from "../schema/routes.js";
 import { clicks, messages } from "../schema/tracking.js";
@@ -53,7 +53,9 @@ export async function findShortCodeTarget(db: Db, code: string): Promise<ShortCo
     .where(eq(messages.shortCode, code))
     .orderBy(links.createdAt)
     .limit(1);
-  return row ?? null;
+  // The joins guarantee a campaign and a lap; the columns are nullable only for test sends.
+  if (!row || row.campaignId === null || row.lapId === null) return null;
+  return { ...row, campaignId: row.campaignId, lapId: row.lapId };
 }
 
 export interface ShortCodeMessage {
@@ -81,7 +83,9 @@ export async function findMessagesByShortCodes(
     .from(messages)
     .where(inArray(messages.shortCode, [...codes]));
   return rows.flatMap((row) =>
-    row.shortCode === null ? [] : [{ ...row, shortCode: row.shortCode }],
+    row.shortCode === null || row.campaignId === null || row.lapId === null
+      ? []
+      : [{ ...row, shortCode: row.shortCode, campaignId: row.campaignId, lapId: row.lapId }],
   );
 }
 
@@ -119,6 +123,15 @@ export async function recordClicks(db: Db, rows: readonly NewClick[]): Promise<n
   await db.transaction(async (tx) => {
     if (human.length > 0) {
       await tx.insert(clicks).values(human);
+      // The first click that resolved an operator names the message's network (Mobile Networks).
+      for (const row of human) {
+        if (row.operator) {
+          await tx
+            .update(messages)
+            .set({ operator: row.operator })
+            .where(and(eq(messages.id, row.messageId), isNull(messages.operator)));
+        }
+      }
       await tx
         .update(laps)
         .set({

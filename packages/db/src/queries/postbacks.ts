@@ -106,17 +106,19 @@ export async function attributePostback(db: Db, postback: PostbackRow): Promise<
     }
 
     const value = updated.valueMicro ?? 0n;
-    await tx
-      .update(laps)
-      .set(
-        updated.type === "lead"
-          ? { leads: sql`${laps.leads} + 1` }
-          : {
-              sales: sql`${laps.sales} + 1`,
-              revenueMicro: sql`${laps.revenueMicro} + ${value}`,
-            },
-      )
-      .where(eq(laps.id, message.lapId));
+    if (message.lapId !== null) {
+      await tx
+        .update(laps)
+        .set(
+          updated.type === "lead"
+            ? { leads: sql`${laps.leads} + 1` }
+            : {
+                sales: sql`${laps.sales} + 1`,
+                revenueMicro: sql`${laps.revenueMicro} + ${value}`,
+              },
+        )
+        .where(eq(laps.id, message.lapId));
+    }
     return { attributed: true, postback: updated };
   });
 }

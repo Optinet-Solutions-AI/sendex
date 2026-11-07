@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-const NAV_GROUPS = ["Campaigns", "Contacts", "Settings"] as const;
+const NAV_GROUPS = ["Campaigns", "Contacts", "Routes", "Settings"] as const;
 
 test.describe("dashboard shell under the development auth stub", () => {
   test("the home page shows the rail and the development login banner", async ({ page }) => {

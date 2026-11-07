@@ -6,6 +6,7 @@ import {
   links,
   listMembers,
   lists,
+  lookupPrices,
   organisations,
   routePrices,
   routes,
@@ -191,6 +192,16 @@ const LINKS = [
 ] as const;
 
 /** Platform routes with their per-country prices in EUR. */
+const LOOKUP_PRICES: ReadonlyArray<[string, string, "hlr" | "mnp", number]> = [
+  ["ES", "HLR 210", "hlr", 4_000],
+  ["FR", "HLR 210", "hlr", 4_500],
+  ["GB", "MNP 331", "mnp", 1_000],
+  ["DE", "HLR 210", "hlr", 6_000],
+  ["PL", "MNP 331", "mnp", 1_200],
+  ["MT", "HLR 210", "hlr", 5_000],
+  ["PT", "MNP 331", "mnp", 1_100],
+];
+
 const PLATFORM_ROUTES: ReadonlyArray<{ name: string; prices: ReadonlyArray<[string, number]> }> = [
   { name: "375", prices: [["FR", 0.0357]] },
   { name: "724", prices: [["GB", 0.0398]] },
@@ -394,6 +405,20 @@ async function seedRoutes(db: Db, externalOrganisationId: string): Promise<numbe
     }),
   );
   await db.insert(routePrices).values(priceRows).onConflictDoNothing();
+  // Lookup prices per country (Numbers Verification coverage); the fake lookup provider matches them.
+  await db
+    .insert(lookupPrices)
+    .values(
+      LOOKUP_PRICES.map(([country, route, method, micro]) => ({
+        id: seedUuid(`lookup-price:${country}`),
+        country,
+        route,
+        method,
+        priceMicro: BigInt(micro),
+        validFrom: PRICE_VALID_FROM,
+      })),
+    )
+    .onConflictDoNothing();
   return routeRows.length + 1;
 }
 

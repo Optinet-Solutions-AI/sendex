@@ -1,9 +1,8 @@
 "use client";
 
 import { countryName } from "@sendex/core";
-import { Button, Tooltip } from "@sendex/ui";
-import { ShieldCheck } from "lucide-react";
 import { formatNumber } from "../../lib/format";
+import { HlrVerifyButton } from "./hlr-verify-button";
 
 export interface LookupRowView {
   country: string;
@@ -71,7 +70,15 @@ function totals(rows: LookupRowView[]): LookupRowView {
  * ending in a bold All Countries row. HLR, MNP, local-only, checking and cached wait for a
  * lookup provider; until then every number counts as unresolved.
  */
-export function LookupTab({ rows }: { rows: LookupRowView[] }) {
+export function LookupTab({
+  rows,
+  listId,
+  canVerify,
+}: {
+  rows: LookupRowView[];
+  listId: string;
+  canVerify: boolean;
+}) {
   const all = totals(rows);
   const render = (row: LookupRowView, bold = false) => (
     <tr
@@ -95,13 +102,7 @@ export function LookupTab({ rows }: { rows: LookupRowView[] }) {
     <div className="space-y-3" data-testid="lookup-tab">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h3 className="text-sm font-semibold text-ink">Country Breakdown</h3>
-        <Tooltip content="Network lookups need an HLR provider; they arrive with the verification phase">
-          <span>
-            <Button variant="outline" size="sm" disabled>
-              <ShieldCheck className="h-3.5 w-3.5" aria-hidden="true" /> HLR Verify
-            </Button>
-          </span>
-        </Tooltip>
+        <HlrVerifyButton listId={listId} canVerify={canVerify} />
       </div>
       <div className="overflow-x-auto rounded-lg border border-rule bg-surface">
         <table className="w-full text-sm" data-testid="lookup-table">

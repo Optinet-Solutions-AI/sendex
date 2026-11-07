@@ -17,6 +17,8 @@ export const QUEUES = {
   clickIngest: "click-ingest",
   postbackIngest: "postback-ingest",
   scheduledSend: "scheduled-send",
+  smsTests: "sms-tests",
+  verify: "verify",
 } as const;
 
 export type QueueKey = keyof typeof QUEUES;
@@ -28,6 +30,8 @@ export const QUEUE_KEYS: readonly QueueKey[] = [
   "clickIngest",
   "postbackIngest",
   "scheduledSend",
+  "smsTests",
+  "verify",
 ];
 
 /** Retry three times, 2s / 4s / 8s apart, and keep a bounded history for inspection. */
@@ -76,6 +80,8 @@ export function createQueues(connection: ConnectionOptions, options: CreateQueue
     clickIngest: make("clickIngest"),
     postbackIngest: make("postbackIngest"),
     scheduledSend: make("scheduledSend"),
+    smsTests: make("smsTests"),
+    verify: make("verify"),
   };
   return queues;
 }
@@ -296,6 +302,8 @@ export function createWorkers(
     clickIngest: makeDead("clickIngest"),
     postbackIngest: makeDead("postbackIngest"),
     scheduledSend: makeDead("scheduledSend"),
+    smsTests: makeDead("smsTests"),
+    verify: makeDead("verify"),
   };
 
   function make<K extends QueueKey>(
@@ -351,6 +359,8 @@ export function createWorkers(
     clickIngest: make("clickIngest", { concurrency: settings.ingestConcurrency }),
     postbackIngest: make("postbackIngest", { concurrency: settings.ingestConcurrency }),
     scheduledSend: make("scheduledSend", { concurrency: 1 }),
+    smsTests: make("smsTests", { concurrency: 2 }),
+    verify: make("verify", { concurrency: 1 }),
   };
 
   return {

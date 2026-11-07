@@ -1,4 +1,6 @@
+import { sql } from "drizzle-orm";
 import {
+  bigint,
   boolean,
   char,
   index,
@@ -10,7 +12,7 @@ import {
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
-import { organisations } from "./core.js";
+import { organisations, users } from "./core.js";
 
 /**
  * One row per phone number per organisation. A contact can sit in many lists
@@ -161,4 +163,106 @@ export const listImports = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [index("list_imports_list_idx").on(t.listId, t.createdAt)],
+);
+
+// ---------------------------------------------------------------------------
+// Numbers Verification (D4-07): lookup results, enrichment rules and the verification log.
+// ---------------------------------------------------------------------------
+
+/**
+ * The last network lookup of a number for an organisation (the "cache"). `status` is one of
+ * hlr, mnp, unresolved, local_only, checking, bad, blacklisted (packages/core LOOKUP_STATUSES).
+ */
+export const lookupResults = pgTable(
+  "lookup_results",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organisationId: uuid("organisation_id")
+      .notNull()
+      .references(() => organisations.id, { onDelete: "cascade" }),
+    e164: text("e164").notNull(),
+    country: char("country", { length: 2 }).notNull(),
+    status: text("status").notNull(),
+    /** hlr, mnp or format. */
+    method: text("method").notNull(),
+    operator: text("operator"),
+    ported: boolean("ported").notNull().default(false),
+    priceMicro: bigint("price_micro", { mode: "bigint" }).notNull().default(sql`0`),
+    provider: text("provider").notNull(),
+    requestId: uuid("request_id"),
+    checkedAt: timestamp("checked_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("lookup_results_org_e164_idx").on(t.organisationId, t.e164),
+    index("lookup_results_org_country_idx").on(t.organisationId, t.country),
+  ],
+);
+
+/** An enrichment rule: verify a country's new numbers automatically within limits. */
+export const enrichmentRules = pgTable(
+  "enrichment_rules",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organisationId: uuid("organisation_id")
+      .notNull()
+      .references(() => organisations.id, { onDelete: "cascade" }),
+    country: char("country", { length: 2 }).notNull(),
+    dailyLimit: integer("daily_limit").notNull().default(5000),
+    monthlyBudgetMicro: bigint("monthly_budget_micro", { mode: "bigint" })
+      .notNull()
+      .default(sql`25000000`),
+    onSchedule: boolean("on_schedule").notNull().default(true),
+    afterUpload: boolean("after_upload").notNull().default(false),
+    asYouSend: boolean("as_you_send").notNull().default(false),
+    includeArchived: boolean("include_archived").notNull().default(false),
+    active: boolean("active").notNull().default(true),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("enrichment_rules_org_country_idx").on(t.organisationId, t.country)],
+);
+
+/**
+ * One verification run (the Verification log): what was asked, by which trigger, and the
+ * verdicts once the worker finished. `status` is queued, running, done or failed.
+ */
+export const verificationRequests = pgTable(
+  "verification_requests",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organisationId: uuid("organisation_id")
+      .notNull()
+      .references(() => organisations.id, { onDelete: "cascade" }),
+    country: char("country", { length: 2 }).notNull(),
+    /** rule, hlr_verify, upload or send. */
+    source: text("source").notNull(),
+    listId: uuid("list_id").references(() => lists.id, { onDelete: "set null" }),
+    ruleId: uuid("rule_id").references(() => enrichmentRules.id, { onDelete: "set null" }),
+    /** How many numbers the request may verify at most. */
+    limit: integer("limit").notNull(),
+    total: integer("total").notNull().default(0),
+    good: integer("good").notNull().default(0),
+    bad: integer("bad").notNull().default(0),
+    noVerdict: integer("no_verdict").notNull().default(0),
+    costMicro: bigint("cost_micro", { mode: "bigint" }).notNull().default(sql`0`),
+    status: text("status").notNull().default("queued"),
+    requestedBy: uuid("requested_by").references(() => users.id, { onDelete: "set null" }),
+    requestedAt: timestamp("requested_at", { withTimezone: true }).notNull().defaultNow(),
+    finishedAt: timestamp("finished_at", { withTimezone: true }),
+  },
+  (t) => [index("verification_requests_org_at_idx").on(t.organisationId, t.requestedAt)],
+);
+
+/** The lookup price per number and country (platform table): route name, method, price. */
+export const lookupPrices = pgTable(
+  "lookup_prices",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    country: char("country", { length: 2 }).notNull(),
+    route: text("route").notNull(),
+    /** hlr or mnp. */
+    method: text("method").notNull(),
+    priceMicro: bigint("price_micro", { mode: "bigint" }).notNull(),
+    validFrom: timestamp("valid_from", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("lookup_prices_country_valid_idx").on(t.country, t.validFrom)],
 );

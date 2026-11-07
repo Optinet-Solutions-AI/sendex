@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import { bigint, integer, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
 import { organisations } from "./core.js";
 
@@ -21,6 +22,12 @@ export const organisationSettings = pgTable("organisation_settings", {
   dailyMessageCap: integer("daily_message_cap"),
   /** Micro-EUR the organisation may spend per calendar day; null means unlimited. */
   dailySpendCapMicro: bigint("daily_spend_cap_micro", { mode: "bigint" }),
+  /** Routes > Custom Routes > Routing Configuration: custom_first, blended or platform_first. */
+  routingStrategy: text("routing_strategy").notNull().default("custom_first"),
+  /** Platform fee per message sent on a custom route, micro-EUR (default EUR 0.01). */
+  customRouteFeeMicro: bigint("custom_route_fee_micro", { mode: "bigint" })
+    .notNull()
+    .default(sql`10000`),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });

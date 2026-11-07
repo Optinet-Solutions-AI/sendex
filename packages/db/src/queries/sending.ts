@@ -33,6 +33,7 @@ import {
   senderIds,
   suppressions,
 } from "../schema/index.js";
+import { organisationSettings } from "../schema/settings.js";
 import type { Db } from "../types.js";
 import { getBalanceMicro } from "./ledger.js";
 import { globalExcludeCondition, segmentCondition } from "./segments.js";
@@ -75,7 +76,16 @@ export interface LapContext {
     name: string;
     active: boolean;
     config: Record<string, unknown>;
+    /** Null on platform routes; the owning organisation on custom routes. */
+    organisationId?: string | null;
+    /** Sealed credentials of a custom route (packages/db secrets); opened by the worker only. */
+    secret?: string | null;
   };
+  /**
+   * Platform fee per message part on a custom route (D4-06), 0 on platform routes. Written as
+   * its own `fee` ledger entry next to the debit.
+   */
+  feeMicro?: bigint;
   /** Active sender ids of the campaign's group, in a stable order. */
   senderIds: string[];
   /** Active texts of the campaign ordered by position. */
@@ -159,6 +169,8 @@ export interface ClaimAndCreateInput {
   eligibility: EligibilityInput;
   limit: number;
   priceMicro: bigint;
+  /** Custom-route platform fee per part; omitted or 0 writes no fee entry. */
+  feeMicro?: bigint;
   /** Turn the claimed members into messages (rendering, rotation). Runs inside the transaction. */
   build: (members: EligibleMember[]) => NewMessageInput[];
 }
@@ -166,6 +178,8 @@ export interface ClaimAndCreateInput {
 export interface ApplyOutcomesInput {
   lap: Pick<SendingLapRow, "id" | "organisationId" | "listId">;
   priceMicro: bigint;
+  /** Custom-route platform fee per part, added to the lap cost with the price. */
+  feeMicro?: bigint;
   outcomes: MessageOutcome[];
 }
 
@@ -274,7 +288,8 @@ const lapColumns = {
 
 const queuedMessageColumns = {
   id: messages.id,
-  contactId: messages.contactId,
+  /** Lap messages always have a contact; the column is nullable only for test sends. */
+  contactId: sql<string>`${messages.contactId}`,
   e164: messages.e164,
   senderId: messages.senderId,
   text: messages.text,
@@ -432,14 +447,26 @@ export async function refundMessages(
     insert into ${ledgerEntries}
       (organisation_id, kind, amount_micro, reference_type, reference_id, idempotency_key, note)
     select ${ledgerEntries.organisationId}, 'refund', -${ledgerEntries.amountMicro}, 'message',
-      ${ledgerEntries.referenceId}, 'refund:' || ${ledgerEntries.referenceId}, ${note}
+      ${ledgerEntries.referenceId},
+      (case when ${ledgerEntries.kind} = 'fee' then 'refund-fee:' else 'refund:' end) || ${ledgerEntries.referenceId},
+      ${note}
     from ${ledgerEntries}
     where ${ledgerEntries.organisationId} = ${organisationId}
-      and ${ledgerEntries.kind} = 'debit'
+      and ${ledgerEntries.kind} in ('debit', 'fee')
       and ${ledgerEntries.referenceType} = 'message'
       and ${ledgerEntries.referenceId} in (${ids})
     on conflict (idempotency_key) do nothing
   `);
+}
+
+/** The organisation's custom-route fee per part (default EUR 0.01 when nothing was saved). */
+export async function customRouteFeeMicro(db: Db, organisationId: string): Promise<bigint> {
+  const [row] = await db
+    .select({ fee: organisationSettings.customRouteFeeMicro })
+    .from(organisationSettings)
+    .where(eq(organisationSettings.organisationId, organisationId))
+    .limit(1);
+  return row?.fee ?? 10_000n;
 }
 
 export function createSendingStore(db: Db): SendingStore {
@@ -469,6 +496,8 @@ export function createSendingStore(db: Db): SendingStore {
             name: routes.name,
             active: routes.active,
             config: routes.config,
+            organisationId: routes.organisationId,
+            secret: routes.secret,
           })
           .from(routes)
           .where(eq(routes.id, lap.routeId))
@@ -507,11 +536,14 @@ export function createSendingStore(db: Db): SendingStore {
           ),
       ]);
       if (!campaign || !list || !route) return null;
+      const feeMicro =
+        route.organisationId === null ? 0n : await customRouteFeeMicro(db, lap.organisationId);
       return {
         lap,
         campaign,
         list,
         route,
+        feeMicro,
         senderIds: sids.map((s) => s.value),
         texts,
         link,
@@ -586,7 +618,7 @@ export function createSendingStore(db: Db): SendingStore {
       return row ?? { bad: 0, alreadySent: 0, suppressed: 0, reused: 0 };
     },
 
-    async claimAndCreateMessages({ lap, eligibility, limit, priceMicro, build }) {
+    async claimAndCreateMessages({ lap, eligibility, limit, priceMicro, feeMicro, build }) {
       if (limit <= 0) return [];
       return db.transaction(async (tx) => {
         const extras = await loadEligibilityExtras(tx, eligibility);
@@ -636,13 +668,30 @@ export function createSendingStore(db: Db): SendingStore {
               })),
             )
             .onConflictDoNothing({ target: ledgerEntries.idempotencyKey });
+          if (feeMicro !== undefined && feeMicro > 0n) {
+            await tx
+              .insert(ledgerEntries)
+              .values(
+                created.map((m) => ({
+                  organisationId: lap.organisationId,
+                  kind: "fee" as const,
+                  amountMicro: -(BigInt(m.parts) * feeMicro),
+                  referenceType: "message",
+                  referenceId: m.id,
+                  idempotencyKey: `fee:${m.id}`,
+                  note: `custom route fee, lap ${lap.id}`,
+                })),
+              )
+              .onConflictDoNothing({ target: ledgerEntries.idempotencyKey });
+          }
         }
         return created;
       });
     },
 
-    async applyOutcomes({ lap, priceMicro, outcomes }) {
+    async applyOutcomes({ lap, priceMicro, feeMicro, outcomes }) {
       if (outcomes.length === 0) return;
+      const perPart = priceMicro + (feeMicro ?? 0n);
       await db.transaction(async (tx) => {
         const sentIds: string[] = [];
         const sentContacts: string[] = [];
@@ -658,7 +707,7 @@ export function createSendingStore(db: Db): SendingStore {
             if (!row) continue;
             sentIds.push(o.messageId);
             sentContacts.push(o.contactId);
-            costMicro += BigInt(o.parts) * priceMicro;
+            costMicro += BigInt(o.parts) * perPart;
           } else {
             const [row] = await tx
               .update(messages)

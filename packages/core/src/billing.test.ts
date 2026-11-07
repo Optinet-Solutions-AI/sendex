@@ -215,7 +215,7 @@ describe("billingSettingsSchema", () => {
 
 describe("ledgerFilterSchema", () => {
   it("accepts the ledger kinds and ISO dates", () => {
-    expect(LEDGER_KINDS).toEqual(["deposit", "debit", "refund", "adjustment"]);
+    expect(LEDGER_KINDS).toEqual(["deposit", "debit", "refund", "adjustment", "fee"]);
     const parsed = ledgerFilterSchema.parse({
       kind: "debit",
       from: "2026-11-01",
@@ -226,7 +226,7 @@ describe("ledgerFilterSchema", () => {
   });
 
   it("rejects unknown kinds and malformed dates", () => {
-    expect(ledgerFilterSchema.safeParse({ kind: "fee" }).success).toBe(false);
+    expect(ledgerFilterSchema.safeParse({ kind: "bonus" }).success).toBe(false);
     expect(ledgerFilterSchema.safeParse({ from: "06/11/2026" }).success).toBe(false);
   });
 });

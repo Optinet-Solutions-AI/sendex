@@ -5,6 +5,7 @@ import {
   capDecision,
   capReasonLabel,
   formatEur,
+  isCustomProvider,
   renderMessageText,
   startOfUtcDay,
   utcDayKey,
@@ -53,6 +54,12 @@ export interface SendLapDeps {
   caps?: CapsStore;
   /** The clock, for the UTC day the caps apply to. Default `new Date()`. */
   now?: () => Date;
+  /**
+   * Builds the provider of a custom route (D4-06) from its config and sealed credentials;
+   * null when the route cannot be served (no key, bad config). Without it custom routes are
+   * cancelled as unknown providers.
+   */
+  customProvider?: (route: LapContext["route"]) => Provider | null;
 }
 
 export type SendLapOutcome = "done" | "cancelled" | "paused" | "skipped";
@@ -196,14 +203,24 @@ export async function sendLap(
   if (first.kind === "stop") return cancel(first.reason);
   if (first.kind === "pause") return pause();
   if (!ctx.route.active) return cancel("route inactive");
-  if (!deps.providers.has(ctx.route.provider)) {
-    return cancel(`unknown provider "${ctx.route.provider}"`);
+  let provider: Provider;
+  if (isCustomProvider(ctx.route.provider)) {
+    const custom = deps.customProvider?.(ctx.route) ?? null;
+    if (!custom) return cancel(`custom route "${ctx.route.name}" cannot be served`);
+    provider = custom;
+  } else {
+    if (!deps.providers.has(ctx.route.provider)) {
+      return cancel(`unknown provider "${ctx.route.provider}"`);
+    }
+    provider = resolveProviderForRoute(deps.providers, ctx.route);
   }
-  const provider: Provider = resolveProviderForRoute(deps.providers, ctx.route);
   if (ctx.priceMicro === null) return cancel(`no price for route in ${ctx.list.country}`);
   if (ctx.texts.length === 0) return cancel("campaign has no active text");
   if (ctx.senderIds.length === 0) return cancel("campaign has no active sender id");
-  const priceMicro = ctx.priceMicro;
+  const basePriceMicro = ctx.priceMicro;
+  const feeMicro = ctx.feeMicro ?? 0n;
+  // The fee rides on the price in every balance estimate; the ledger keeps them apart.
+  const priceMicro = basePriceMicro + feeMicro;
   pricing = { priceMicro, maxParts: estimateMaxParts(ctx, linksBaseUrl) };
 
   const existing = await store.countLapMessages(ctx.lap.id);
@@ -321,7 +338,12 @@ export async function sendLap(
       }
       return { ...base, status: "failed", errorCode: r ? r.reason : "NO_OUTCOME" };
     });
-    await store.applyOutcomes({ lap: ctx.lap, priceMicro, outcomes });
+    await store.applyOutcomes({
+      lap: ctx.lap,
+      priceMicro: basePriceMicro,
+      feeMicro,
+      outcomes,
+    });
     const sent = outcomes.filter((o) => o.status === "sent").length;
     const failed = outcomes.length - sent;
     runSent += sent;
@@ -352,7 +374,8 @@ export async function sendLap(
       lap: ctx.lap,
       eligibility,
       limit: Math.min(wanted, g.limit ?? wanted),
-      priceMicro,
+      priceMicro: basePriceMicro,
+      feeMicro,
       build,
     });
     if (created.length === 0) break; // the list has no eligible member left

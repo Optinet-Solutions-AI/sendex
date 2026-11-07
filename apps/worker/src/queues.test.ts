@@ -18,6 +18,8 @@ describe("QUEUES", () => {
       clickIngest: "click-ingest",
       postbackIngest: "postback-ingest",
       scheduledSend: "scheduled-send",
+      smsTests: "sms-tests",
+      verify: "verify",
     });
   });
 

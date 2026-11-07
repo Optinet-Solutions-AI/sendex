@@ -27,11 +27,14 @@ export function SegmentBuilder({
   segment,
   choices,
   canEdit,
+  aiEnabled = false,
 }: {
   /** Null for a new segment. */
   segment: SegmentView | null;
   choices: SegmentChoices;
   canEdit: boolean;
+  /** Shows the AI Rule Generator card (`ENABLE_AI_RULES=1`); hidden otherwise. */
+  aiEnabled?: boolean;
 }) {
   const router = useRouter();
   const { toast } = useToast();
@@ -154,47 +157,49 @@ export function SegmentBuilder({
 
       <div className="grid gap-4 lg:grid-cols-[3fr_2fr]">
         <div className="space-y-4">
-          <Card>
-            <div className="flex items-center gap-2 border-b border-rule px-4 py-3">
-              <Sparkles className="h-4 w-4 text-navy" aria-hidden="true" />
-              <h3 className="text-sm font-semibold text-ink">AI Rule Generator</h3>
-            </div>
-            <div className="space-y-2 p-4">
-              <label htmlFor={`${id}-prompt`} className="sr-only">
-                Describe your audience
-              </label>
-              <Textarea
-                id={`${id}-prompt`}
-                value={prompt}
-                onChange={(e) => setPrompt(e.target.value)}
-                placeholder={
-                  rules === 0
-                    ? 'Describe your audience: e.g. "UK clickers from the last 30 days"'
-                    : 'Add or edit rules: e.g. "also exclude numbers with no clicks in 60 days"'
-                }
-                className="min-h-20"
-                disabled={!canEdit}
-                data-testid="ai-prompt"
-              />
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-xs text-muted">
-                  {rules === 0
-                    ? "Turns plain English into rules."
-                    : "Will add new or update existing rules"}
-                </span>
-                <Button
-                  size="sm"
-                  onClick={generate}
-                  disabled={!canEdit || generating || prompt.trim() === ""}
-                  data-testid="ai-generate"
-                >
-                  <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />{" "}
-                  {generating ? "Generating…" : "Generate"}
-                </Button>
+          {aiEnabled ? (
+            <Card>
+              <div className="flex items-center gap-2 border-b border-rule px-4 py-3">
+                <Sparkles className="h-4 w-4 text-navy" aria-hidden="true" />
+                <h3 className="text-sm font-semibold text-ink">AI Rule Generator</h3>
               </div>
-              {aiNote ? <p className="text-xs text-good">{aiNote}</p> : null}
-            </div>
-          </Card>
+              <div className="space-y-2 p-4">
+                <label htmlFor={`${id}-prompt`} className="sr-only">
+                  Describe your audience
+                </label>
+                <Textarea
+                  id={`${id}-prompt`}
+                  value={prompt}
+                  onChange={(e) => setPrompt(e.target.value)}
+                  placeholder={
+                    rules === 0
+                      ? 'Describe your audience: e.g. "UK clickers from the last 30 days"'
+                      : 'Add or edit rules: e.g. "also exclude numbers with no clicks in 60 days"'
+                  }
+                  className="min-h-20"
+                  disabled={!canEdit}
+                  data-testid="ai-prompt"
+                />
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs text-muted">
+                    {rules === 0
+                      ? "Turns plain English into rules."
+                      : "Will add new or update existing rules"}
+                  </span>
+                  <Button
+                    size="sm"
+                    onClick={generate}
+                    disabled={!canEdit || generating || prompt.trim() === ""}
+                    data-testid="ai-generate"
+                  >
+                    <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />{" "}
+                    {generating ? "Generating…" : "Generate"}
+                  </Button>
+                </div>
+                {aiNote ? <p className="text-xs text-good">{aiNote}</p> : null}
+              </div>
+            </Card>
+          ) : null}
 
           <Card>
             <div className="flex items-center justify-between border-b border-rule px-4 py-3">

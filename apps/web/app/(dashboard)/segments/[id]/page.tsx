@@ -3,6 +3,7 @@ import { db, getSegment } from "@sendex/db";
 import { PageHeader } from "@sendex/ui";
 import { notFound } from "next/navigation";
 import { SegmentBuilder } from "../../../../components/segments/segment-builder";
+import { aiRulesEnabled } from "../../../../lib/ai-rules";
 import { AuthError, requireAction } from "../../../../lib/auth";
 import { AuthErrorView } from "../../require-org";
 import { loadSegmentChoices } from "../choices";
@@ -33,7 +34,12 @@ export default async function SegmentPage({ params }: { params: Promise<{ id: st
         breadcrumb={[{ label: "Segments", href: "/segments" }, { label: segment.name }]}
         title={<span className="sr-only">{segment.name}</span>}
       />
-      <SegmentBuilder segment={segment} choices={choices} canEdit={can(ctx.role, "list.upload")} />
+      <SegmentBuilder
+        segment={segment}
+        choices={choices}
+        canEdit={can(ctx.role, "list.upload")}
+        aiEnabled={aiRulesEnabled()}
+      />
     </section>
   );
 }

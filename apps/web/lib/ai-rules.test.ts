@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { generateRules } from "./ai-rules";
+import { aiRulesEnabled, generateRules } from "./ai-rules";
 
 const current = { id: "g1", op: "and" as const, rules: [] };
 
@@ -79,5 +79,16 @@ describe("generateRules", () => {
       fetchImpl: async () => new Response("nope", { status: 529 }),
     });
     expect(down).toEqual({ ok: false, error: "The AI service answered 529" });
+  });
+});
+
+describe("aiRulesEnabled", () => {
+  it("is off unless ENABLE_AI_RULES is 1", () => {
+    expect(aiRulesEnabled({})).toBe(false);
+    expect(aiRulesEnabled({ ENABLE_AI_RULES: "0" })).toBe(false);
+    expect(aiRulesEnabled({ ENABLE_AI_RULES: "true" })).toBe(false);
+    expect(aiRulesEnabled({ ANTHROPIC_API_KEY: "sk-ant-x" })).toBe(false);
+    expect(aiRulesEnabled({ ENABLE_AI_RULES: "1" })).toBe(true);
+    expect(aiRulesEnabled({ ENABLE_AI_RULES: " 1 " })).toBe(true);
   });
 });

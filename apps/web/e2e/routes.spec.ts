@@ -67,6 +67,8 @@ test.describe("routes", () => {
     await pricing.getByLabel("Price 1 (EUR)").fill("0.05");
     await pricing.getByTestId("pricing-submit").click();
     await expect(page.getByTestId("toast").last()).toContainText("Prices saved");
+    // Read the saved price back from the server rather than waiting on the client refresh.
+    await page.reload();
     await expect(row).not.toContainText("No pricing");
 
     // Routing Configuration: pick a strategy and lock Malta to the new route.

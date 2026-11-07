@@ -1,0 +1,39 @@
+name: Deploy links
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "apps/links/**"
+      - "packages/core/**"
+      - "pnpm-lock.yaml"
+      - "package.json"
+      - ".github/workflows/deploy-links.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-links
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy to Cloudflare Workers
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # Runs only once CLOUDFLARE_API_TOKEN (Workers Scripts: Edit, Workers KV Storage: Edit) and
+    # CLOUDFLARE_ACCOUNT_ID are repository secrets and CF_DEPLOY_ENABLED=true is a repository variable.
+    if: ${{ vars.CF_DEPLOY_ENABLED == 'true' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile --ignore-scripts --filter @sendex/links...
+      - uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: apps/links
+          command: deploy

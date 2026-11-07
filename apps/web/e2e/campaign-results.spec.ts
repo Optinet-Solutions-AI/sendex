@@ -100,7 +100,9 @@ test.describe("campaign results", () => {
     await page.getByTestId("lap-comment-input").fill("best route so far");
     await page.getByTestId("lap-comment-save").click();
     await page.getByTestId("show-comments").click();
-    await expect(page.getByTestId("lap-comment").filter({ hasText: "best route so far" })).toBeVisible();
+    await expect(
+      page.getByTestId("lap-comment").filter({ hasText: "best route so far" }),
+    ).toBeVisible();
 
     await page.getByRole("tab", { name: "Logs" }).click();
     await expect(page.getByTestId("logs-table")).toContainText("lap.topup");

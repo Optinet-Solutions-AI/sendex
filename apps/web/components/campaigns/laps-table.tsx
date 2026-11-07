@@ -21,7 +21,6 @@ import {
   Tooltip,
   useToast,
 } from "@sendex/ui";
-import { formatInTimeZone } from "date-fns-tz";
 import {
   CalendarClock,
   ExternalLink,
@@ -222,11 +221,25 @@ const STATUS_LABEL: Record<LapView["status"], string> = {
   cancelled: "Off",
 };
 
-/** "09:09 (CET)" in the campaign's timezone, ticking every half minute; empty until mounted. */
+/** "09:09 (CET)": the time and the zone's short name (en-GB gives CET, not GMT+1). */
+export function localClock(now: Date, timezone: string): string {
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: timezone,
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+    timeZoneName: "short",
+  }).formatToParts(now);
+  const get = (type: Intl.DateTimeFormatPartTypes) =>
+    parts.find((p) => p.type === type)?.value ?? "";
+  return `${get("hour")}:${get("minute")} (${get("timeZoneName")})`;
+}
+
+/** The campaign's local time, ticking every half minute; empty until mounted. */
 function useLocalClock(timezone: string): string {
   const [now, setNow] = useState<string>("");
   useEffect(() => {
-    const tick = () => setNow(formatInTimeZone(new Date(), timezone, "HH:mm (zzz)"));
+    const tick = () => setNow(localClock(new Date(), timezone));
     tick();
     const id = window.setInterval(tick, 30_000);
     return () => window.clearInterval(id);
@@ -587,6 +600,8 @@ function LapTr({
   onToggle: (on: boolean) => void;
   onAction: (kind: "comment" | "reschedule" | "flush") => void;
 }) {
+  // The table scrolls sideways, which would clip an absolutely placed menu: fix it to the viewport.
+  const [menuPos, setMenuPos] = useState<{ top: number; right: number } | null>(null);
   const info = (
     <div className="space-y-0.5">
       <div>Status: {STATUS_LABEL[lap.status]}</div>
@@ -701,10 +716,14 @@ function LapTr({
             icon={<MoreVertical />}
             aria-haspopup="menu"
             aria-expanded={menuOpen}
-            onClick={() => onMenu(!menuOpen)}
+            onClick={(e) => {
+              const rect = e.currentTarget.getBoundingClientRect();
+              setMenuPos({ top: rect.bottom + 4, right: window.innerWidth - rect.right });
+              onMenu(!menuOpen);
+            }}
             data-testid="lap-menu"
           />
-          {menuOpen ? (
+          {menuOpen && menuPos ? (
             <>
               <button
                 type="button"
@@ -714,7 +733,8 @@ function LapTr({
               />
               <div
                 role="menu"
-                className="absolute right-2 z-20 mt-1 w-44 rounded-md border border-rule bg-surface py-1 text-left text-sm shadow-md"
+                style={{ top: menuPos.top, right: menuPos.right }}
+                className="fixed z-20 w-44 rounded-md border border-rule bg-surface py-1 text-left text-sm shadow-md"
               >
                 <button
                   type="button"

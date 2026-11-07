@@ -36,8 +36,13 @@ export interface Telecom23ProviderOptions {
   timeoutMs?: number;
   /** Price per SMS part in EUR keyed by `${route}:${country}`; the worker uses `route_prices`. */
   prices?: Record<string, number>;
-  /** Parallel status lookups per {@link Telecom23Provider.pollReceipts} call. Default 5. */
+  /** Parallel status lookups per {@link Telecom23Provider.pollReceipts} call. Default 2. */
   pollConcurrency?: number;
+  /**
+   * Status lookups per {@link Telecom23Provider.pollReceipts} call; ids beyond it wait for the
+   * next poll. Default 50: one lookup per id, and 200 a minute got the worker's IP refused.
+   */
+  maxPollPerCall?: number;
 }
 
 /** Statuses that end a message. Everything else (`SENT`, `ENROUTE`, `ACCEPTD`, `pending`) is on the way. */
@@ -55,6 +60,11 @@ const FINAL_STATUSES: Record<string, DeliveryReceipt["status"]> = {
 export function isFinalDeliveryStatus(status: string): boolean {
   return Object.hasOwn(FINAL_STATUSES, status);
 }
+
+/** Sandbox message ids start with this; they live 24 h and only answer to a sandbox key. */
+const SANDBOX_ID_PREFIX = "test_";
+/** Error code written on a sandbox message that is retired because the key went live. */
+export const SANDBOX_MESSAGE_ERROR_CODE = "SANDBOX_MESSAGE";
 
 /** Per-recipient `results[].status` values that are the message's fault, not the moment's. */
 const FINAL_RESULT_STATUSES = new Set([
@@ -102,6 +112,7 @@ export class Telecom23Provider implements Provider {
   private readonly timeoutMs: number;
   private readonly prices: Record<string, number>;
   private readonly pollConcurrency: number;
+  private readonly maxPollPerCall: number;
 
   constructor(opts: Telecom23ProviderOptions) {
     this.name = opts.name ?? "23telecom";
@@ -111,7 +122,13 @@ export class Telecom23Provider implements Provider {
     this.maxPerRequest = Math.max(1, Math.min(opts.maxPerRequest ?? DEFAULT_MAX_PER_REQUEST, 1000));
     this.timeoutMs = opts.timeoutMs ?? DEFAULT_TIMEOUT_MS;
     this.prices = opts.prices ?? {};
-    this.pollConcurrency = Math.max(1, opts.pollConcurrency ?? 5);
+    this.pollConcurrency = Math.max(1, opts.pollConcurrency ?? 2);
+    this.maxPollPerCall = Math.max(1, opts.maxPollPerCall ?? 50);
+  }
+
+  /** Sandbox keys start with `sk_test_`; everything else is treated as live. */
+  private get isSandboxKey(): boolean {
+    return this.apiKey.startsWith("sk_test_");
   }
 
   async send(batch: readonly OutboundMessage[]): Promise<SubmitOutcome[]> {
@@ -214,8 +231,23 @@ export class Telecom23Provider implements Provider {
    */
   async pollReceipts(providerMessageIds: readonly string[]): Promise<DeliveryReceipt[]> {
     const receipts: DeliveryReceipt[] = [];
-    for (let i = 0; i < providerMessageIds.length; i += this.pollConcurrency) {
-      const chunk = providerMessageIds.slice(i, i + this.pollConcurrency);
+    const toLookUp: string[] = [];
+    for (const id of providerMessageIds) {
+      // A sandbox id (`test_…`) can only be read with a sandbox key; under a live key the
+      // carrier answers 404 forever, so retire it instead of asking every minute.
+      if (id.startsWith(SANDBOX_ID_PREFIX) && !this.isSandboxKey) {
+        receipts.push({
+          providerMessageId: id,
+          status: "expired",
+          errorCode: SANDBOX_MESSAGE_ERROR_CODE,
+          at: new Date(),
+        });
+      } else if (toLookUp.length < this.maxPollPerCall) {
+        toLookUp.push(id);
+      }
+    }
+    for (let i = 0; i < toLookUp.length; i += this.pollConcurrency) {
+      const chunk = toLookUp.slice(i, i + this.pollConcurrency);
       const found = await Promise.all(chunk.map((id) => this.fetchStatus(id)));
       for (const r of found) if (r) receipts.push(r);
     }

@@ -81,19 +81,20 @@ describe("createReceiptPollTick", () => {
     expect(lines).toEqual([]);
   });
 
-  it("logs a carrier failure, leaves the message as sent, and does not throw", async () => {
+  it("logs a carrier failure, leaves the message as sent, backs off, and does not throw", async () => {
     const provider = pollingProvider(async () => {
       throw new Error("23telecom status lookup answered 503 SANDBOX_BUSY");
     });
     const providers = createProviderRegistry().register("fake", provider);
     const { lines, log } = capture();
+    let now = T0;
     const tick = createReceiptPollTick({
       db: t.db,
       providers,
       log,
       afterMs: 10 * MINUTE,
       everyMs: MINUTE,
-      now: () => T0,
+      now: () => now,
     });
     expect(await tick()).toEqual({ polled: 1, applied: 0, ignored: 0, unknown: 0 });
     expect(provider.asked).toEqual([["p-1"]]);
@@ -101,8 +102,15 @@ describe("createReceiptPollTick", () => {
     expect(lines[0]).toMatchObject({
       level: "error",
       msg: "receipt poll failed",
-      fields: { provider: "fake", polled: 1 },
+      fields: { provider: "fake", polled: 1, retryAfterMs: 5 * MINUTE },
     });
+    // The failing carrier is left alone for the backoff, then asked again.
+    now = new Date(T0.getTime() + 2 * MINUTE);
+    expect(await tick()).toEqual({ polled: 0, applied: 0, ignored: 0, unknown: 0 });
+    expect(provider.asked).toHaveLength(1);
+    now = new Date(T0.getTime() + 6 * MINUTE);
+    expect(await tick()).toEqual({ polled: 1, applied: 0, ignored: 0, unknown: 0 });
+    expect(provider.asked).toHaveLength(2);
     const [message] = await t.db.select().from(messages).where(eq(messages.id, seed.messageId));
     expect(message?.status).toBe("sent");
   });

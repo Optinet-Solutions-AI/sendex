@@ -33,11 +33,11 @@ test.describe("campaign results", () => {
     await expect(page.getByTestId("total-leads")).toHaveText(String(s.leads));
     await expect(page.getByTestId("total-sales")).toHaveText(String(s.sales));
     await expect(page.getByTestId("total-cost")).toHaveText(
-      `EUR ${(s.costMicro / 1_000_000).toFixed(2)}`,
+      `€${(s.costMicro / 1_000_000).toFixed(2)}`,
     );
     // 4 clicks on 9 sent, EUR 0.225 / 4 clicks.
     await expect(page.getByTestId("total-ctr")).toHaveText("44.44%");
-    await expect(page.getByTestId("total-cpc")).toHaveText("EUR 0.06");
+    await expect(page.getByTestId("total-cpc")).toHaveText("€0.06");
     await expect(page.getByTestId("sending-progress")).toContainText(`${s.sent} /`);
 
     const rows = page.getByTestId("lap-row");

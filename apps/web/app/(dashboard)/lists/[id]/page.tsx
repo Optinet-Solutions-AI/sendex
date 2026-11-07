@@ -1,6 +1,16 @@
 import { can, countryByCode, flagEmoji } from "@sendex/core";
 import { db, getList, listMembersPage } from "@sendex/db";
-import { Badge, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@sendex/ui";
+import {
+  Badge,
+  KpiStrip,
+  PageHeader,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@sendex/ui";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AuthError, requireAction } from "../../../../lib/auth";
@@ -46,28 +56,40 @@ export default async function ListDetailPage({
 
   return (
     <section>
-      <nav className="text-sm text-neutral-500">
-        <Link href="/lists" className="hover:underline">
-          Lists
-        </Link>{" "}
-        / {list.name}
-      </nav>
-      <div className="mt-1 flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold">{list.name}</h1>
-          <p className="mt-1 text-sm text-neutral-600">
+      <PageHeader
+        breadcrumb={[
+          { label: "Contacts" },
+          { label: "Lists", href: "/lists" },
+          { label: list.name },
+        ]}
+        title={list.name}
+        meta={
+          <>
             {flagEmoji(list.country)} {country?.name ?? list.country}
-          </p>
-        </div>
-        {can(ctx.role, "list.flush") ? <FlushButton listId={list.id} listName={list.name} /> : null}
-      </div>
+          </>
+        }
+        actions={
+          can(ctx.role, "list.flush") ? <FlushButton listId={list.id} listName={list.name} /> : null
+        }
+      />
 
-      <dl className="mt-6 grid grid-cols-2 gap-4 md:grid-cols-4">
-        <Stat label="Numbers" value={list.counts.members} testId="count-members" />
-        <Stat label="Available" value={list.counts.available} testId="count-available" />
-        <Stat label="Sent" value={list.counts.sent} testId="count-sent" />
-        <Stat label="Bad" value={list.counts.bad} testId="count-bad" />
-      </dl>
+      <KpiStrip
+        items={[
+          { label: "Numbers", value: formatNumber(list.counts.members), testId: "count-members" },
+          {
+            label: "Available",
+            value: formatNumber(list.counts.available),
+            testId: "count-available",
+          },
+          { label: "Sent", value: formatNumber(list.counts.sent), testId: "count-sent" },
+          {
+            label: "Bad",
+            value: formatNumber(list.counts.bad),
+            testId: "count-bad",
+            tone: list.counts.bad > 0 ? "bad" : "default",
+          },
+        ]}
+      />
 
       <dl className="mt-4 grid gap-x-6 gap-y-1 text-sm md:grid-cols-3">
         <div>
@@ -149,16 +171,5 @@ export default async function ListDetailPage({
         </div>
       </div>
     </section>
-  );
-}
-
-function Stat({ label, value, testId }: { label: string; value: number; testId: string }) {
-  return (
-    <div className="rounded-md border border-neutral-200 bg-white p-4">
-      <dt className="text-xs font-medium text-neutral-500 uppercase tracking-wide">{label}</dt>
-      <dd className="mt-1 text-2xl font-semibold tabular-nums" data-testid={testId}>
-        {formatNumber(value)}
-      </dd>
-    </div>
   );
 }

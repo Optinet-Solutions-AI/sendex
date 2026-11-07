@@ -29,7 +29,7 @@ export function KpiStrip({
       }}
     >
       {items.map((item) => (
-        <div key={keyOf(item)} className="bg-surface px-4 py-3" data-testid={item.testId}>
+        <div key={keyOf(item)} className="bg-surface px-4 py-3">
           <div className="font-mono text-[11px] uppercase tracking-[0.06em] text-muted">
             {item.label}
           </div>
@@ -39,6 +39,7 @@ export function KpiStrip({
               item.tone === "good" && "text-good",
               item.tone === "bad" && "text-signal",
             )}
+            data-testid={item.testId}
           >
             {item.value}
           </div>

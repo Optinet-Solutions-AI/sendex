@@ -1,5 +1,6 @@
 import { buildPostbackUrl, can, canonicalPostbackQuery, signPostbackQuery } from "@sendex/core";
 import { db, findOrganisationByKey, getOrCreatePostbackKey } from "@sendex/db";
+import { PageHeader } from "@sendex/ui";
 import Link from "next/link";
 import { formatDateTime } from "../../../../lib/format";
 import { workerPublicUrl } from "../../../../lib/worker-public-url";
@@ -56,15 +57,12 @@ export default function PostbackSettingsPage() {
         const exampleUrl = await buildPostbackUrl(base, orgKey, exampleParams, key.secret);
         return (
           <section className="max-w-3xl space-y-6">
-            <nav aria-label="Breadcrumb" className="text-sm text-neutral-500">
-              <Link href="/settings" className="hover:underline">
-                Settings
-              </Link>{" "}
-              / Postbacks
-            </nav>
+            <PageHeader
+              breadcrumb={[{ label: "Settings", href: "/settings" }, { label: "Postbacks" }]}
+              title="Postbacks"
+            />
             <div>
-              <h1 className="text-2xl font-semibold">Postbacks</h1>
-              <p className="mt-2 text-sm text-neutral-600">
+              <p className="text-sm text-muted">
                 Give these to the brand (or its tracker) so registrations and sales come back to
                 Sendex and show on the campaign and in{" "}
                 <Link href="/reports/postbacks" className="underline">

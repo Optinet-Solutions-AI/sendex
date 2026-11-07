@@ -1,6 +1,6 @@
 import { can } from "@sendex/core";
 import { db, getSettings } from "@sendex/db";
-import Link from "next/link";
+import { PageHeader } from "@sendex/ui";
 import { AuthError, requireAction } from "../../../../lib/auth";
 import { eurDecimal, formatDateTime } from "../../../../lib/format";
 import { AuthErrorView } from "../../require-org";
@@ -20,14 +20,11 @@ export default async function BillingSettingsPage() {
   const settings = await getSettings(db(), ctx.organisationId);
   return (
     <section className="max-w-2xl">
-      <p className="text-sm text-neutral-500">
-        <Link href="/settings" className="hover:underline">
-          Settings
-        </Link>{" "}
-        / Billing
-      </p>
-      <h1 className="mt-1 text-2xl font-semibold">Billing settings</h1>
-      <p className="mt-2 text-sm text-neutral-600">
+      <PageHeader
+        breadcrumb={[{ label: "Settings", href: "/settings" }, { label: "Billing" }]}
+        title="Billing settings"
+      />
+      <p className="text-sm text-muted">
         Get an email when the balance drops below a threshold, and cap how much the organisation can
         send or spend per day. The alert fires once per dip and arms again when the balance
         recovers.

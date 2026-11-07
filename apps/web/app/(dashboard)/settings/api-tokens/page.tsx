@@ -1,5 +1,5 @@
 import { db, listApiTokens } from "@sendex/db";
-import Link from "next/link";
+import { PageHeader } from "@sendex/ui";
 import { workerPublicUrl } from "../../../../lib/worker-public-url";
 import { RequireOrg } from "../../require-org";
 import { ApiTokensPanel, type ApiTokenView } from "./api-tokens-panel";
@@ -26,20 +26,11 @@ export default function ApiTokensPage() {
         }));
         return (
           <section className="max-w-3xl space-y-6">
-            <nav aria-label="Breadcrumb" className="text-sm text-neutral-500">
-              <Link href="/settings" className="hover:underline">
-                Settings
-              </Link>{" "}
-              / API tokens
-            </nav>
-            <div>
-              <h1 className="text-2xl font-semibold">API tokens</h1>
-              <p className="mt-2 text-sm text-neutral-600">
-                Tokens let your own systems read lists and campaigns, create campaigns and queue
-                sends through the public API. Each token is shown once when it is created; Sendex
-                keeps only a hash. Revoke a token the moment it may have leaked.
-              </p>
-            </div>
+            <PageHeader
+              breadcrumb={[{ label: "Settings", href: "/settings" }, { label: "API tokens" }]}
+              title="API tokens"
+              subtitle="Tokens let your own systems read lists and campaigns, create campaigns and queue sends through the public API. Each token is shown once when it is created; Sendex keeps only a hash. Revoke a token the moment it may have leaked."
+            />
             <ApiTokensPanel tokens={tokens} apiBaseUrl={workerPublicUrl()} />
           </section>
         );

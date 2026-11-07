@@ -9,9 +9,9 @@ import type { CampaignStatus, LapStatus } from "./types";
 type Variant = "primary" | "secondary" | "danger" | "ghost";
 
 const VARIANTS: Record<Variant, string> = {
-  primary: "bg-neutral-900 text-white hover:bg-neutral-700 disabled:bg-neutral-400",
+  primary: "bg-navy text-white hover:bg-navy-hover disabled:bg-neutral-400",
   secondary:
-    "border border-neutral-300 bg-white text-neutral-800 hover:bg-neutral-50 disabled:text-neutral-400",
+    "border border-neutral-300 bg-surface text-ink hover:bg-neutral-50 disabled:text-neutral-400",
   danger: "border border-red-300 bg-white text-red-700 hover:bg-red-50 disabled:text-red-300",
   ghost: "text-neutral-700 hover:bg-neutral-100 disabled:text-neutral-400",
 };

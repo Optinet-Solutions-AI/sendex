@@ -5,8 +5,10 @@ import { cn } from "./cn.js";
 import { Tooltip } from "./tooltip.js";
 
 export interface IconButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, "children"> {
-  /** The accessible name and the tooltip text ("View campaign", "Delete campaign"). */
+  /** The accessible name ("View Roy Boy UK"). */
   label: string;
+  /** The tooltip text when it differs from the name ("View campaign"). */
+  tooltip?: string;
   icon: ReactNode;
   /** `danger` turns red on hover (delete). */
   tone?: "default" | "danger";
@@ -17,6 +19,7 @@ export interface IconButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonEle
 /** A grey icon button at the right end of a row, with the spec's dark tooltip. */
 export function IconButton({
   label,
+  tooltip,
   icon,
   tone = "default",
   noTooltip,
@@ -38,5 +41,5 @@ export function IconButton({
       {icon}
     </button>
   );
-  return noTooltip ? button : <Tooltip content={label}>{button}</Tooltip>;
+  return noTooltip ? button : <Tooltip content={tooltip ?? label}>{button}</Tooltip>;
 }

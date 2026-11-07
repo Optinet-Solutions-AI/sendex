@@ -73,7 +73,7 @@ test.describe("full flow: send, progress, click", () => {
     await page.getByTestId("test-size").fill(String(TEST_SIZE));
     await page.getByTestId("route-405").check();
     await expect(page.getByTestId("footer-sms")).toHaveText(String(TEST_SIZE));
-    await expect(page.getByTestId("footer-cost")).toHaveText("EUR 0.50");
+    await expect(page.getByTestId("footer-cost")).toHaveText("€0.50");
     await page.getByTestId("send-button").click();
     await expect(page.getByTestId("lap-row")).toHaveCount(1);
 
@@ -127,7 +127,7 @@ test.describe("full flow: send, progress, click", () => {
   });
 });
 
-/** "Balance: EUR 4,957.11" in the header → 4957.11. */
+/** "Balance: €4,957.11" in the header → 4957.11. */
 async function readBalance(page: Page): Promise<number> {
   const text = (await page.getByTestId("header-balance").textContent()) ?? "";
   const match = text.replace(/,/g, "").match(/-?\d+(\.\d+)?/);

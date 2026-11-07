@@ -1,5 +1,6 @@
 import { UserProfile } from "@clerk/nextjs";
 import { can } from "@sendex/core";
+import { PageHeader } from "@sendex/ui";
 import Link from "next/link";
 import { authMode } from "../../../lib/env";
 import { RequireOrg } from "../require-org";
@@ -15,13 +16,18 @@ export default function SettingsPage() {
     <RequireOrg action="settings.view">
       {(ctx) => (
         <section>
-          <h1 className="text-2xl font-semibold">Settings</h1>
-          <p className="mt-2 text-sm text-neutral-600">
-            Your role is <span className="font-medium">{ctx.role}</span>.{" "}
-            {can(ctx.role, "settings.manage")
-              ? "You can manage organisation settings, members and balance."
-              : "Organisation settings are read only for your role."}
-          </p>
+          <PageHeader
+            breadcrumb={[{ label: "Settings" }, { label: "General" }]}
+            title="Settings"
+            subtitle={
+              <>
+                Your role is <span className="font-medium">{ctx.role}</span>.{" "}
+                {can(ctx.role, "settings.manage")
+                  ? "You can manage organisation settings, members and balance."
+                  : "Organisation settings are read only for your role."}
+              </>
+            }
+          />
           <div className="mt-4 flex flex-wrap gap-2">
             <Link
               href="/settings/billing"

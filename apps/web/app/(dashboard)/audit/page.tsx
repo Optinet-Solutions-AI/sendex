@@ -1,5 +1,13 @@
 import { db, listAuditActions, listAuditActors, listAuditEntries } from "@sendex/db";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@sendex/ui";
+import {
+  PageHeader,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@sendex/ui";
 import {
   AUDIT_PAGE_SIZE,
   auditQueryString,
@@ -51,17 +59,19 @@ export default async function AuditPage({ searchParams }: { searchParams: Promis
 
   return (
     <section>
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold">Audit log</h1>
-          <p className="mt-1 text-sm text-neutral-600" data-testid="audit-count">
-            {formatNumber(result.total)} {result.total === 1 ? "entry" : "entries"}
-          </p>
-        </div>
-        <a href={exportHref} className={linkButton}>
-          Export CSV
-        </a>
-      </div>
+      <PageHeader
+        breadcrumb={[{ label: "Settings" }, { label: "Logs" }]}
+        title="Audit log"
+        subtitle="Every action in the organisation, with who did it and when."
+        actions={
+          <a href={exportHref} className={linkButton}>
+            Export CSV
+          </a>
+        }
+      />
+      <p className="text-sm text-muted" data-testid="audit-count">
+        {formatNumber(result.total)} {result.total === 1 ? "entry" : "entries"}
+      </p>
 
       <form method="get" action="/audit" className="mt-4 flex flex-wrap items-end gap-2">
         <label className="flex flex-col gap-1 text-xs text-neutral-600">

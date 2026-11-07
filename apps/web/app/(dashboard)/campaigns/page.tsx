@@ -1,4 +1,5 @@
 import { db, listCampaigns } from "@sendex/db";
+import { PageHeader } from "@sendex/ui";
 import { CampaignsTable } from "../../../components/campaigns/campaigns-table";
 import { NewCampaignModal } from "../../../components/campaigns/new-campaign-modal";
 import { toCampaignSummaryView } from "../../../lib/campaign-views";
@@ -19,10 +20,11 @@ export default async function CampaignsPage({
         const result = await listCampaigns(db(), ctx.organisationId, campaignsListInput(query));
         return (
           <section className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h1 className="text-2xl font-semibold">Campaigns</h1>
-              <NewCampaignModal />
-            </div>
+            <PageHeader
+              breadcrumb={[{ label: "SMS" }, { label: "Campaigns" }]}
+              title="Campaigns"
+              actions={<NewCampaignModal />}
+            />
             <CampaignsTable
               items={result.items.map(toCampaignSummaryView)}
               total={result.total}

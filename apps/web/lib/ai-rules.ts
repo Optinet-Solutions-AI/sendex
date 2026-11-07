@@ -13,6 +13,14 @@ import {
  */
 
 const MODEL = "claude-sonnet-5-5";
+
+/**
+ * The generator is off until `ENABLE_AI_RULES=1`: the builder hides it and the action
+ * refuses, so no Anthropic key is needed while the feature is not in use.
+ */
+export function aiRulesEnabled(env: Record<string, string | undefined> = process.env): boolean {
+  return env.ENABLE_AI_RULES?.trim() === "1";
+}
 const API_URL = "https://api.anthropic.com/v1/messages";
 
 export interface GenerateRulesInput {

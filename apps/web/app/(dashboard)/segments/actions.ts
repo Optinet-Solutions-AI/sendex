@@ -17,7 +17,7 @@ import {
 } from "@sendex/db";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { generateRules } from "../../../lib/ai-rules";
+import { aiRulesEnabled, generateRules } from "../../../lib/ai-rules";
 import { AuthError, requireAction } from "../../../lib/auth";
 
 export type ActionResult<T> = { ok: true; data: T } | { ok: false; error: string };
@@ -148,6 +148,7 @@ export async function generateRulesAction(
 ): Promise<ActionResult<{ definition: SegmentGroup; note: string }>> {
   return run(async () => {
     const ctx = await requireAction("list.upload");
+    if (!aiRulesEnabled()) throw new Error("The AI rule generator is turned off.");
     const data = generateInput.parse(input);
     const [lists, campaigns] = await Promise.all([
       listListNames(db(), ctx.organisationId),

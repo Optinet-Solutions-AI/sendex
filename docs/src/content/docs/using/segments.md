@@ -18,8 +18,9 @@ delete. **Refresh Stats** recounts every segment.
 
 ## The builder
 
-**+ New Segment** opens the builder: a name, the **AI Rule Generator**, the **Rules** card
-and the **Global negative segment** switch on the left; the live **Preview** on the right.
+**+ New Segment** opens the builder: a name, the **Rules** card and the **Global negative
+segment** switch on the left (plus the **AI Rule Generator** when it is turned on); the live
+**Preview** on the right.
 
 - **Rules** are a tree: an AND / OR toggle, one row per rule (field, operator, value) and
   **Add Rule** / **Add Group**. Groups nest, each with its own AND / OR and **Remove group**.
@@ -70,5 +71,6 @@ language, city, time zone and operating system fields wait for a data source.
 
 Describe the audience in plain English ("UK clickers from the last 30 days") and
 **Generate** turns it into rules; with rules already there it adds to or amends them. The
-generator uses the Claude API and needs `ANTHROPIC_API_KEY` on the web app; without it the
-builder says so and everything else keeps working.
+generator uses the Claude API and is **off by default**: set `ENABLE_AI_RULES=1` and
+`ANTHROPIC_API_KEY` on the web app to show it. While it is off the builder has no AI card
+and rules are added by hand.

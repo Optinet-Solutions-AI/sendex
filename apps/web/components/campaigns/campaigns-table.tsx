@@ -6,7 +6,9 @@ import {
   Button,
   ConfirmDialog,
   CountPill,
+  CountryMultiSelect,
   cn,
+  DateRangePicker,
   EmptyState,
   IconButton,
   PaginationBar,
@@ -67,6 +69,8 @@ function Check({ name, label, checked }: { name: string; label: string; checked:
 
 const Dash = () => <span className="text-muted">-</span>;
 
+const COUNTRIES = countryOptions.map((c) => ({ code: c.code, name: c.name, flag: c.flag }));
+
 /**
  * The campaigns list of the spec: search and a count pill, a Filters toggle that reveals the
  * filter row, the table (ID, Campaign, Status, Country, Laps, Sent, Clicks, CTR, Cost,
@@ -89,8 +93,10 @@ export function CampaignsTable({
   const { toast } = useToast();
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
+  const [countries, setCountries] = useState<string[]>(filters.countries);
+  const [range, setRange] = useState({ from: filters.from, to: filters.to });
   const filtersActive =
-    Boolean(filters.country || filters.status || filters.from || filters.to) ||
+    Boolean(filters.countries.length > 0 || filters.status || filters.from || filters.to) ||
     filters.hasLeads ||
     filters.hasSales ||
     filters.noClicks ||
@@ -148,19 +154,10 @@ export function CampaignsTable({
           <CountPill count={total} noun="campaign" className="ml-auto" testId="campaign-count" />
         </div>
         <div className={showFilters ? "flex flex-wrap items-center gap-3" : "hidden"}>
-          <select
-            name="country"
-            defaultValue={filters.country}
-            aria-label="Country"
-            className={cn(inputClass, "w-44")}
-          >
-            <option value="">All Countries</option>
-            {countryOptions.map((c) => (
-              <option key={c.code} value={c.code}>
-                {c.flag} {c.name}
-              </option>
-            ))}
-          </select>
+          {countries.map((c) => (
+            <input key={c} type="hidden" name="country" value={c} />
+          ))}
+          <CountryMultiSelect countries={COUNTRIES} value={countries} onChange={setCountries} />
           <select
             name="status"
             defaultValue={filters.status}
@@ -174,26 +171,9 @@ export function CampaignsTable({
               </option>
             ))}
           </select>
-          <label className="inline-flex items-center gap-1.5 text-sm text-muted">
-            From
-            <input
-              type="date"
-              name="from"
-              defaultValue={filters.from}
-              aria-label="From"
-              className={cn(inputClass, "w-40")}
-            />
-          </label>
-          <label className="inline-flex items-center gap-1.5 text-sm text-muted">
-            To
-            <input
-              type="date"
-              name="to"
-              defaultValue={filters.to}
-              aria-label="To"
-              className={cn(inputClass, "w-40")}
-            />
-          </label>
+          <input type="hidden" name="from" value={range.from} />
+          <input type="hidden" name="to" value={range.to} />
+          <DateRangePicker value={range} onChange={setRange} />
           <Check name="hasLeads" label="Has leads" checked={filters.hasLeads} />
           <Check name="hasSales" label="Has sales" checked={filters.hasSales} />
           <Check name="noClicks" label="No clicks" checked={filters.noClicks} />

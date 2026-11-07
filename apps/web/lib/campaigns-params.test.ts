@@ -5,7 +5,7 @@ describe("parseCampaignsQuery", () => {
   it("falls back to safe defaults", () => {
     expect(parseCampaignsQuery({})).toEqual({
       search: "",
-      country: "",
+      countries: [],
       status: "",
       from: "",
       to: "",
@@ -35,7 +35,7 @@ describe("parseCampaignsQuery", () => {
       }),
     ).toEqual({
       search: "roy",
-      country: "ES",
+      countries: ["ES"],
       status: "sending",
       from: "2026-09-01",
       to: "",
@@ -48,7 +48,7 @@ describe("parseCampaignsQuery", () => {
     });
     expect(parseCampaignsQuery({ status: "bogus", country: "ESP", page: "-2" })).toMatchObject({
       status: "",
-      country: "",
+      countries: [],
       page: 1,
     });
   });
@@ -60,7 +60,7 @@ describe("campaignsQueryString", () => {
     expect(
       campaignsQueryString({
         search: "roy",
-        country: "ES",
+        countries: ["ES"],
         hasSales: true,
         spendMin: "10",
         page: 2,

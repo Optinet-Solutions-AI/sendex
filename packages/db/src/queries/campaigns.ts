@@ -88,7 +88,8 @@ async function touch(db: Db, campaignId: string): Promise<void> {
 
 export interface ListCampaignsInput {
   search?: string;
-  country?: string;
+  /** ISO-2 codes; empty or absent means every country. */
+  countries?: readonly string[];
   status?: CampaignStatus;
   /** Sending period overlaps [from, to); a campaign without laps is placed at its creation date. */
   from?: Date;
@@ -139,7 +140,14 @@ export async function listCampaigns(
   const conditions = [eq(campaigns.organisationId, organisationId)];
   const search = input.search?.trim();
   if (search) conditions.push(ilike(campaigns.name, `%${search}%`));
-  if (input.country) conditions.push(eq(campaigns.country, input.country.toUpperCase()));
+  if (input.countries && input.countries.length > 0) {
+    conditions.push(
+      inArray(
+        campaigns.country,
+        input.countries.map((c) => c.toUpperCase()),
+      ),
+    );
+  }
   if (input.status) conditions.push(eq(campaigns.status, input.status));
 
   const agg = db
@@ -178,8 +186,9 @@ export async function listCampaigns(
     conditions.push(sql`${costSum} >= ${input.spendMinMicro.toString()}::bigint`);
   if (input.spendMaxMicro !== undefined)
     conditions.push(sql`${costSum} <= ${input.spendMaxMicro.toString()}::bigint`);
-  if (input.from) conditions.push(sql`${periodEnd} >= ${input.from}`);
-  if (input.to) conditions.push(sql`${periodStart} < ${input.to}`);
+  // ISO strings, not Date objects: a raw Date in a sql fragment reaches Postgres as Date.toString().
+  if (input.from) conditions.push(sql`${periodEnd} >= ${input.from.toISOString()}::timestamptz`);
+  if (input.to) conditions.push(sql`${periodStart} < ${input.to.toISOString()}::timestamptz`);
   const filtered = and(...conditions);
 
   const page = Math.max(1, Math.floor(input.page));

@@ -170,7 +170,7 @@ describe("createCampaign and listCampaigns", () => {
     await createCampaign(t.db, orgA, { name: "Zed FR", country: "FR", timezone: "Europe/Paris" });
     const bySearch = await listCampaigns(t.db, orgA, { page: 1, search: "zed" });
     expect(bySearch.items.map((c) => c.name)).toEqual(["Zed FR"]);
-    const byCountry = await listCampaigns(t.db, orgA, { page: 1, country: "FR" });
+    const byCountry = await listCampaigns(t.db, orgA, { page: 1, countries: ["fr"] });
     expect(byCountry.items.every((c) => c.country === "FR")).toBe(true);
     const byStatus = await listCampaigns(t.db, orgA, { page: 1, status: "completed" });
     expect(byStatus.items).toEqual([]);

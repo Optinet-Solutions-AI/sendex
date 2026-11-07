@@ -7,6 +7,7 @@ export * from "./cn.js";
 export * from "./count-pill.js";
 export * from "./country-multi-select.js";
 export * from "./data-table.js";
+export * from "./date-range-picker.js";
 export * from "./dialog.js";
 export * from "./empty-state.js";
 export * from "./icon-button.js";

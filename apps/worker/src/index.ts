@@ -1,10 +1,17 @@
 import os from "node:os";
 import { serve } from "@hono/node-server";
 import {
+  claimTest,
   createAutosenderStore,
   createCapsStore,
   createSendingStore,
   db,
+  finishTest,
+  getBalanceMicro,
+  listQueuedTests,
+  listScheduledTests,
+  loadTestContext,
+  recordTestMessage,
   type SendingStore,
 } from "@sendex/db";
 import { createRateLimiter, RATE_LIMITS } from "@sendex/redis-utils";
@@ -74,6 +81,18 @@ if (redis) {
           send: { linksBaseUrl, pauseRetryMs: settings.pauseRetryMs },
           caps: createCapsStore(db()),
           autosender: createAutosenderStore(db()),
+          tests: {
+            store: {
+              loadTestContext: (id) => loadTestContext(db(), id),
+              recordTestMessage: (input) => recordTestMessage(db(), input),
+              finishTest: (id, outcome) => finishTest(db(), id, outcome),
+              getBalanceMicro: (organisationId) => getBalanceMicro(db(), organisationId),
+              listQueuedTests: () => listQueuedTests(db()),
+              listScheduledTests: () => listScheduledTests(db()),
+              claimTest: (id, slotKey) => claimTest(db(), id, slotKey),
+            },
+            queue: queues.smsTests,
+          },
           alerts: { store: createAlertChecksStore(db()), throttle: createRedisThrottle(redis) },
           expiry: { windowMs: dlrExpiryMs, everyMs: dlrExpiryPollMs },
           receiptPoll: { afterMs: receiptPollAfterMs, everyMs: receiptPollEveryMs },

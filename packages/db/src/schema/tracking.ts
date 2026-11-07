@@ -15,7 +15,7 @@ import {
 import { adTexts, campaigns, laps, links } from "./campaigns.js";
 import { organisations } from "./core.js";
 import { contacts } from "./lists.js";
-import { routes } from "./routes.js";
+import { routes, smsTests } from "./routes.js";
 
 export const messageStatusEnum = pgEnum("message_status", [
   "queued",
@@ -45,16 +45,15 @@ export const messages = pgTable(
     organisationId: uuid("organisation_id")
       .notNull()
       .references(() => organisations.id, { onDelete: "cascade" }),
-    campaignId: uuid("campaign_id")
-      .notNull()
-      .references(() => campaigns.id, { onDelete: "cascade" }),
-    lapId: uuid("lap_id")
-      .notNull()
-      .references(() => laps.id, { onDelete: "cascade" }),
-    contactId: uuid("contact_id")
-      .notNull()
-      .references(() => contacts.id, { onDelete: "restrict" }),
+    /** Null for a Send Single / Test SMS message (D4-06), which belongs to `test_id` instead. */
+    campaignId: uuid("campaign_id").references(() => campaigns.id, { onDelete: "cascade" }),
+    lapId: uuid("lap_id").references(() => laps.id, { onDelete: "cascade" }),
+    testId: uuid("test_id").references(() => smsTests.id, { onDelete: "cascade" }),
+    /** Null for a test message to a number that is not a contact. */
+    contactId: uuid("contact_id").references(() => contacts.id, { onDelete: "restrict" }),
     e164: text("e164").notNull(),
+    /** Mobile operator, from the carrier receipt or the first click that resolved it. */
+    operator: text("operator"),
     /** The sender id value used for this message. */
     senderId: text("sender_id").notNull(),
     /** Final text after link and placeholder substitution. */

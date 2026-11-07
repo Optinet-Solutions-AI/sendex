@@ -8,9 +8,10 @@ const OWNER_ONLY: Action[] = [
   "member.manage",
   "emergency.stop",
   "audit.view",
+  "route.manage",
 ];
 
-const VIEWER_ALLOWED: Action[] = ["campaign.view", "list.view", "settings.view"];
+const VIEWER_ALLOWED: Action[] = ["campaign.view", "list.view", "settings.view", "route.view"];
 
 describe("can", () => {
   it("lists every role and action once", () => {
@@ -30,6 +31,9 @@ describe("can", () => {
       "member.manage",
       "emergency.stop",
       "audit.view",
+      "route.view",
+      "route.manage",
+      "test.send",
     ]);
   });
 
@@ -69,6 +73,9 @@ describe("can", () => {
         "member.manage": true,
         "emergency.stop": true,
         "audit.view": true,
+        "route.view": true,
+        "route.manage": true,
+        "test.send": true,
       },
       campaign_manager: {
         "campaign.create": true,
@@ -85,6 +92,9 @@ describe("can", () => {
         "member.manage": false,
         "emergency.stop": false,
         "audit.view": false,
+        "route.view": true,
+        "route.manage": false,
+        "test.send": true,
       },
       viewer: {
         "campaign.create": false,
@@ -101,6 +111,9 @@ describe("can", () => {
         "member.manage": false,
         "emergency.stop": false,
         "audit.view": false,
+        "route.view": true,
+        "route.manage": false,
+        "test.send": false,
       },
     };
     for (const role of ROLES) {

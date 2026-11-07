@@ -12,8 +12,8 @@ import {
   listSegments,
   listSidGroups,
   listsForCountry,
+  orderedRoutesForCountry,
   routePerformance,
-  routesForCountry,
   sidGroupStats,
 } from "@sendex/db";
 import { notFound } from "next/navigation";
@@ -29,6 +29,7 @@ import { OffersPanel } from "../../../../components/campaigns/offers-panel";
 import { SendForm } from "../../../../components/campaigns/send-form";
 import { SidPanel } from "../../../../components/campaigns/sid-panel";
 import { isCampaignTab, isLogsSubTab } from "../../../../components/campaigns/tabs";
+import { SendSingleForm } from "../../../../components/routes/send-single-dialog";
 import {
   toAuditView,
   toCampaignView,
@@ -90,7 +91,7 @@ export default async function CampaignPage({
           listSidGroups(database, ctx.organisationId, detail.country),
           listsForCountry(database, ctx.organisationId, detail.country),
           listLinks(database, ctx.organisationId),
-          routesForCountry(database, ctx.organisationId, detail.country),
+          orderedRoutesForCountry(database, ctx.organisationId, detail.country),
           listAuditLog(database, ctx.organisationId, { targetType: "campaign", targetId: id }),
           conversionStats(database, ctx.organisationId, id),
           campaignResults(database, ctx.organisationId, id),
@@ -197,9 +198,13 @@ export default async function CampaignPage({
                   </div>
                 ),
                 single: (
-                  <p className="text-sm text-muted">
-                    Sending a single test message to one number arrives with the routes phase.
-                  </p>
+                  <div className="max-w-2xl space-y-3">
+                    <p className="text-sm text-muted">
+                      Send one message through your routes to a number you control. The SMS cost
+                      will be charged.
+                    </p>
+                    <SendSingleForm mode="single" country={detail.country} />
+                  </div>
                 ),
               }}
             />

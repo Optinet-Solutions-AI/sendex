@@ -111,7 +111,10 @@ test.describe("campaign results", () => {
 
   test("the Routes tab shows platform ranks and the account's own statistics", async ({ page }) => {
     await page.goto(`/campaigns/${seeded.campaignId}`);
-    await page.getByRole("button", { name: "Routes", exact: true }).click();
+    await page
+      .getByTestId("schedule-panel")
+      .getByRole("button", { name: "Routes", exact: true })
+      .click();
     const perf = page.getByTestId("routes-performance");
     await expect(perf).toContainText("Spain Routes Performance");
     await expect(perf).toContainText("Rank 1 = best performing route on the platform");

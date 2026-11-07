@@ -10,7 +10,14 @@ import {
 } from "drizzle-orm/pg-core";
 import { organisations } from "./core.js";
 
-export const ledgerKindEnum = pgEnum("ledger_kind", ["deposit", "debit", "refund", "adjustment"]);
+export const ledgerKindEnum = pgEnum("ledger_kind", [
+  "deposit",
+  "debit",
+  "refund",
+  "adjustment",
+  /** The per-message platform fee on a custom route (D4-06). */
+  "fee",
+]);
 
 /**
  * Append-only money ledger. The balance of an organisation is the sum of its

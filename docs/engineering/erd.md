@@ -218,6 +218,7 @@ erDiagram
     text idempotency_key UK
     uuid lap_id FK
     uuid link_id FK
+    text operator
     uuid organisation_id FK
     integer parts
     text provider_message_id
@@ -226,6 +227,7 @@ erDiagram
     timestamp_with_time_zone sent_at
     text short_code
     message_status status
+    uuid test_id FK
     text text
   }
   organisation_alerts {
@@ -247,12 +249,14 @@ erDiagram
   }
   organisation_settings {
     timestamp_with_time_zone created_at
+    bigint custom_route_fee_micro
     integer daily_message_cap
     bigint daily_spend_cap_micro
     timestamp_with_time_zone low_balance_alerted_at
     text[] low_balance_emails
     bigint low_balance_threshold_micro
     uuid organisation_id PK, FK
+    text routing_strategy
     timestamp_with_time_zone updated_at
   }
   organisations {
@@ -277,6 +281,17 @@ erDiagram
     postback_type type
     bigint value_micro
   }
+  route_connection_events {
+    timestamp_with_time_zone at
+    text error
+    text event
+    text host
+    uuid id PK
+    integer latency_ms
+    uuid organisation_id FK
+    uuid route_id FK
+    text source
+  }
   route_prices {
     char(2) country
     uuid id PK
@@ -288,10 +303,21 @@ erDiagram
     boolean active
     jsonb config
     char(2) country
+    timestamp_with_time_zone created_at
     uuid id PK
     text name
     uuid organisation_id FK
     text provider
+    text secret
+  }
+  routing_exceptions {
+    char(2) country UK "unique with organisation_id"
+    uuid[] disabled_routes
+    uuid id PK
+    uuid locked_route FK
+    uuid organisation_id FK, UK "unique with country"
+    uuid[] route_order
+    timestamp_with_time_zone updated_at
   }
   segments {
     timestamp_with_time_zone created_at
@@ -320,6 +346,33 @@ erDiagram
     uuid id PK
     text name
     uuid organisation_id FK
+  }
+  sms_tests {
+    boolean cascade
+    bigint cost_micro
+    char(2) country
+    timestamp_with_time_zone created_at
+    uuid created_by FK
+    text custom_sender
+    text custom_text
+    text hypothesis
+    uuid id PK
+    boolean jitter
+    timestamp_with_time_zone last_sent_at
+    text last_slot
+    uuid organisation_id FK
+    text queue_status
+    text recipient
+    timestamp_with_time_zone removed_at
+    uuid[] route_ids
+    integer[] schedule_days
+    text[] schedule_times
+    text[] sender_modes
+    integer success_count
+    text[] test_networks
+    integer tests_ran
+    text[] text_presets
+    text type
   }
   suppression_imports {
     integer count
@@ -392,25 +445,32 @@ erDiagram
   organisations ||--o{ organisation_postback_keys : "organisation_id"
   organisations ||--o{ organisation_settings : "organisation_id"
   organisations ||--o{ postbacks : "organisation_id"
+  organisations ||--o{ route_connection_events : "organisation_id"
   organisations ||--o{ routes : "organisation_id"
+  organisations ||--o{ routing_exceptions : "organisation_id"
   organisations ||--o{ segments : "organisation_id"
   organisations ||--o{ sender_ids : "organisation_id"
   organisations ||--o{ sid_groups : "organisation_id"
+  organisations ||--o{ sms_tests : "organisation_id"
   organisations ||--o{ suppression_imports : "organisation_id"
   organisations ||--o{ suppressions : "organisation_id"
   routes ||--o{ laps : "route_id"
   routes ||--o{ messages : "route_id"
+  routes ||--o{ route_connection_events : "route_id"
   routes ||--o{ route_prices : "route_id"
+  routes ||--o{ routing_exceptions : "locked_route"
   segments ||--o{ campaign_segments : "segment_id"
   segments ||--o{ laps : "segment_id"
   sid_groups ||--o{ campaign_sid_group : "sid_group_id"
   sid_groups ||--o{ sender_ids : "sid_group_id"
+  sms_tests ||--o{ messages : "test_id"
   suppression_imports ||--o{ suppressions : "import_id"
   users ||--o{ api_tokens : "created_by"
   users ||--o{ audit_log : "actor_user_id"
   users ||--o{ campaigns : "created_by"
   users ||--o{ memberships : "user_id"
   users ||--o{ organisation_alerts : "acknowledged_by"
+  users ||--o{ sms_tests : "created_by"
 ```
 
-Generated from the Drizzle schema by `pnpm --filter @sendex/db erd` (31 tables, 64 relationships). Do not edit by hand: regenerate after every schema change. CI runs `pnpm --filter @sendex/db erd:check` and fails when this file is stale.
+Generated from the Drizzle schema by `pnpm --filter @sendex/db erd` (34 tables, 71 relationships). Do not edit by hand: regenerate after every schema change. CI runs `pnpm --filter @sendex/db erd:check` and fails when this file is stale.

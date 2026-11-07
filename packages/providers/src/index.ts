@@ -1,4 +1,5 @@
 export * from "./fake-provider.js";
+export * from "./http/custom-http-provider.js";
 export * from "./http/smsedge-provider.js";
 export * from "./http/telecom23-provider.js";
 export * from "./provider.js";

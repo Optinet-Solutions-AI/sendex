@@ -569,3 +569,17 @@ export async function cleanupE2eSegments(namePrefix: string): Promise<void> {
     await sql.end();
   }
 }
+
+/** Remove the custom routes and SMS tests the routes spec created (name / hypothesis prefix). */
+export async function cleanupE2eRoutes(prefix: string): Promise<void> {
+  const url = process.env.DATABASE_URL;
+  if (!url) throw new Error("DATABASE_URL must be set to run the routes e2e spec");
+  const sql = postgres(url, { max: 1 });
+  try {
+    await sql`delete from sms_tests where hypothesis like ${`${prefix}%`}`;
+    await sql`delete from routes where organisation_id is not null and name like ${`${prefix}%`}`;
+    await sql`delete from routing_exceptions where country = 'MT'`;
+  } finally {
+    await sql.end();
+  }
+}

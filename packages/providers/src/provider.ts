@@ -23,6 +23,8 @@ export interface DeliveryReceipt {
   status: "delivered" | "failed" | "expired";
   errorCode?: string;
   at: Date;
+  /** The mobile operator that delivered it, when the carrier reports one (Mobile Networks). */
+  operator?: string;
 }
 
 export interface Provider {

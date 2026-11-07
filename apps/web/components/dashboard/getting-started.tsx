@@ -102,15 +102,18 @@ export function GettingStarted({
             title="Test your SMS"
             text="Check a route delivers before you spend on a real send."
             links={[
-              { href: "/campaigns?intent=test", label: "Send Test SMS" },
-              { href: "/campaigns?intent=single", label: "Send single SMS" },
+              { href: "/routes/testing", label: "Send Test SMS" },
+              { href: "/routes/testing", label: "Send single SMS" },
             ]}
           />
           <ActionCard
             icon={<Radio />}
             title="Platform routes"
             text="Countries you can reach on our gateways, with pricing."
-            links={[{ href: "/campaigns", label: "Connect SMS routes" }]}
+            links={[
+              { href: "/routes/platform", label: "Platform routes" },
+              { href: "/routes/custom", label: "Connect SMS routes" },
+            ]}
           />
           <ActionCard
             icon={<Wallet />}

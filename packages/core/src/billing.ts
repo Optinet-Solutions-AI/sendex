@@ -7,7 +7,8 @@ import { z } from "zod";
 
 export const MICRO_PER_EUR = 1_000_000n;
 
-export const LEDGER_KINDS = ["deposit", "debit", "refund", "adjustment"] as const;
+/** `fee` is the per-message platform fee on a custom route (D4-06). */
+export const LEDGER_KINDS = ["deposit", "debit", "refund", "adjustment", "fee"] as const;
 export type LedgerKind = (typeof LEDGER_KINDS)[number];
 
 export const DEPOSIT_METHODS = ["wire", "crypto", "manual"] as const;

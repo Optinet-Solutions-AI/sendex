@@ -108,7 +108,9 @@ async function cancelLaps(
     "cancelled",
   );
   const perLap = new Map<string, number>();
-  for (const m of cancelledMessages) perLap.set(m.lapId, (perLap.get(m.lapId) ?? 0) + 1);
+  for (const m of cancelledMessages) {
+    if (m.lapId) perLap.set(m.lapId, (perLap.get(m.lapId) ?? 0) + 1);
+  }
   await tx.insert(auditLog).values(
     lapIds.map((lapId) => ({
       organisationId,

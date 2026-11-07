@@ -64,7 +64,10 @@ test.describe("campaigns", () => {
     // Test size 200 (the default) and route 405 at EUR 0.025: 200 SMS for EUR 5.00.
     await page.getByRole("switch", { name: "Advanced Settings" }).click();
     await expect(page.getByTestId("test-size")).toHaveValue("200");
-    await page.getByRole("button", { name: "Routes", exact: true }).click();
+    await page
+      .getByTestId("schedule-panel")
+      .getByRole("button", { name: "Routes", exact: true })
+      .click();
     await page.getByTestId("route-405").check();
     await expect(page.getByTestId("footer-sms")).toHaveText("200");
     await expect(page.getByTestId("footer-cost")).toHaveText("~€5.00");

@@ -12,6 +12,12 @@ import { dispatchQueuedLaps, type SendQueueLike } from "./send/dispatcher.js";
 import { createExpiryTick } from "./send/expiry.js";
 import type { ProgressTracker, SendRedis } from "./send/progress.js";
 import { sendLap } from "./send/send-lap.js";
+import {
+  dispatchDueTests,
+  type TestDispatchStore,
+  type TestQueueLike,
+} from "./tests/dispatcher.js";
+import { runSmsTest, type TestStore } from "./tests/run-test.js";
 
 export interface HandlerDeps {
   log?: Logger;
@@ -37,6 +43,8 @@ export interface HandlerDeps {
   alerts?: { store: AlertChecksStore; throttle: CheckThrottle };
   /** AutoSender (D4-02) rides on the tick too; without it no campaign is scaled out. */
   autosender?: AutosenderStore;
+  /** Routes > Testing (D4-06): the tests store and queue; without them no test runs. */
+  tests?: { store: TestStore & TestDispatchStore; queue: TestQueueLike };
 }
 
 /**
@@ -61,6 +69,17 @@ export function createHandlers(deps: HandlerDeps): JobHandlers {
           postbackIngest: createPostbackIngestHandler(deps.db, log),
         }
       : {}),
+    async smsTests(job, meta) {
+      if (!deps.tests) {
+        log("warn", "sms test (stub: no tests store)", { jobId: meta.id, testId: job.testId });
+        return;
+      }
+      const result = await runSmsTest(
+        { store: deps.tests.store, providers: deps.providers, log },
+        job,
+      );
+      log("info", "sms test job finished", { jobId: meta.id, testId: job.testId, ...result });
+    },
     async send(job, meta) {
       const result = await sendLap(
         {
@@ -107,6 +126,17 @@ export function createHandlers(deps: HandlerDeps): JobHandlers {
           log("error", "receipt poll sweep failed", { jobId: meta.id, err }),
         );
       }
+      // Routes > Testing (D4-06): queued and due scheduled tests go on the sms-tests queue.
+      if (deps.tests) {
+        const tests = deps.tests;
+        await dispatchDueTests({ store: tests.store, queue: tests.queue, log })
+          .then((r) => {
+            if (r.enqueued > 0) log("info", "sms tests dispatched", { jobId: meta.id, ...r });
+          })
+          .catch((err: unknown) =>
+            log("error", "sms test dispatch failed", { jobId: meta.id, err }),
+          );
+      }
       // AutoSender (D4-02): measure test rounds and queue scale-out laps for the next tick.
       if (deps.autosender) {
         await runAutosenderTick({ store: deps.autosender, log })
@@ -141,6 +171,9 @@ export function createStubHandlers(log: Logger = defaultLog): JobHandlers {
     },
     async scheduledSend(job, meta) {
       log("warn", "lap dispatch (stub: no database)", { jobId: meta.id, kind: job.kind });
+    },
+    async smsTests(job, meta) {
+      log("warn", "sms test (stub: no database)", { jobId: meta.id, testId: job.testId });
     },
   };
 }

@@ -213,6 +213,12 @@ const sumKind = (kind: LedgerKind) =>
     toBigInt,
   );
 
+/** Debits plus the custom-route fees: what a message cost in total. */
+const sumSpend = () =>
+  sql<bigint>`coalesce(sum(${ledgerEntries.amountMicro}) filter (where ${ledgerEntries.kind} in ('debit', 'fee')), 0)::bigint`.mapWith(
+    toBigInt,
+  );
+
 /** Per UTC day: deposits, debits, refunds, adjustments and net (the Billing Summary tab). */
 export async function dailySummary(
   db: Db,
@@ -224,7 +230,7 @@ export async function dailySummary(
     .select({
       day: sql<string>`${day}`.mapWith(toIsoDay),
       depositsMicro: sumKind("deposit"),
-      debitsMicro: sumKind("debit"),
+      debitsMicro: sumSpend(),
       refundsMicro: sumKind("refund"),
       adjustmentsMicro: sumKind("adjustment"),
       netMicro: sql<bigint>`coalesce(sum(${ledgerEntries.amountMicro}), 0)::bigint`.mapWith(
@@ -268,7 +274,7 @@ export async function spendByCampaign(
     .select({
       campaignId: campaigns.id,
       campaignName: campaigns.name,
-      debitsMicro: sumKind("debit"),
+      debitsMicro: sumSpend(),
       refundsMicro: sumKind("refund"),
       netMicro: sql<bigint>`coalesce(sum(${ledgerEntries.amountMicro}), 0)::bigint`.mapWith(
         toBigInt,

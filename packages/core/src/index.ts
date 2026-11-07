@@ -17,6 +17,7 @@ export * from "./render.js";
 export * from "./reports.js";
 export * from "./results.js";
 export * from "./route-ranks.js";
+export * from "./routes.js";
 export * from "./segments.js";
 export * from "./send-count.js";
 export * from "./sms-encoding.js";

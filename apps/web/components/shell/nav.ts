@@ -54,6 +54,16 @@ export const NAV_TREE: readonly NavGroup[] = [
     ],
   },
   {
+    label: "Routes",
+    icon: "routes",
+    children: [
+      { label: "Platform Routes", href: "/routes/platform", action: "route.view" },
+      { label: "Custom Routes", href: "/routes/custom", action: "route.view" },
+      { label: "Testing", href: "/routes/testing", action: "route.view" },
+      { label: "Mobile Networks", href: "/routes/mobile-networks", action: "route.view" },
+    ],
+  },
+  {
     label: "Settings",
     icon: "settings",
     children: [

@@ -18,7 +18,7 @@ import {
   Toggle,
   useToast,
 } from "@sendex/ui";
-import { Archive, ArchiveRestore, Download, RefreshCw, Trash2, Upload } from "lucide-react";
+import { Archive, ArchiveRestore, Download, Files, RefreshCw, Trash2, Upload } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { type FormEvent, useState } from "react";
@@ -336,6 +336,11 @@ export function ListsTable({
               <a href={`/lists/export${listsQueryString(query)}`}>
                 <Download className="h-4 w-4" aria-hidden="true" /> Export CSV
               </a>
+            </Button>
+            <Button variant="outline" asChild>
+              <Link href="/lists/files">
+                <Files className="h-4 w-4" aria-hidden="true" /> Files
+              </Link>
             </Button>
             {canFlush ? (
               <Button variant="outline" onClick={() => setFlushAllOpen(true)}>

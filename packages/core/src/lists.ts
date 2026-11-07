@@ -7,6 +7,7 @@ import {
   type CountryCode,
   type DroppedNumber,
   type DropReason,
+  isSuspiciousPattern,
   logicalCheck,
   normalisePhone,
 } from "./phone.js";
@@ -364,9 +365,33 @@ export const DROP_REASON_LABELS: Record<DropReason, string> = {
   voip: "VoIP",
 };
 
-/** What one upload did, summed over its chunks. Stored in the audit log and shown to the user. */
+/** How many numbers of each kind the summary keeps as examples (the Files page lists them). */
+export const SAMPLE_LIMIT = 50;
+
+const samplesShape = {
+  landline: z.array(z.string()).max(SAMPLE_LIMIT).default([]),
+  suspicious: z.array(z.string()).max(SAMPLE_LIMIT).default([]),
+  rejected: z.array(z.string()).max(SAMPLE_LIMIT).default([]),
+  skipped: z.array(z.string()).max(SAMPLE_LIMIT).default([]),
+  duplicates: z.array(z.string()).max(SAMPLE_LIMIT).default([]),
+};
+
+export interface UploadSamples {
+  landline: string[];
+  suspicious: string[];
+  rejected: string[];
+  skipped: string[];
+  duplicates: string[];
+}
+
+export function emptySamples(): UploadSamples {
+  return { landline: [], suspicious: [], rejected: [], skipped: [], duplicates: [] };
+}
+
+/** What one upload did, summed over its chunks. Stored with the import and shown to the user. */
 export const UploadSummarySchema = z.object({
   rows: z.number().int().nonnegative(),
+  /** Members added to the list, good and bad together. */
   imported: z.number().int().nonnegative(),
   skippedExisting: z.number().int().nonnegative(),
   duplicates: z.number().int().nonnegative(),
@@ -379,11 +404,35 @@ export const UploadSummarySchema = z.object({
     toll_free: z.number().int().nonnegative(),
     voip: z.number().int().nonnegative(),
   }),
+  /** Numbers kept but flagged Bad. */
+  addedBad: z
+    .object({
+      landline: z.number().int().nonnegative().default(0),
+      suspicious: z.number().int().nonnegative().default(0),
+    })
+    .default({ landline: 0, suspicious: 0 }),
+  samples: z.object(samplesShape).default(emptySamples()),
 });
 export type UploadSummary = z.infer<typeof UploadSummarySchema>;
 
 export function emptyUploadSummary(): UploadSummary {
-  return { rows: 0, imported: 0, skippedExisting: 0, duplicates: 0, dropped: emptyDropCounts() };
+  return {
+    rows: 0,
+    imported: 0,
+    skippedExisting: 0,
+    duplicates: 0,
+    dropped: emptyDropCounts(),
+    addedBad: { landline: 0, suspicious: 0 },
+    samples: emptySamples(),
+  };
+}
+
+function mergeSamples(a: UploadSamples, b: UploadSamples): UploadSamples {
+  const out = emptySamples();
+  for (const key of Object.keys(out) as (keyof UploadSamples)[]) {
+    out[key] = [...a[key], ...b[key]].slice(0, SAMPLE_LIMIT);
+  }
+  return out;
 }
 
 export function addUploadSummary(a: UploadSummary, b: UploadSummary): UploadSummary {
@@ -395,22 +444,47 @@ export function addUploadSummary(a: UploadSummary, b: UploadSummary): UploadSumm
     skippedExisting: a.skippedExisting + b.skippedExisting,
     duplicates: a.duplicates + b.duplicates,
     dropped,
+    addedBad: {
+      landline: a.addedBad.landline + b.addedBad.landline,
+      suspicious: a.addedBad.suspicious + b.addedBad.suspicious,
+    },
+    samples: mergeSamples(a.samples, b.samples),
   };
+}
+
+/** Members added as good: imported minus the Bad ones. */
+export function importedGood(summary: UploadSummary): number {
+  return Math.max(0, summary.imported - summary.addedBad.landline - summary.addedBad.suspicious);
 }
 
 export function totalDropped(summary: UploadSummary): number {
   return DROP_REASONS.reduce((n, reason) => n + summary.dropped[reason], 0);
 }
 
+export const BAD_REASONS = ["landline", "suspicious"] as const;
+export type BadReason = (typeof BAD_REASONS)[number];
+
+export const BAD_REASON_LABELS: Record<BadReason, string> = {
+  landline: "Not a mobile number (landline)",
+  suspicious: "Suspicious digit pattern (likely fake)",
+};
+
 /** An upload row after cleaning: normalised number plus the contact fields that came with it. */
 export interface CleanedRow extends Omit<UploadRow, "phone"> {
   e164: string;
   country: CountryCode;
+  /** Set when the number is kept but flagged Bad (landline, suspicious pattern). */
+  bad?: BadReason;
 }
 
 export interface CleanUploadRowsOptions {
   defaultCountry: CountryCode;
   removeLandlines: boolean;
+  /**
+   * SMS Edge semantics: landlines (when `removeLandlines`) and suspicious digit patterns are
+   * kept and flagged Bad instead of dropped. Off, landlines are dropped as before.
+   */
+  keepBad?: boolean;
 }
 
 export interface CleanUploadRowsResult {
@@ -432,23 +506,48 @@ export function cleanUploadRows(
   const seen = new Set<string>();
   let duplicates = 0;
 
+  const addedBad = { landline: 0, suspicious: 0 };
+  const samples = emptySamples();
+  const sample = (key: keyof UploadSamples, value: string) => {
+    if (samples[key].length < SAMPLE_LIMIT) samples[key].push(value);
+  };
+
   for (const { phone, ...fields } of rows) {
     const normalised = normalisePhone(phone, opts.defaultCountry);
     if (!normalised.ok) {
       dropped.push({ raw: phone, reason: normalised.reason });
+      sample("rejected", phone);
       continue;
     }
     const check = logicalCheck(normalised, { removeLandlines: opts.removeLandlines });
+    let bad: BadReason | undefined;
     if (!check.keep) {
-      dropped.push({ raw: phone, reason: check.reason });
-      continue;
+      if (opts.keepBad && check.reason === "landline") {
+        bad = "landline";
+      } else {
+        dropped.push({ raw: phone, reason: check.reason });
+        sample("rejected", phone);
+        continue;
+      }
+    } else if (opts.keepBad && isSuspiciousPattern(normalised.e164)) {
+      bad = "suspicious";
     }
     if (seen.has(normalised.e164)) {
       duplicates += 1;
+      sample("duplicates", normalised.e164);
       continue;
     }
     seen.add(normalised.e164);
-    kept.push({ ...fields, e164: normalised.e164, country: normalised.country });
+    if (bad) {
+      addedBad[bad] += 1;
+      sample(bad, normalised.e164);
+    }
+    kept.push({
+      ...fields,
+      e164: normalised.e164,
+      country: normalised.country,
+      ...(bad ? { bad } : {}),
+    });
   }
 
   return {
@@ -459,6 +558,8 @@ export function cleanUploadRows(
       skippedExisting: 0,
       duplicates,
       dropped: countDrops(dropped),
+      addedBad,
+      samples,
     },
   };
 }

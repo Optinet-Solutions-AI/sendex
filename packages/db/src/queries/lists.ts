@@ -312,6 +312,9 @@ export async function deleteList(db: Db, organisationId: string, listId: string)
 export interface ImportRow {
   e164: string;
   country: string;
+  /** Kept but flagged Bad (landline, suspicious pattern): never sent to, counted as bad. */
+  bad?: boolean | undefined;
+  badReason?: string | undefined;
   firstName?: string | undefined;
   lastName?: string | undefined;
   email?: string | undefined;
@@ -340,6 +343,8 @@ export interface ImportContactsResult {
   imported: number;
   /** Rows not added: known contacts under `skip_existing`, or already members of the list. */
   skippedExisting: number;
+  /** Up to 50 of the skipped numbers, for the import summary. */
+  skippedSamples: string[];
 }
 
 function chunk<T>(items: readonly T[], size: number): T[][] {
@@ -376,6 +381,10 @@ export async function importContacts(
 ): Promise<ImportContactsResult> {
   const listId = await resolveTargetList(db, organisationId, input);
   let imported = 0;
+  const skippedSamples: string[] = [];
+  const noteSkipped = (e164: string) => {
+    if (skippedSamples.length < 50) skippedSamples.push(e164);
+  };
 
   for (const batch of chunk(input.rows, MEMBER_CHUNK)) {
     if (batch.length === 0) continue;
@@ -394,7 +403,9 @@ export async function importContacts(
           )
         : new Set<string>();
     const toImport = batch.filter((r) => !existing.has(r.e164));
+    for (const r of batch) if (existing.has(r.e164)) noteSkipped(r.e164);
     if (toImport.length === 0) continue;
+    const flagsByNumber = new Map(toImport.map((r) => [r.e164, r]));
 
     const upserted = await db
       .insert(contacts)
@@ -426,14 +437,27 @@ export async function importContacts(
           custom5: sql`coalesce(excluded.custom5, ${contacts.custom5})`,
         },
       })
-      .returning({ id: contacts.id });
+      .returning({ id: contacts.id, e164: contacts.e164 });
 
     const inserted = await db
       .insert(listMembers)
-      .values(upserted.map((c) => ({ organisationId, listId, contactId: c.id })))
+      .values(
+        upserted.map((c) => {
+          const row = flagsByNumber.get(c.e164);
+          return {
+            organisationId,
+            listId,
+            contactId: c.id,
+            bad: row?.bad === true,
+            badReason: row?.bad === true ? (row.badReason ?? null) : null,
+          };
+        }),
+      )
       .onConflictDoNothing({ target: [listMembers.listId, listMembers.contactId] })
-      .returning({ id: listMembers.id });
+      .returning({ id: listMembers.id, contactId: listMembers.contactId });
     imported += inserted.length;
+    const insertedContacts = new Set(inserted.map((m) => m.contactId));
+    for (const c of upserted) if (!insertedContacts.has(c.id)) noteSkipped(c.e164);
   }
 
   await db
@@ -446,7 +470,7 @@ export async function importContacts(
 
   if (input.flushAfterImport) await flushList(db, organisationId, listId);
 
-  return { listId, imported, skippedExisting: input.rows.length - imported };
+  return { listId, imported, skippedExisting: input.rows.length - imported, skippedSamples };
 }
 
 /** Reset the sent flags of every member of the list, keeping bad flags. Returns members touched. */

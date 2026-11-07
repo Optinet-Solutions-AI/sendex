@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { cleanBatch, logicalCheck, normalisePhone } from "./phone.js";
+import { cleanBatch, isSuspiciousPattern, logicalCheck, normalisePhone } from "./phone.js";
 
 describe("normalisePhone", () => {
   it("parses an E.164 number as-is", () => {
@@ -506,5 +506,21 @@ describe("cleanBatch", () => {
     expect(out.kept).toHaveLength(10_000);
     expect(out.duplicates).toBe(40_000);
     expect(out.dropped).toEqual([]);
+  });
+});
+
+describe("isSuspiciousPattern", () => {
+  it("flags repeated digits, straight runs and long zero tails on the national part", () => {
+    expect(isSuspiciousPattern("+491770000000")).toBe(true);
+    expect(isSuspiciousPattern("+4958000000000")).toBe(true);
+    expect(isSuspiciousPattern("+34666666666")).toBe(true);
+    expect(isSuspiciousPattern("+34612345678")).toBe(true);
+    expect(isSuspiciousPattern("+34698765432")).toBe(true);
+  });
+
+  it("keeps ordinary numbers, even with a few zeros", () => {
+    expect(isSuspiciousPattern("+34622000001")).toBe(false);
+    expect(isSuspiciousPattern("+447700900123")).toBe(false);
+    expect(isSuspiciousPattern("+35699001122")).toBe(false);
   });
 });

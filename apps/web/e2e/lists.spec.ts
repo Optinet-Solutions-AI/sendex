@@ -93,10 +93,11 @@ test.describe("lists", () => {
     const numbers = readFileSync(FIXTURE, "utf8");
 
     await page.goto("/lists/upload");
-    await expect(page.getByRole("heading", { level: 1, name: "Upload List" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "Upload Contacts" })).toBeVisible();
 
-    await page.getByLabel("Or paste numbers, one per line").fill(numbers);
-    await page.getByRole("button", { name: "Use pasted data" }).click();
+    await page.getByRole("button", { name: "Paste CSV" }).click();
+    await page.getByLabel("Paste phone numbers, one per line").fill(numbers);
+    await page.getByRole("button", { name: "Upload", exact: true }).click();
     await expect(page.getByText("20 rows from pasted text")).toBeVisible();
     await expect(page.getByRole("combobox", { name: "Type of column 1" })).toContainText("Phone");
 
@@ -109,20 +110,35 @@ test.describe("lists", () => {
 
     const summary = page.getByTestId("upload-summary");
     await expect(summary).toBeVisible({ timeout: 30_000 });
+    // 20 rows: 17 good, 2 landlines kept as Bad, 1 rejected ("12345").
     await expect(page.getByTestId("summary-rows")).toHaveText("20");
-    await expect(page.getByTestId("summary-imported")).toHaveText("17");
+    await expect(page.getByTestId("summary-imported")).toHaveText("19");
+    await expect(page.getByTestId("summary-good")).toHaveText("17");
+    await expect(page.getByTestId("summary-bad")).toHaveText("2");
     await expect(page.getByTestId("summary-skipped")).toHaveText("0");
     await expect(page.getByTestId("summary-duplicates")).toHaveText("0");
-    await expect(page.getByTestId("summary-dropped")).toHaveText("3");
-    await expect(page.getByTestId("drop-landline")).toHaveText("2");
+    await expect(page.getByTestId("summary-dropped")).toHaveText("1");
+    await expect(page.getByTestId("bad-landline")).toHaveText("2");
     await expect(page.getByTestId("drop-invalid")).toHaveText("1");
-    await expect(page.getByTestId("drop-unparseable")).toHaveText("0");
+    await expect(page.getByTestId("drop-landline")).toHaveText("0");
 
-    // The new list is in the table with its 17 numbers.
+    // The import is on the Files page with its result.
+    await page.goto("/lists/files");
+    const fileRow = page.getByTestId("file-row").filter({ hasText: listName }).first();
+    await expect(fileRow).toContainText("pasted text");
+    await expect(fileRow).toContainText("19 / 20");
+    await fileRow.getByRole("button", { name: "Show import summary" }).click();
+    const fileSummary = page.getByTestId("file-summary").first();
+    await expect(fileSummary).toContainText(
+      "20 rows → 19 added (17 good, 2 bad) · 1 rejected · 0 skipped",
+    );
+    await expect(fileSummary).toContainText("Not Mobile");
+
+    // The new list is in the table with its 19 numbers.
     await page.goto(`/lists?search=${encodeURIComponent(listName)}`);
     const row = page.getByRole("row", { name: new RegExp(listName) });
     await expect(row).toBeVisible();
-    await expect(row).toContainText("17");
+    await expect(row).toContainText("19");
     await expect(row).toContainText("ES");
 
     // Flush it from the row menu and confirm.
@@ -132,14 +148,15 @@ test.describe("lists", () => {
     await expect(dialog).toContainText(`Flush ${listName}?`);
     await dialog.getByRole("button", { name: "Flush list" }).click();
     await expect(page.getByTestId("toast")).toContainText(`Flushed ${listName}`);
-    await expect(page.getByTestId("toast")).toContainText("17 numbers reset");
+    await expect(page.getByTestId("toast")).toContainText("19 numbers reset");
 
     // The detail page shows the counts and full numbers.
     await row.getByRole("link", { name: listName, exact: true }).click();
     await expect(page.getByRole("heading", { level: 1, name: listName })).toBeVisible();
-    await expect(page.getByTestId("count-members")).toHaveText("17");
+    await expect(page.getByTestId("count-members")).toHaveText("19");
     await expect(page.getByTestId("count-available")).toHaveText("17");
     await expect(page.getByTestId("count-sent")).toHaveText("0");
+    await expect(page.getByTestId("count-bad")).toHaveText("2");
     await expect(page.getByText("+34622000001", { exact: true })).toBeVisible();
 
     // Archive it from the row menu: it leaves the table, shows under "Show archived", comes back.

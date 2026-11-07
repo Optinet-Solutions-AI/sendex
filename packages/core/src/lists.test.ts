@@ -11,6 +11,7 @@ import {
   emptyDropCounts,
   emptyUploadSummary,
   flagEmoji,
+  importedGood,
   totalDropped,
   UploadSettingsSchema,
 } from "./lists.js";
@@ -37,16 +38,43 @@ describe("cleanUploadRows", () => {
       { defaultCountry: "ES", removeLandlines: true, dedupe: true },
     );
     expect(out.kept.map((k) => k.e164)).toEqual(batch.kept.map((k) => k.e164));
-    expect(out.summary).toEqual({
+    expect(out.summary).toMatchObject({
       rows: 6,
       imported: 0,
       skippedExisting: 0,
       duplicates: batch.duplicates,
       dropped: countDrops(batch.dropped),
+      addedBad: { landline: 0, suspicious: 0 },
     });
+    expect(out.summary.samples.rejected).toEqual(["912345678", "900123456", "junk"]);
     expect(out.summary.dropped.landline).toBe(1);
     expect(out.summary.dropped.toll_free).toBe(1);
     expect(out.summary.dropped.unparseable).toBe(1);
+  });
+
+  it("with keepBad, landlines and suspicious patterns are kept and flagged Bad", () => {
+    const out = cleanUploadRows([...rows, { phone: "+34666666666" }, { phone: "+34677000000" }], {
+      defaultCountry: "ES",
+      removeLandlines: true,
+      keepBad: true,
+    });
+    const byNumber = new Map(out.kept.map((k) => [k.e164, k]));
+    expect(byNumber.get("+34912345678")?.bad).toBe("landline");
+    expect(byNumber.get("+34666666666")?.bad).toBe("suspicious");
+    expect(byNumber.get("+34677000000")?.bad).toBe("suspicious");
+    // 612345678 is a straight run, so it is Bad too; 33612345678 (FR) is the same digits.
+    expect(byNumber.get("+34612345678")?.bad).toBe("suspicious");
+    expect(out.summary.addedBad).toEqual({ landline: 1, suspicious: 4 });
+    expect(out.summary.dropped.landline).toBe(0);
+    expect(out.summary.dropped.toll_free).toBe(1);
+    expect(out.summary.samples.landline).toEqual(["+34912345678"]);
+    expect(out.summary.samples.suspicious).toEqual([
+      "+34612345678",
+      "+33612345678",
+      "+34666666666",
+      "+34677000000",
+    ]);
+    expect(importedGood({ ...out.summary, imported: 5 })).toBe(0);
   });
 
   it("keeps landlines when the logical check is off", () => {

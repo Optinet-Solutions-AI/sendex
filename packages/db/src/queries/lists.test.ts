@@ -69,6 +69,40 @@ describe("importContacts", () => {
     expect(contact?.custom1).toBe("VIP");
   });
 
+  it("keeps Bad rows as bad members and reports the skipped numbers", async () => {
+    const result = await importContacts(t.db, orgA, {
+      newList: { name: "Bad_ES", country: "ES" },
+      rows: [
+        { ...es(901), bad: true, badReason: "landline" },
+        { ...es(902), bad: true, badReason: "suspicious" },
+        es(903),
+      ],
+      duplicates: "allow",
+      flushAfterImport: false,
+    });
+    expect(result.imported).toBe(3);
+    const again = await importContacts(t.db, orgA, {
+      listId: result.listId,
+      rows: [es(903), es(904)],
+      duplicates: "allow",
+      flushAfterImport: false,
+    });
+    expect(again).toMatchObject({
+      imported: 1,
+      skippedExisting: 1,
+      skippedSamples: [es(903).e164],
+    });
+    const list = await getList(t.db, orgA, result.listId);
+    expect(list?.counts).toMatchObject({ members: 4, bad: 2, available: 2 });
+    const page = await listMembersPage(t.db, orgA, result.listId, { page: 1, pageSize: 10 });
+    expect(
+      page.rows
+        .filter((r) => r.bad)
+        .map((r) => r.badReason)
+        .sort(),
+    ).toEqual(["landline", "suspicious"]);
+  });
+
   it("skips contacts the organisation already has with skip_existing", async () => {
     const result = await importContacts(t.db, orgA, {
       newList: { name: "Import_ES_2", country: "ES" },

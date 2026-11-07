@@ -174,3 +174,21 @@ export function cleanBatch(rows: readonly string[], opts: CleanBatchOptions): Cl
 
   return { kept, dropped, duplicates };
 }
+
+/**
+ * Numbers that parse but are almost surely fake: six or more of the same digit in a row,
+ * a straight run of seven digits (1234567, 7654321) or five or more trailing zeros, judged
+ * on the national part (the last nine digits). SMS Edge calls these "Not Logical".
+ */
+export function isSuspiciousPattern(e164: string): boolean {
+  const digits = e164.replace(/\D/g, "");
+  const national = digits.slice(Math.max(0, digits.length - 9));
+  if (/(\d)\1{5,}/.test(national)) return true;
+  if (/0{5,}$/.test(national)) return true;
+  for (const run of ["0123456789", "9876543210"]) {
+    for (let i = 0; i + 7 <= run.length; i += 1) {
+      if (national.includes(run.slice(i, i + 7))) return true;
+    }
+  }
+  return false;
+}

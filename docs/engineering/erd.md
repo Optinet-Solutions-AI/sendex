@@ -150,6 +150,25 @@ erDiagram
     bigint profit_micro
     text url
   }
+  list_imports {
+    integer added
+    integer added_bad
+    integer added_good
+    timestamp_with_time_zone created_at
+    boolean dedup
+    integer duplicates
+    text file_name
+    uuid id PK
+    uuid list_id FK
+    uuid organisation_id FK
+    integer rejected
+    integer rows_in_file
+    integer skipped
+    text source
+    text status
+    jsonb summary
+    integer valid
+  }
   list_members {
     boolean bad
     text bad_reason
@@ -315,6 +334,7 @@ erDiagram
   links ||--o{ messages : "link_id"
   lists ||--o{ campaign_lists : "list_id"
   lists ||--o{ laps : "list_id"
+  lists ||--o{ list_imports : "list_id"
   lists ||--o{ list_members : "list_id"
   messages ||--o{ clicks : "message_id"
   messages ||--o{ postbacks : "message_id"
@@ -330,6 +350,7 @@ erDiagram
   organisations ||--o{ laps : "organisation_id"
   organisations ||--o{ ledger_entries : "organisation_id"
   organisations ||--o{ links : "organisation_id"
+  organisations ||--o{ list_imports : "organisation_id"
   organisations ||--o{ list_members : "organisation_id"
   organisations ||--o{ lists : "organisation_id"
   organisations ||--o{ memberships : "organisation_id"
@@ -354,4 +375,4 @@ erDiagram
   users ||--o{ organisation_alerts : "acknowledged_by"
 ```
 
-Generated from the Drizzle schema by `pnpm --filter @sendex/db erd` (27 tables, 55 relationships). Do not edit by hand: regenerate after every schema change. CI runs `pnpm --filter @sendex/db erd:check` and fails when this file is stale.
+Generated from the Drizzle schema by `pnpm --filter @sendex/db erd` (28 tables, 57 relationships). Do not edit by hand: regenerate after every schema change. CI runs `pnpm --filter @sendex/db erd:check` and fails when this file is stale.

@@ -2,18 +2,30 @@ import os from "node:os";
 import { serve } from "@hono/node-server";
 import {
   claimTest,
+  claimVerificationRequest,
+  countUnverified,
   createAutosenderStore,
   createCapsStore,
   createSendingStore,
+  createVerificationRequest,
   db,
   finishTest,
+  finishVerificationRequest,
   getBalanceMicro,
+  getEnrichmentRuleById,
   listQueuedTests,
+  listQueuedVerificationRequests,
   listScheduledTests,
   loadTestContext,
+  lookupPriceFor,
+  recordLookupResults,
   recordTestMessage,
+  ruleUsage,
   type SendingStore,
+  scheduledEnrichmentRules,
+  verificationTargets,
 } from "@sendex/db";
+import { FakeLookupProvider } from "@sendex/providers";
 import { createRateLimiter, RATE_LIMITS } from "@sendex/redis-utils";
 import { sql } from "drizzle-orm";
 import { Redis } from "ioredis";
@@ -92,6 +104,32 @@ if (redis) {
               claimTest: (id, slotKey) => claimTest(db(), id, slotKey),
             },
             queue: queues.smsTests,
+          },
+          verification: {
+            store: {
+              claimVerificationRequest: (id) => claimVerificationRequest(db(), id),
+              verificationTargets: (request, includeArchived) =>
+                verificationTargets(db(), request, includeArchived),
+              recordLookupResults: (input) => recordLookupResults(db(), input),
+              finishVerificationRequest: (id, status) =>
+                finishVerificationRequest(db(), id, status),
+              lookupPriceFor: (country) => lookupPriceFor(db(), country),
+              getBalanceMicro: (organisationId) => getBalanceMicro(db(), organisationId),
+              ruleIncludesArchived: async (ruleId) =>
+                ruleId
+                  ? ((await getEnrichmentRuleById(db(), ruleId))?.includeArchived ?? false)
+                  : false,
+              listQueuedVerificationRequests: () => listQueuedVerificationRequests(db()),
+              scheduledEnrichmentRules: () => scheduledEnrichmentRules(db()),
+              ruleUsage: (ruleId, now) => ruleUsage(db(), ruleId, now),
+              countUnverified: (organisationId, scope) =>
+                countUnverified(db(), organisationId, scope),
+              createVerificationRequest: (organisationId, input) =>
+                createVerificationRequest(db(), organisationId, input),
+            },
+            queue: queues.verify,
+            // The real HLR / MNP provider arrives with an account; `fake` serves development.
+            lookup: process.env.LOOKUP_PROVIDER === "fake" ? new FakeLookupProvider() : null,
           },
           alerts: { store: createAlertChecksStore(db()), throttle: createRedisThrottle(redis) },
           expiry: { windowMs: dlrExpiryMs, everyMs: dlrExpiryPollMs },

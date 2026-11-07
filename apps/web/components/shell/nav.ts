@@ -50,6 +50,7 @@ export const NAV_TREE: readonly NavGroup[] = [
     children: [
       { label: "Lists", href: "/lists", action: "list.view" },
       { label: "Segments", href: "/segments", action: "list.view" },
+      { label: "Enrichment", href: "/enrichment", action: "list.view" },
       { label: "Unsubscribe", href: "/unsubscribes", action: "list.view" },
     ],
   },

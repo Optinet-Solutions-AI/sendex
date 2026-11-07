@@ -8,6 +8,7 @@ import {
   links,
   listMembers,
   lists,
+  lookupPrices,
   organisations,
   routePrices,
   routes,
@@ -65,6 +66,7 @@ async function snapshot() {
     links: await rows(links),
     routes: await rows(routes),
     routePrices: await rows(routePrices),
+    lookupPrices: await rows(lookupPrices),
     ledgerEntries: await rows(ledgerEntries),
   };
 }
@@ -83,6 +85,7 @@ describe("seedDemo", () => {
       links: 3,
       routes: 11,
       routePrices: 13,
+      lookupPrices: 7,
       ledgerEntries: 1,
     });
   }, 120_000);

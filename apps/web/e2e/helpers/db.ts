@@ -583,3 +583,16 @@ export async function cleanupE2eRoutes(prefix: string): Promise<void> {
     await sql.end();
   }
 }
+
+/** Remove the enrichment rules and verification requests the enrichment spec created. */
+export async function cleanupE2eEnrichment(): Promise<void> {
+  const url = process.env.DATABASE_URL;
+  if (!url) throw new Error("DATABASE_URL must be set to run the enrichment e2e spec");
+  const sql = postgres(url, { max: 1 });
+  try {
+    await sql`delete from verification_requests where source = 'hlr_verify' or country = 'MT'`;
+    await sql`delete from enrichment_rules where country = 'MT'`;
+  } finally {
+    await sql.end();
+  }
+}

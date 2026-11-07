@@ -75,9 +75,14 @@ export const smsTestJobSchema = z.object({
 });
 export type SmsTestJob = z.infer<typeof smsTestJobSchema>;
 
+/** One Numbers Verification request (D4-07). */
+export const verifyJobSchema = z.object({ organisationId: nonEmpty, requestId: nonEmpty });
+export type VerifyJob = z.infer<typeof verifyJobSchema>;
+
 export const jobSchemas = {
   send: sendLapJobSchema,
   smsTests: smsTestJobSchema,
+  verify: verifyJobSchema,
   dlr: dlrJobSchema,
   clickIngest: clickIngestJobSchema,
   postbackIngest: postbackIngestJobSchema,

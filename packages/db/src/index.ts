@@ -55,4 +55,5 @@ export * from "./queries/segments.js";
 export * from "./queries/send-log.js";
 export * from "./queries/sms-tests.js";
 export * from "./queries/suppressions.js";
+export * from "./queries/verification.js";
 export * from "./secrets.js";

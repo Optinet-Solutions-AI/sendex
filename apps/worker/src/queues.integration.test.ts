@@ -74,6 +74,7 @@ const noopHandlers: JobHandlers = {
   postbackIngest: async () => undefined,
   scheduledSend: async () => undefined,
   smsTests: async () => undefined,
+  verify: async () => undefined,
 };
 
 describe.skipIf(!reachable)("queues (integration, needs Redis)", () => {

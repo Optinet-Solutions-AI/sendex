@@ -107,6 +107,19 @@ erDiagram
     text last_name
     uuid organisation_id FK, UK "unique with e164"
   }
+  enrichment_rules {
+    boolean active
+    boolean after_upload
+    boolean as_you_send
+    char(2) country UK "unique with organisation_id"
+    timestamp_with_time_zone created_at
+    integer daily_limit
+    uuid id PK
+    boolean include_archived
+    bigint monthly_budget_micro
+    boolean on_schedule
+    uuid organisation_id FK, UK "unique with country"
+  }
   laps {
     boolean active
     boolean autosender
@@ -196,6 +209,28 @@ erDiagram
     text name
     integer numbers_count
     uuid organisation_id FK
+  }
+  lookup_prices {
+    char(2) country
+    uuid id PK
+    text method
+    bigint price_micro
+    text route
+    timestamp_with_time_zone valid_from
+  }
+  lookup_results {
+    timestamp_with_time_zone checked_at
+    char(2) country
+    text e164 UK "unique with organisation_id"
+    uuid id PK
+    text method
+    text operator
+    uuid organisation_id FK, UK "unique with e164"
+    boolean ported
+    bigint price_micro
+    text provider
+    uuid request_id
+    text status
   }
   memberships {
     timestamp_with_time_zone created_at
@@ -399,6 +434,24 @@ erDiagram
     uuid id PK
     text name
   }
+  verification_requests {
+    integer bad
+    bigint cost_micro
+    char(2) country
+    timestamp_with_time_zone finished_at
+    integer good
+    uuid id PK
+    integer limit
+    uuid list_id FK
+    integer no_verdict
+    uuid organisation_id FK
+    timestamp_with_time_zone requested_at
+    uuid requested_by FK
+    uuid rule_id FK
+    text source
+    text status
+    integer total
+  }
 
   ad_texts ||--o{ messages : "ad_text_id"
   campaigns ||--o{ ad_texts : "campaign_id"
@@ -412,6 +465,7 @@ erDiagram
   campaigns ||--o{ postbacks : "campaign_id"
   contacts ||--o{ list_members : "contact_id"
   contacts ||--o{ messages : "contact_id"
+  enrichment_rules ||--o{ verification_requests : "rule_id"
   laps ||--o{ clicks : "lap_id"
   laps ||--o{ messages : "lap_id"
   laps ||--o{ postbacks : "lap_id"
@@ -421,6 +475,7 @@ erDiagram
   lists ||--o{ laps : "list_id"
   lists ||--o{ list_imports : "list_id"
   lists ||--o{ list_members : "list_id"
+  lists ||--o{ verification_requests : "list_id"
   messages ||--o{ clicks : "message_id"
   messages ||--o{ postbacks : "message_id"
   organisations ||--o{ ad_texts : "organisation_id"
@@ -433,12 +488,14 @@ erDiagram
   organisations ||--o{ campaigns : "organisation_id"
   organisations ||--o{ clicks : "organisation_id"
   organisations ||--o{ contacts : "organisation_id"
+  organisations ||--o{ enrichment_rules : "organisation_id"
   organisations ||--o{ laps : "organisation_id"
   organisations ||--o{ ledger_entries : "organisation_id"
   organisations ||--o{ links : "organisation_id"
   organisations ||--o{ list_imports : "organisation_id"
   organisations ||--o{ list_members : "organisation_id"
   organisations ||--o{ lists : "organisation_id"
+  organisations ||--o{ lookup_results : "organisation_id"
   organisations ||--o{ memberships : "organisation_id"
   organisations ||--o{ messages : "organisation_id"
   organisations ||--o{ organisation_alerts : "organisation_id"
@@ -454,6 +511,7 @@ erDiagram
   organisations ||--o{ sms_tests : "organisation_id"
   organisations ||--o{ suppression_imports : "organisation_id"
   organisations ||--o{ suppressions : "organisation_id"
+  organisations ||--o{ verification_requests : "organisation_id"
   routes ||--o{ laps : "route_id"
   routes ||--o{ messages : "route_id"
   routes ||--o{ route_connection_events : "route_id"
@@ -471,6 +529,7 @@ erDiagram
   users ||--o{ memberships : "user_id"
   users ||--o{ organisation_alerts : "acknowledged_by"
   users ||--o{ sms_tests : "created_by"
+  users ||--o{ verification_requests : "requested_by"
 ```
 
-Generated from the Drizzle schema by `pnpm --filter @sendex/db erd` (34 tables, 71 relationships). Do not edit by hand: regenerate after every schema change. CI runs `pnpm --filter @sendex/db erd:check` and fails when this file is stale.
+Generated from the Drizzle schema by `pnpm --filter @sendex/db erd` (38 tables, 77 relationships). Do not edit by hand: regenerate after every schema change. CI runs `pnpm --filter @sendex/db erd:check` and fails when this file is stale.

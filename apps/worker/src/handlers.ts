@@ -1,5 +1,5 @@
 import type { AutosenderStore, CapsStore, Db, SendingStore } from "@sendex/db";
-import type { ProviderRegistry } from "@sendex/providers";
+import type { LookupProvider, ProviderRegistry } from "@sendex/providers";
 import { type AlertChecksStore, type CheckThrottle, runAlertChecks } from "./alerts/checks.js";
 import { createDlrHandler } from "./dlr/handler.js";
 import { createReceiptPollTick } from "./dlr/poll.js";
@@ -18,6 +18,13 @@ import {
   type TestQueueLike,
 } from "./tests/dispatcher.js";
 import { runSmsTest, type TestStore } from "./tests/run-test.js";
+import {
+  dispatchVerification,
+  runVerification,
+  type VerificationDispatchStore,
+  type VerificationStore,
+  type VerifyQueueLike,
+} from "./verification/run-verification.js";
 
 export interface HandlerDeps {
   log?: Logger;
@@ -45,6 +52,12 @@ export interface HandlerDeps {
   autosender?: AutosenderStore;
   /** Routes > Testing (D4-06): the tests store and queue; without them no test runs. */
   tests?: { store: TestStore & TestDispatchStore; queue: TestQueueLike };
+  /** Numbers Verification (D4-07): store, queue and the lookup provider (null = none configured). */
+  verification?: {
+    store: VerificationStore & VerificationDispatchStore;
+    queue: VerifyQueueLike;
+    lookup: LookupProvider | null;
+  };
 }
 
 /**
@@ -69,6 +82,21 @@ export function createHandlers(deps: HandlerDeps): JobHandlers {
           postbackIngest: createPostbackIngestHandler(deps.db, log),
         }
       : {}),
+    async verify(job, meta) {
+      if (!deps.verification) {
+        log("warn", "verification (stub: no store)", { jobId: meta.id, requestId: job.requestId });
+        return;
+      }
+      const result = await runVerification(
+        { store: deps.verification.store, lookup: deps.verification.lookup, log },
+        job,
+      );
+      log("info", "verification job finished", {
+        jobId: meta.id,
+        requestId: job.requestId,
+        ...result,
+      });
+    },
     async smsTests(job, meta) {
       if (!deps.tests) {
         log("warn", "sms test (stub: no tests store)", { jobId: meta.id, testId: job.testId });
@@ -137,6 +165,17 @@ export function createHandlers(deps: HandlerDeps): JobHandlers {
             log("error", "sms test dispatch failed", { jobId: meta.id, err }),
           );
       }
+      // Numbers Verification (D4-07): enrichment rules create requests; queued ones are enqueued.
+      if (deps.verification) {
+        const verification = deps.verification;
+        await dispatchVerification({
+          store: verification.store,
+          queue: verification.queue,
+          log,
+        }).catch((err: unknown) =>
+          log("error", "verification dispatch failed", { jobId: meta.id, err }),
+        );
+      }
       // AutoSender (D4-02): measure test rounds and queue scale-out laps for the next tick.
       if (deps.autosender) {
         await runAutosenderTick({ store: deps.autosender, log })
@@ -174,6 +213,9 @@ export function createStubHandlers(log: Logger = defaultLog): JobHandlers {
     },
     async smsTests(job, meta) {
       log("warn", "sms test (stub: no database)", { jobId: meta.id, testId: job.testId });
+    },
+    async verify(job, meta) {
+      log("warn", "verification (stub: no database)", { jobId: meta.id, requestId: job.requestId });
     },
   };
 }

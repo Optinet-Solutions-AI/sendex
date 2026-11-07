@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import * as schema from "./schema/index.js";
 
 /** Platform-level tables that are not owned by a tenant. */
-const TENANT_EXEMPT = new Set(["organisations", "users", "route_prices"]);
+const TENANT_EXEMPT = new Set(["organisations", "users", "route_prices", "lookup_prices"]);
 
 const tables: Table[] = [];
 for (const value of Object.values<unknown>(schema)) {

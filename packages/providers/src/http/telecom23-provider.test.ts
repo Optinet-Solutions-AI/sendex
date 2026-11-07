@@ -291,6 +291,34 @@ describe("Telecom23Provider.pollReceipts", () => {
     expect(calls[0]?.init.method).toBeUndefined();
   });
 
+  it("retires sandbox ids under a live key without calling the API, and looks them up under a sandbox key", async () => {
+    const live = fakeFetch([statusBody("api_9", "DELIVRD")]);
+    const p = new Telecom23Provider({ apiKey: "sk_prod_x", fetch: live.fetch });
+    const out = await p.pollReceipts(["test_267_1_a", "api_9", "test_267_1_b"]);
+    expect(out.map(({ at, ...r }) => r)).toEqual([
+      { providerMessageId: "test_267_1_a", status: "expired", errorCode: "SANDBOX_MESSAGE" },
+      { providerMessageId: "test_267_1_b", status: "expired", errorCode: "SANDBOX_MESSAGE" },
+      { providerMessageId: "api_9", status: "delivered" },
+    ]);
+    expect(live.calls.map((c) => c.url)).toEqual([`${TELECOM23_BASE_URL}/sms/status/api_9`]);
+
+    const sandbox = fakeFetch([statusBody("test_267_1_a", "DELIVRD")]);
+    const s = new Telecom23Provider({ apiKey: "sk_test_x", fetch: sandbox.fetch });
+    expect(await s.pollReceipts(["test_267_1_a"])).toHaveLength(1);
+    expect(sandbox.calls).toHaveLength(1);
+  });
+
+  it("looks up at most maxPollPerCall ids per call and leaves the rest for the next poll", async () => {
+    const { fetch, calls } = fakeFetch([
+      statusBody("a", "SENT"),
+      statusBody("b", "SENT"),
+      statusBody("c", "SENT"),
+    ]);
+    const p = new Telecom23Provider({ apiKey: "k", fetch, maxPollPerCall: 3, pollConcurrency: 1 });
+    await p.pollReceipts(["a", "b", "c", "d", "e"]);
+    expect(calls.map((c) => c.url.split("/").pop())).toEqual(["a", "b", "c"]);
+  });
+
   it("returns nothing for an empty list without calling the API", async () => {
     const { fetch, calls } = fakeFetch([]);
     const p = new Telecom23Provider({ apiKey: "k", fetch });

@@ -226,6 +226,8 @@ export const laps = pgTable(
     scheduledAt: timestamp("scheduled_at", { withTimezone: true }),
     /** True for the scale-out laps AutoSender creates; the test round stays false. */
     autosender: boolean("autosender").notNull().default(false),
+    /** Set when the lap sends only to the list's contacts that match a segment. */
+    segmentId: uuid("segment_id").references(() => segments.id, { onDelete: "set null" }),
     startedAt: timestamp("started_at", { withTimezone: true }),
     finishedAt: timestamp("finished_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

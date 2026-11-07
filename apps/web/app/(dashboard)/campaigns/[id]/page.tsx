@@ -9,6 +9,7 @@ import {
   listAuditLog,
   listCampaignMessages,
   listLinks,
+  listSegments,
   listSidGroups,
   listsForCountry,
   routePerformance,
@@ -84,6 +85,7 @@ export default async function CampaignPage({
           messages,
           balanceMicro,
           performance,
+          segmentListing,
         ] = await Promise.all([
           listSidGroups(database, ctx.organisationId, detail.country),
           listsForCountry(database, ctx.organisationId, detail.country),
@@ -96,7 +98,17 @@ export default async function CampaignPage({
           listCampaignMessages(database, ctx.organisationId, id, { page: messagePage }),
           getBalanceMicro(database, ctx.organisationId),
           routePerformance(database, ctx.organisationId, detail.country),
+          listSegments(database, ctx.organisationId, { tab: "all" }),
         ]);
+        const segmentOptions = segmentListing.rows
+          .filter((seg) => !seg.isTemplate && !seg.globalExclude)
+          .map((seg) => ({
+            id: seg.id,
+            name: seg.name,
+            summary: seg.summary,
+            size: seg.size,
+            good: seg.good,
+          }));
         const stats = await sidGroupStats(
           database,
           ctx.organisationId,
@@ -131,6 +143,7 @@ export default async function CampaignPage({
                     campaign={campaign}
                     sidGroups={groups}
                     lists={lists.map(toListOption)}
+                    segmentOptions={segmentOptions}
                     links={links.map(toLinkOption)}
                     routes={routes.map(toRouteView)}
                     performance={toRoutePerformanceView(performance)}

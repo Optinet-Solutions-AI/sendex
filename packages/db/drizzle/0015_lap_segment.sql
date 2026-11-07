@@ -1,0 +1,2 @@
+ALTER TABLE "laps" ADD COLUMN "segment_id" uuid;--> statement-breakpoint
+ALTER TABLE "laps" ADD CONSTRAINT "laps_segment_id_segments_id_fk" FOREIGN KEY ("segment_id") REFERENCES "public"."segments"("id") ON DELETE set null ON UPDATE no action;

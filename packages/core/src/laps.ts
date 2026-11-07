@@ -8,6 +8,8 @@ export interface LapList {
   listId: string;
   /** Contacts not yet sent to and not suppressed. */
   available: number;
+  /** When the lap draws only the list's contacts that match a segment. */
+  segmentId?: string | null;
 }
 
 export interface LapRoute {
@@ -29,6 +31,7 @@ export interface PlannedLap {
   routeId: string;
   count: number;
   costMicro: number;
+  segmentId?: string | null;
 }
 
 /**
@@ -70,6 +73,7 @@ export function planLaps(input: PlanLapsInput): PlannedLap[] {
         routeId: route.routeId,
         count,
         costMicro: count * route.priceMicro,
+        ...(list.segmentId ? { segmentId: list.segmentId } : {}),
       });
     }
   }

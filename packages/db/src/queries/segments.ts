@@ -29,75 +29,75 @@ const toNumber = (v: unknown): number => Number(v ?? 0);
 // ---------------------------------------------------------------------------
 
 /** `c` is the contacts row the condition is evaluated for; `org` the bound organisation id. */
-function metric(key: string, org: string): SQL {
-  const msgs = sql`messages m where m.organisation_id = ${org} and m.contact_id = c.id and m.sent_at is not null`;
+function metric(key: string, org: string, C: SQL): SQL {
+  const msgs = sql`messages m where m.organisation_id = ${org} and m.contact_id = ${C}.id and m.sent_at is not null`;
   switch (key) {
     case "sent_count":
       return sql`(select count(*) from ${msgs})`;
     case "clicks_count":
-      return sql`(select count(distinct ck.message_id) from clicks ck join messages m on m.id = ck.message_id where m.organisation_id = ${org} and m.contact_id = c.id)`;
+      return sql`(select count(distinct ck.message_id) from clicks ck join messages m on m.id = ck.message_id where m.organisation_id = ${org} and m.contact_id = ${C}.id)`;
     case "ctr_level":
-      return sql`(select coalesce(100.0 * count(distinct ck.message_id) / nullif((select count(*) from ${msgs}), 0), 0) from clicks ck join messages m on m.id = ck.message_id where m.organisation_id = ${org} and m.contact_id = c.id)`;
+      return sql`(select coalesce(100.0 * count(distinct ck.message_id) / nullif((select count(*) from ${msgs}), 0), 0) from clicks ck join messages m on m.id = ck.message_id where m.organisation_id = ${org} and m.contact_id = ${C}.id)`;
     case "leads":
-      return sql`(select count(*) from postbacks p join messages m on m.id = p.message_id where m.organisation_id = ${org} and m.contact_id = c.id and p.type = 'lead')`;
+      return sql`(select count(*) from postbacks p join messages m on m.id = p.message_id where m.organisation_id = ${org} and m.contact_id = ${C}.id and p.type = 'lead')`;
     case "sales":
-      return sql`(select count(*) from postbacks p join messages m on m.id = p.message_id where m.organisation_id = ${org} and m.contact_id = c.id and p.type = 'sale')`;
+      return sql`(select count(*) from postbacks p join messages m on m.id = p.message_id where m.organisation_id = ${org} and m.contact_id = ${C}.id and p.type = 'sale')`;
     case "cost_per_click":
-      return sql`(select coalesce((select -sum(le.amount_micro) from ledger_entries le join messages m on le.reference_id = m.id::text where le.reference_type = 'message' and m.organisation_id = ${org} and m.contact_id = c.id) / 1000000.0 / nullif((select count(distinct ck.message_id) from clicks ck join messages m on m.id = ck.message_id where m.organisation_id = ${org} and m.contact_id = c.id), 0), 0))`;
+      return sql`(select coalesce((select -sum(le.amount_micro) from ledger_entries le join messages m on le.reference_id = m.id::text where le.reference_type = 'message' and m.organisation_id = ${org} and m.contact_id = ${C}.id) / 1000000.0 / nullif((select count(distinct ck.message_id) from clicks ck join messages m on m.id = ck.message_id where m.organisation_id = ${org} and m.contact_id = ${C}.id), 0), 0))`;
     case "dlr_delivered":
-      return sql`(select count(*) from messages m where m.organisation_id = ${org} and m.contact_id = c.id and m.status = 'delivered')`;
+      return sql`(select count(*) from messages m where m.organisation_id = ${org} and m.contact_id = ${C}.id and m.status = 'delivered')`;
     case "dlr_rejected":
-      return sql`(select count(*) from messages m where m.organisation_id = ${org} and m.contact_id = c.id and m.status = 'failed')`;
+      return sql`(select count(*) from messages m where m.organisation_id = ${org} and m.contact_id = ${C}.id and m.status = 'failed')`;
     case "dlr_expired":
-      return sql`(select count(*) from messages m where m.organisation_id = ${org} and m.contact_id = c.id and m.status = 'expired')`;
+      return sql`(select count(*) from messages m where m.organisation_id = ${org} and m.contact_id = ${C}.id and m.status = 'expired')`;
     case "dlr_delivery_rate":
       return sql`(select coalesce(100.0 * count(*) filter (where m.status = 'delivered') / nullif(count(*), 0), 0) from ${msgs})`;
     case "last_received_sms":
       return sql`(select max(m.sent_at) from ${msgs})`;
     case "last_clicked":
-      return sql`(select max(ck.at) from clicks ck join messages m on m.id = ck.message_id where m.organisation_id = ${org} and m.contact_id = c.id)`;
+      return sql`(select max(ck.at) from clicks ck join messages m on m.id = ck.message_id where m.organisation_id = ${org} and m.contact_id = ${C}.id)`;
     case "last_lead":
-      return sql`(select max(p.received_at) from postbacks p join messages m on m.id = p.message_id where m.organisation_id = ${org} and m.contact_id = c.id and p.type = 'lead')`;
+      return sql`(select max(p.received_at) from postbacks p join messages m on m.id = p.message_id where m.organisation_id = ${org} and m.contact_id = ${C}.id and p.type = 'lead')`;
     case "last_sale":
-      return sql`(select max(p.received_at) from postbacks p join messages m on m.id = p.message_id where m.organisation_id = ${org} and m.contact_id = c.id and p.type = 'sale')`;
+      return sql`(select max(p.received_at) from postbacks p join messages m on m.id = p.message_id where m.organisation_id = ${org} and m.contact_id = ${C}.id and p.type = 'sale')`;
     case "number_added":
-      return sql`c.created_at`;
+      return sql`${C}.created_at`;
     case "list_created":
-      return sql`(select max(l.created_at) from list_members lm join lists l on l.id = lm.list_id where lm.contact_id = c.id)`;
+      return sql`(select max(l.created_at) from list_members lm join lists l on l.id = lm.list_id where lm.contact_id = ${C}.id)`;
     case "first_name":
-      return sql`c.first_name`;
+      return sql`${C}.first_name`;
     case "last_name":
-      return sql`c.last_name`;
+      return sql`${C}.last_name`;
     case "email":
-      return sql`c.email`;
+      return sql`${C}.email`;
     case "list_name":
-      return sql`(select string_agg(l.name, ' | ') from list_members lm join lists l on l.id = lm.list_id where lm.contact_id = c.id)`;
+      return sql`(select string_agg(l.name, ' | ') from list_members lm join lists l on l.id = lm.list_id where lm.contact_id = ${C}.id)`;
     case "browser":
-      return sql`(select string_agg(ck.user_agent, ' | ') from clicks ck join messages m on m.id = ck.message_id where m.organisation_id = ${org} and m.contact_id = c.id)`;
+      return sql`(select string_agg(ck.user_agent, ' | ') from clicks ck join messages m on m.id = ck.message_id where m.organisation_id = ${org} and m.contact_id = ${C}.id)`;
     default:
       throw new Error(`segment: no metric for ${key}`);
   }
 }
 
 /** "contact has at least one X among `values`" for the enum fields backed by rows, not columns. */
-function membership(key: string, org: string, values: readonly string[]): SQL {
+function membership(key: string, org: string, values: readonly string[], C: SQL): SQL {
   switch (key) {
     case "list":
-      return sql`exists (select 1 from list_members lm where lm.contact_id = c.id and lm.list_id in ${values})`;
+      return sql`exists (select 1 from list_members lm where lm.contact_id = ${C}.id and lm.list_id in ${values})`;
     case "sent_in_campaign":
-      return sql`exists (select 1 from messages m where m.organisation_id = ${org} and m.contact_id = c.id and m.sent_at is not null and m.campaign_id in ${values})`;
+      return sql`exists (select 1 from messages m where m.organisation_id = ${org} and m.contact_id = ${C}.id and m.sent_at is not null and m.campaign_id in ${values})`;
     case "lead_in_campaign":
-      return sql`exists (select 1 from postbacks p join messages m on m.id = p.message_id where m.organisation_id = ${org} and m.contact_id = c.id and p.type = 'lead' and p.campaign_id in ${values})`;
+      return sql`exists (select 1 from postbacks p join messages m on m.id = p.message_id where m.organisation_id = ${org} and m.contact_id = ${C}.id and p.type = 'lead' and p.campaign_id in ${values})`;
     case "clicked_in_campaign":
-      return sql`exists (select 1 from clicks ck join messages m on m.id = ck.message_id where m.organisation_id = ${org} and m.contact_id = c.id and ck.campaign_id in ${values})`;
+      return sql`exists (select 1 from clicks ck join messages m on m.id = ck.message_id where m.organisation_id = ${org} and m.contact_id = ${C}.id and ck.campaign_id in ${values})`;
     case "device":
-      return sql`exists (select 1 from clicks ck join messages m on m.id = ck.message_id where m.organisation_id = ${org} and m.contact_id = c.id and ck.device in ${values})`;
+      return sql`exists (select 1 from clicks ck join messages m on m.id = ck.message_id where m.organisation_id = ${org} and m.contact_id = ${C}.id and ck.device in ${values})`;
     case "mobile_network":
-      return sql`exists (select 1 from clicks ck join messages m on m.id = ck.message_id where m.organisation_id = ${org} and m.contact_id = c.id and ck.operator in ${values})`;
+      return sql`exists (select 1 from clicks ck join messages m on m.id = ck.message_id where m.organisation_id = ${org} and m.contact_id = ${C}.id and ck.operator in ${values})`;
     case "click_country":
-      return sql`exists (select 1 from clicks ck join messages m on m.id = ck.message_id where m.organisation_id = ${org} and m.contact_id = c.id and ck.country in ${values})`;
+      return sql`exists (select 1 from clicks ck join messages m on m.id = ck.message_id where m.organisation_id = ${org} and m.contact_id = ${C}.id and ck.country in ${values})`;
     case "country":
-      return sql`c.country in ${values}`;
+      return sql`${C}.country in ${values}`;
     default:
       throw new Error(`segment: no membership for ${key}`);
   }
@@ -108,18 +108,18 @@ function asStrings(value: unknown): string[] {
   return value === undefined || value === null ? [] : [String(value)];
 }
 
-function compileRule(rule: SegmentRule, org: string): SQL {
+function compileRule(rule: SegmentRule, org: string, C: SQL): SQL {
   const def = segmentField(rule.field);
   if (!def) throw new Error(`segment: unknown field ${rule.field}`);
   if (def.kind === "enum") {
     const values = asStrings(rule.value);
     if (values.length === 0) throw new Error(`segment: ${rule.field} needs a value`);
-    const positive = membership(rule.field, org, values);
+    const positive = membership(rule.field, org, values, C);
     return rule.operator === "not_equals" || rule.operator === "not_in"
       ? sql`not ${positive}`
       : positive;
   }
-  const expr = metric(rule.field, org);
+  const expr = metric(rule.field, org, C);
   if (def.kind === "number") {
     const n = Number(rule.value);
     switch (rule.operator) {
@@ -178,9 +178,12 @@ function compileRule(rule: SegmentRule, org: string): SQL {
 }
 
 /** The whole tree as one condition; an empty group matches nothing (so a draft has no audience). */
-export function compileSegment(group: SegmentGroup, organisationId: string): SQL {
+export function compileSegment(group: SegmentGroup, organisationId: string, alias = "c"): SQL {
+  const C = sql.raw(alias);
   const parts = group.rules.map((node) =>
-    isSegmentGroup(node) ? compileSegment(node, organisationId) : compileRule(node, organisationId),
+    isSegmentGroup(node)
+      ? compileSegment(node, organisationId, alias)
+      : compileRule(node, organisationId, C),
   );
   if (parts.length === 0) return sql`false`;
   const glue = group.op === "and" ? sql` and ` : sql` or `;
@@ -208,9 +211,9 @@ export interface SegmentPreview {
   devices: SegmentBreakdownRow[];
 }
 
-function goodSql(org: string): SQL {
-  return sql`(not exists (select 1 from suppressions s where s.organisation_id = ${org} and s.e164 = c.e164)
-    and exists (select 1 from list_members lm where lm.contact_id = c.id and lm.bad = false))`;
+function goodSql(org: string, C: SQL): SQL {
+  return sql`(not exists (select 1 from suppressions s where s.organisation_id = ${org} and s.e164 = ${C}.e164)
+    and exists (select 1 from list_members lm where lm.contact_id = ${C}.id and lm.bad = false))`;
 }
 
 /** Count, good, a sample and the three breakdowns for a rule tree; throws on an invalid tree. */
@@ -221,10 +224,11 @@ export async function previewSegment(
   options: { sample?: number } = {},
 ): Promise<SegmentPreview> {
   const parsed = segmentGroupSchema.parse(definition);
+  const C = sql.raw("c");
   const problems = validateSegment(parsed);
   if (problems.length > 0) throw new Error(problems[0]?.message ?? "Invalid segment");
-  const where = sql`c.organisation_id = ${organisationId} and ${compileSegment(parsed, organisationId)}`;
-  const good = goodSql(organisationId);
+  const where = sql`${C}.organisation_id = ${organisationId} and ${compileSegment(parsed, organisationId)}`;
+  const good = goodSql(organisationId, C);
   const sampleSize = Math.max(0, Math.min(options.sample ?? 10, 100));
   const [[counts], sample, countries, networks, devices] = await Promise.all([
     db
@@ -235,47 +239,47 @@ export async function previewSegment(
       .from(sql`contacts c`)
       .where(where),
     db
-      .select({ e164: sql<string>`c.e164` })
+      .select({ e164: sql<string>`${C}.e164` })
       .from(sql`contacts c`)
       .where(where)
       .orderBy(sql`random()`)
       .limit(sampleSize),
     db
-      .select({ key: sql<string>`c.country`, count: sql<number>`count(*)`.mapWith(toNumber) })
+      .select({ key: sql<string>`${C}.country`, count: sql<number>`count(*)`.mapWith(toNumber) })
       .from(sql`contacts c`)
       .where(where)
-      .groupBy(sql`c.country`)
+      .groupBy(sql`${C}.country`)
       .orderBy(desc(sql`count(*)`))
       .limit(10),
     db
       .select({
         key: sql<string>`coalesce(ck.operator, 'Unknown')`,
-        count: sql<number>`count(distinct c.id)`.mapWith(toNumber),
+        count: sql<number>`count(distinct ${C}.id)`.mapWith(toNumber),
       })
       .from(sql`contacts c`)
       .innerJoin(
         sql`messages m`,
-        sql`m.contact_id = c.id and m.organisation_id = ${organisationId}`,
+        sql`m.contact_id = ${C}.id and m.organisation_id = ${organisationId}`,
       )
       .innerJoin(sql`clicks ck`, sql`ck.message_id = m.id`)
       .where(where)
       .groupBy(sql`coalesce(ck.operator, 'Unknown')`)
-      .orderBy(desc(sql`count(distinct c.id)`))
+      .orderBy(desc(sql`count(distinct ${C}.id)`))
       .limit(10),
     db
       .select({
         key: sql<string>`coalesce(ck.device, 'unknown')`,
-        count: sql<number>`count(distinct c.id)`.mapWith(toNumber),
+        count: sql<number>`count(distinct ${C}.id)`.mapWith(toNumber),
       })
       .from(sql`contacts c`)
       .innerJoin(
         sql`messages m`,
-        sql`m.contact_id = c.id and m.organisation_id = ${organisationId}`,
+        sql`m.contact_id = ${C}.id and m.organisation_id = ${organisationId}`,
       )
       .innerJoin(sql`clicks ck`, sql`ck.message_id = m.id`)
       .where(where)
       .groupBy(sql`coalesce(ck.device, 'unknown')`)
-      .orderBy(desc(sql`count(distinct c.id)`))
+      .orderBy(desc(sql`count(distinct ${C}.id)`))
       .limit(10),
   ]);
   return {
@@ -297,11 +301,14 @@ export async function segmentNumbers(
   options: { page: number; pageSize: number },
 ): Promise<string[]> {
   const parsed = segmentGroupSchema.parse(definition);
+  const C = sql.raw("c");
   const rows = await db
-    .select({ e164: sql<string>`c.e164` })
+    .select({ e164: sql<string>`${C}.e164` })
     .from(sql`contacts c`)
-    .where(sql`c.organisation_id = ${organisationId} and ${compileSegment(parsed, organisationId)}`)
-    .orderBy(sql`c.e164`)
+    .where(
+      sql`${C}.organisation_id = ${organisationId} and ${compileSegment(parsed, organisationId)}`,
+    )
+    .orderBy(sql`${C}.e164`)
     .limit(Math.max(1, options.pageSize))
     .offset((Math.max(1, options.page) - 1) * Math.max(1, options.pageSize));
   return rows.map((r) => r.e164);
@@ -515,7 +522,11 @@ export async function refreshSegmentStats(
 }
 
 /** The organisation's global exclude segments, compiled; `null` when there are none. */
-export async function globalExcludeCondition(db: Db, organisationId: string): Promise<SQL | null> {
+export async function globalExcludeCondition(
+  db: Db,
+  organisationId: string,
+  alias = "c",
+): Promise<SQL | null> {
   const rows = await db
     .select({ definition: segments.definition })
     .from(segments)
@@ -530,7 +541,7 @@ export async function globalExcludeCondition(db: Db, organisationId: string): Pr
   for (const row of rows) {
     const definition = segmentGroupSchema.parse(row.definition);
     if (definition.rules.length === 0 || validateSegment(definition).length > 0) continue;
-    parts.push(compileSegment(definition, organisationId));
+    parts.push(compileSegment(definition, organisationId, alias));
   }
   if (parts.length === 0) return null;
   return sql`(${sql.join(parts, sql` or `)})`;
@@ -558,4 +569,61 @@ export async function clickOperators(db: Db, organisationId: string): Promise<st
     .orderBy(sql`ck.operator`)
     .limit(200);
   return rows.map((r) => r.operator);
+}
+
+/**
+ * One segment as a condition over the contacts table aliased `alias`; `false` when the
+ * segment is missing, empty or invalid, so a stale lap sends nothing rather than everything.
+ */
+export async function segmentCondition(
+  db: Db,
+  organisationId: string,
+  segmentId: string,
+  alias = "c",
+): Promise<SQL> {
+  const row = await getSegment(db, organisationId, segmentId);
+  if (!row) return sql`false`;
+  const definition = segmentGroupSchema.parse(row.definition);
+  if (definition.rules.length === 0 || validateSegment(definition).length > 0) return sql`false`;
+  return compileSegment(definition, organisationId, alias);
+}
+
+/** `db.execute` returns a row list on postgres-js and `{ rows }` on PGlite. */
+function rowsOf(result: unknown): Record<string, unknown>[] {
+  if (Array.isArray(result)) return result as Record<string, unknown>[];
+  const maybe = result as { rows?: Record<string, unknown>[] };
+  return maybe.rows ?? [];
+}
+
+/**
+ * How many contacts of each live list in `country` match the segment and could still be
+ * sent to (not bad, unsent or flushed, not suppressed): the laps a segment audience plans.
+ */
+export async function segmentListAvailability(
+  db: Db,
+  organisationId: string,
+  segmentId: string,
+  country: string,
+): Promise<Array<{ listId: string; available: number }>> {
+  const cond = await segmentCondition(db, organisationId, segmentId, "c");
+  const rows = rowsOf(
+    await db.execute(sql`
+      select lm.list_id as list_id, count(*) as available
+      from list_members lm
+      join contacts c on c.id = lm.contact_id
+      join lists l on l.id = lm.list_id
+      where lm.organisation_id = ${organisationId}
+        and l.organisation_id = ${organisationId}
+        and l.country = ${country.toUpperCase()}
+        and l.archived_at is null
+        and lm.bad = false
+        and (lm.sent_at is null or lm.flushed_at > lm.sent_at)
+        and not exists (select 1 from suppressions s
+          where s.organisation_id = ${organisationId} and s.e164 = c.e164)
+        and ${cond}
+      group by lm.list_id
+      order by available desc
+    `),
+  );
+  return rows.map((r) => ({ listId: String(r.list_id), available: Number(r.available ?? 0) }));
 }

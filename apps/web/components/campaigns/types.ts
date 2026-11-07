@@ -72,12 +72,34 @@ export interface RouteView {
   priceMicro: number | null;
 }
 
+/** A segment attached to the campaign as an audience. */
+export interface CampaignSegmentView {
+  id: string;
+  name: string;
+  summary: string;
+  size: number | null;
+  good: number | null;
+  /** Matching contacts of the campaign country's lists that can still be sent to. */
+  available: number;
+}
+
+/** A segment the organisation can pick as an audience. */
+export interface SegmentOption {
+  id: string;
+  name: string;
+  summary: string;
+  size: number | null;
+  good: number | null;
+}
+
 export interface LapView {
   id: string;
   routeId: string;
   routeName: string;
   listId: string;
   listName: string;
+  /** The segment the lap was planned from, when it was. */
+  segmentName: string | null;
   testSize: number;
   status: LapStatus;
   sent: number;
@@ -127,6 +149,7 @@ export interface CampaignView {
   createdAt: string;
   updatedAt: string;
   lists: ListOption[];
+  segments: CampaignSegmentView[];
   sidGroup: SidGroupView | null;
   adTexts: AdTextView[];
   links: CampaignLinkView[];

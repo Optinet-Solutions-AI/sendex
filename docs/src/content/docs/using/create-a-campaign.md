@@ -12,6 +12,13 @@ A campaign is **one country, one or more lists from that country, one sender ID 
 - **Sender ID group.** A named set of sender IDs (alphanumeric or numeric). Sendex rotates through the group and only keeps the ones each route and country accept.
 - **Text.** The message body. Write `{{domain}}` where the link should go; the counter under the text box shows the GSM-7 or UCS-2 character count and how many SMS parts the message will cost, taking the length of the short link into account.
 
+## Lists tab
+
+Pick the campaign's audiences: the **Lists** of the campaign's country (with their progress
+bar, sent and bad counts and a per-list flush) and, above them, your **Segments**. A segment
+audience sends only to the contacts that match its rules, one lap per list they live in; the
+number on the right is how many can still be sent to. **+ Create Segment** opens the builder.
+
 ## Routes tab
 
 Under the route picker, **{Country} Routes Performance** shows two tables, each switchable

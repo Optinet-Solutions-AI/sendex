@@ -10,7 +10,7 @@ import type { CampaignView, EstimateView } from "./types";
  * route, balance. Null when the setup is complete.
  */
 export function sendBlocker(
-  campaign: Pick<CampaignView, "sidGroup" | "lists" | "adTexts">,
+  campaign: Pick<CampaignView, "sidGroup" | "lists" | "segments" | "adTexts">,
   estimate: EstimateView | null,
   routeCount: number,
   balanceMicro: number | null,
@@ -18,7 +18,9 @@ export function sendBlocker(
   if (!campaign.sidGroup || campaign.sidGroup.activeCount === 0) {
     return "SID group with active sender IDs required";
   }
-  if (campaign.lists.length === 0) return "Pick at least one list or segment";
+  if (campaign.lists.length + campaign.segments.length === 0) {
+    return "Pick at least one list or segment";
+  }
   if (campaign.adTexts.filter((t) => t.active).length === 0) return "Add at least one ad text";
   if (routeCount === 0) return "Pick at least one route";
   if (estimate && estimate.smsCount === 0)

@@ -55,9 +55,18 @@ export function SendSummary({
         <Row
           label="Audiences"
           value={
-            campaign.lists.length === 0
+            campaign.lists.length + campaign.segments.length === 0
               ? "none selected"
-              : `${campaign.lists.length} list${campaign.lists.length === 1 ? "" : "s"}`
+              : [
+                  campaign.lists.length > 0
+                    ? `${campaign.lists.length} list${campaign.lists.length === 1 ? "" : "s"}`
+                    : null,
+                  campaign.segments.length > 0
+                    ? `${campaign.segments.length} segment${campaign.segments.length === 1 ? "" : "s"}`
+                    : null,
+                ]
+                  .filter(Boolean)
+                  .join(", ")
           }
         />
         <Row

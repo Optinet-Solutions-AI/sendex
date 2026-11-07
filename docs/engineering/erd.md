@@ -130,6 +130,7 @@ erDiagram
     uuid route_id FK
     integer sales
     timestamp_with_time_zone scheduled_at
+    uuid segment_id FK
     integer sent
     timestamp_with_time_zone started_at
     lap_status status
@@ -400,6 +401,7 @@ erDiagram
   routes ||--o{ messages : "route_id"
   routes ||--o{ route_prices : "route_id"
   segments ||--o{ campaign_segments : "segment_id"
+  segments ||--o{ laps : "segment_id"
   sid_groups ||--o{ campaign_sid_group : "sid_group_id"
   sid_groups ||--o{ sender_ids : "sid_group_id"
   suppression_imports ||--o{ suppressions : "import_id"
@@ -410,4 +412,4 @@ erDiagram
   users ||--o{ organisation_alerts : "acknowledged_by"
 ```
 
-Generated from the Drizzle schema by `pnpm --filter @sendex/db erd` (31 tables, 63 relationships). Do not edit by hand: regenerate after every schema change. CI runs `pnpm --filter @sendex/db erd:check` and fails when this file is stale.
+Generated from the Drizzle schema by `pnpm --filter @sendex/db erd` (31 tables, 64 relationships). Do not edit by hand: regenerate after every schema change. CI runs `pnpm --filter @sendex/db erd:check` and fails when this file is stale.

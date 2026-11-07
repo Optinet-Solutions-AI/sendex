@@ -36,6 +36,17 @@ and the **Global negative segment** switch on the left; the live **Preview** on 
 Editing a saved segment shows the same builder with the saved rules, Segment Analytics and
 **Export CSV** (every matching number).
 
+## Using a segment in a campaign
+
+On a campaign's **Lists** tab, the **Segments** section lists your segments (templates and
+global excludes aside). Tick one and it becomes an audience next to the lists: when you
+send, Sendex plans one lap per list the matching contacts live in (in the campaign's
+country), limited to those contacts, and the lap table shows the segment next to the list.
+The count on the right is how many matching contacts can still be sent to.
+
+Global excludes need no ticking: every campaign skips their contacts at send time, like the
+unsubscribe list.
+
 ## Fields
 
 The field picker groups the fields the way SMS Edge does; fields marked **click data** come

@@ -35,6 +35,7 @@ import {
 } from "../schema/index.js";
 import type { Db } from "../types.js";
 import { getBalanceMicro } from "./ledger.js";
+import { globalExcludeCondition, segmentCondition } from "./segments.js";
 
 /**
  * Everything the sending engine (apps/worker/src/send) reads and writes. The worker
@@ -60,6 +61,8 @@ export interface SendingLapRow {
   sent: number;
   failed: number;
   costMicro: bigint;
+  /** Set when the lap sends only to the list's contacts that match a segment. */
+  segmentId?: string | null;
 }
 
 export interface LapContext {
@@ -88,6 +91,24 @@ export interface EligibilityInput {
   listId: string;
   campaignId: string;
   contactReuse: ContactReuse;
+  /** Only the list's contacts that match this segment. */
+  segmentId?: string | null;
+}
+
+/** The segment and global-exclude conditions a lap's eligibility needs, loaded once per call. */
+interface EligibilityExtras {
+  segment: SQL | null;
+  globalExclude: SQL | null;
+}
+
+async function loadEligibilityExtras(db: Db, input: EligibilityInput): Promise<EligibilityExtras> {
+  const [segment, globalExclude] = await Promise.all([
+    input.segmentId
+      ? segmentCondition(db, input.organisationId, input.segmentId, "contacts")
+      : null,
+    globalExcludeCondition(db, input.organisationId, "contacts"),
+  ]);
+  return { segment, globalExclude };
 }
 
 export interface EligibleMember {
@@ -248,6 +269,7 @@ const lapColumns = {
   sent: laps.sent,
   failed: laps.failed,
   costMicro: laps.costMicro,
+  segmentId: laps.segmentId,
 };
 
 const queuedMessageColumns = {
@@ -282,7 +304,11 @@ interface EligibilityRules {
   notReused: SQL;
 }
 
-function eligibilityRules(db: Db, input: EligibilityInput): EligibilityRules {
+function eligibilityRules(
+  db: Db,
+  input: EligibilityInput,
+  extras: EligibilityExtras,
+): EligibilityRules {
   const sinceFlush = or(
     isNull(listMembers.flushedAt),
     gt(sql`coalesce(${messages.sentAt}, ${messages.createdAt})`, listMembers.flushedAt),
@@ -314,32 +340,48 @@ function eligibilityRules(db: Db, input: EligibilityInput): EligibilityRules {
   );
   const notReused =
     input.contactReuse === "account_wide" ? sql`(${inCampaign} and ${accountWide})` : inCampaign;
+  const scope = extras.segment
+    ? sql`(${eq(listMembers.organisationId, input.organisationId)} and ${eq(listMembers.listId, input.listId)} and ${extras.segment})`
+    : sql`(${eq(listMembers.organisationId, input.organisationId)} and ${eq(listMembers.listId, input.listId)})`;
+  const notOnSuppressions = notExists(
+    db
+      .select({ one: sql`1` })
+      .from(suppressions)
+      .where(
+        and(
+          eq(suppressions.organisationId, input.organisationId),
+          eq(suppressions.e164, contacts.e164),
+        ),
+      ),
+  );
   return {
-    scope: sql`(${eq(listMembers.organisationId, input.organisationId)} and ${eq(listMembers.listId, input.listId)})`,
+    scope,
     notBad: eq(listMembers.bad, false),
     // coalesce: a null flushed_at must read as "not flushed", also under `not (...)` in the counts.
     unsent: sql`(${isNull(listMembers.sentAt)} or coalesce(${gt(listMembers.flushedAt, listMembers.sentAt)}, false))`,
-    notSuppressed: notExists(
-      db
-        .select({ one: sql`1` })
-        .from(suppressions)
-        .where(
-          and(
-            eq(suppressions.organisationId, input.organisationId),
-            eq(suppressions.e164, contacts.e164),
-          ),
-        ),
-    ),
+    // Global exclude segments count as suppressed: the contact is kept off every campaign.
+    notSuppressed: extras.globalExclude
+      ? sql`(${notOnSuppressions} and not ${extras.globalExclude})`
+      : notOnSuppressions,
     notReused,
   };
 }
 
-function eligibilityWhere(db: Db, input: EligibilityInput): SQL | undefined {
-  const r = eligibilityRules(db, input);
+function eligibilityWhere(
+  db: Db,
+  input: EligibilityInput,
+  extras: EligibilityExtras,
+): SQL | undefined {
+  const r = eligibilityRules(db, input, extras);
   return and(r.scope, r.notBad, r.unsent, r.notSuppressed, r.notReused);
 }
 
-function eligibleMembersQuery(db: Db, input: EligibilityInput, limit: number) {
+function eligibleMembersQuery(
+  db: Db,
+  input: EligibilityInput,
+  limit: number,
+  extras: EligibilityExtras,
+) {
   return db
     .select({
       memberId: listMembers.id,
@@ -349,7 +391,7 @@ function eligibleMembersQuery(db: Db, input: EligibilityInput, limit: number) {
     })
     .from(listMembers)
     .innerJoin(contacts, eq(contacts.id, listMembers.contactId))
-    .where(eligibilityWhere(db, input))
+    .where(eligibilityWhere(db, input, extras))
     .orderBy(asc(listMembers.id))
     .limit(limit);
 }
@@ -512,19 +554,22 @@ export function createSendingStore(db: Db): SendingStore {
         .orderBy(asc(messages.createdAt), asc(messages.id));
     },
 
-    selectEligibleMembers: (input, limit) => eligibleMembersQuery(db, input, limit),
+    async selectEligibleMembers(input, limit) {
+      return eligibleMembersQuery(db, input, limit, await loadEligibilityExtras(db, input));
+    },
 
     async countEligibleMembers(input) {
+      const extras = await loadEligibilityExtras(db, input);
       const [row] = await db
         .select({ count: sql`count(*)`.mapWith(toNumber) })
         .from(listMembers)
         .innerJoin(contacts, eq(contacts.id, listMembers.contactId))
-        .where(eligibilityWhere(db, input));
+        .where(eligibilityWhere(db, input, extras));
       return row?.count ?? 0;
     },
 
     async countSkipReasons(input) {
-      const r = eligibilityRules(db, input);
+      const r = eligibilityRules(db, input, await loadEligibilityExtras(db, input));
       const count = (cond: SQL) => sql`count(*) filter (where ${cond})`.mapWith(toNumber);
       const [row] = await db
         .select({
@@ -544,7 +589,8 @@ export function createSendingStore(db: Db): SendingStore {
     async claimAndCreateMessages({ lap, eligibility, limit, priceMicro, build }) {
       if (limit <= 0) return [];
       return db.transaction(async (tx) => {
-        const members = await eligibleMembersQuery(tx, eligibility, limit).for("update", {
+        const extras = await loadEligibilityExtras(tx, eligibility);
+        const members = await eligibleMembersQuery(tx, eligibility, limit, extras).for("update", {
           of: listMembers,
           skipLocked: true,
         });

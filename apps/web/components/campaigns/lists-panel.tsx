@@ -4,9 +4,12 @@ import { Button, ConfirmDialog, IconButton, useToast } from "@sendex/ui";
 import { ExternalLink, RefreshCw, Upload } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState, useTransition } from "react";
-import { setCampaignListsAction } from "../../app/(dashboard)/campaigns/actions";
+import {
+  setCampaignListsAction,
+  setCampaignSegmentsAction,
+} from "../../app/(dashboard)/campaigns/actions";
 import { flushListAction } from "../../app/(dashboard)/lists/actions";
-import type { CampaignView, ListOption } from "./types";
+import type { CampaignView, ListOption, SegmentOption } from "./types";
 import { ErrorText } from "./ui";
 
 const n = (v: number) => v.toLocaleString("en-GB");
@@ -20,11 +23,13 @@ const n = (v: number) => v.toLocaleString("en-GB");
 export function ListsPanel({
   campaign,
   lists,
+  segmentOptions,
   canFlush,
   onChanged,
 }: {
   campaign: CampaignView;
   lists: ListOption[];
+  segmentOptions: SegmentOption[];
   canFlush: boolean;
   onChanged: () => void;
 }) {
@@ -52,6 +57,19 @@ export function ListsPanel({
     });
   }
 
+  function toggleSegment(segmentId: string, checked: boolean) {
+    const current = campaign.segments.map((s) => s.id);
+    const next = checked
+      ? [...new Set([...current, segmentId])]
+      : current.filter((id) => id !== segmentId);
+    setError(null);
+    start(async () => {
+      const result = await setCampaignSegmentsAction({ campaignId: campaign.id, segmentIds: next });
+      if (!result.ok) setError(result.error);
+      else onChanged();
+    });
+  }
+
   async function flush(list: ListOption) {
     const result = await flushListAction(list.id);
     if (!result.ok) throw new Error(result.error);
@@ -68,13 +86,48 @@ export function ListsPanel({
       <section>
         <div className="mb-2 flex items-center justify-between">
           <h4 className="font-mono text-[11px] uppercase tracking-[0.06em] text-muted">Segments</h4>
-          <Button size="sm" variant="outline" disabled title="Segments arrive with the next phase">
-            + Create Segment
+          <Button size="sm" variant="outline" asChild>
+            <Link href="/segments/new">+ Create Segment</Link>
           </Button>
         </div>
-        <p className="rounded-md border border-dashed border-rule px-3 py-3 text-xs text-muted">
-          Saved audiences over your contacts and their history. Coming with the segments phase.
-        </p>
+        {segmentOptions.length === 0 ? (
+          <p className="rounded-md border border-dashed border-rule px-3 py-3 text-xs text-muted">
+            Saved audiences over your contacts and their history. Create one under Contacts ›
+            Segments.
+          </p>
+        ) : (
+          <ul className="divide-y divide-rule rounded-md border border-rule bg-surface">
+            {segmentOptions.map((seg) => {
+              const attached = campaign.segments.find((s) => s.id === seg.id);
+              return (
+                <li key={seg.id} className="flex items-start gap-3 px-3 py-2 text-sm">
+                  <input
+                    type="checkbox"
+                    className="mt-1"
+                    checked={attached !== undefined}
+                    aria-label={seg.name}
+                    data-testid={`segment-${seg.id}`}
+                    disabled={pending}
+                    onChange={(e) => toggleSegment(seg.id, e.target.checked)}
+                  />
+                  <span className="min-w-0 flex-1">
+                    <span className="block font-medium text-ink">{seg.name}</span>
+                    <span className="block truncate text-xs text-muted" title={seg.summary}>
+                      {seg.summary}
+                    </span>
+                  </span>
+                  <span className="whitespace-nowrap font-mono text-xs text-muted">
+                    {attached
+                      ? `${n(attached.available)} left`
+                      : seg.good !== null
+                        ? `${n(seg.good)} good`
+                        : "–"}
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+        )}
       </section>
 
       <section>

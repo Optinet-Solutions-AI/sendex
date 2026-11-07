@@ -265,6 +265,7 @@ export async function sendLap(
     listId: ctx.lap.listId,
     campaignId: ctx.lap.campaignId,
     contactReuse: ctx.campaign.contactReuse,
+    segmentId: ctx.lap.segmentId ?? null,
   };
   // Why members of the list are left out, counted before this run sends anything.
   const skipped = existing === 0 ? await store.countSkipReasons(eligibility) : null;

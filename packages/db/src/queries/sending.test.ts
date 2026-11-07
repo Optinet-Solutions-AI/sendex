@@ -21,6 +21,7 @@ import {
 } from "../schema/index.js";
 import { createTestDb, seedOrganisation, type TestDb } from "../test/db.js";
 import { getBalanceMicro } from "./ledger.js";
+import { createSegment, deleteSegment } from "./segments.js";
 import { createSendingStore, type SendingStore } from "./sending.js";
 
 let t: TestDb;
@@ -662,5 +663,47 @@ describe("claimQueuedLaps and lap lifecycle", () => {
     expect(foreign.list).toBeNull();
     // Platform routes (organisation_id null) are visible to every organisation.
     expect(foreign.route?.id).toBe(routeId);
+  });
+});
+
+describe("segments at send time", () => {
+  it("a lap's segment narrows the list and a global exclude keeps contacts off every lap", async () => {
+    const onlyFresh = await createSegment(t.db, org, {
+      name: "Fresh only",
+      definition: {
+        id: "g",
+        op: "and",
+        rules: [{ id: "r", field: "first_name", operator: "equals", value: "fresh" }],
+      },
+      isTemplate: false,
+      globalExclude: false,
+    });
+    const narrowed = await store.selectEligibleMembers(
+      { ...eligibility(), segmentId: onlyFresh.id },
+      100,
+    );
+    expect(narrowed.map((r) => r.firstName)).toEqual(["fresh"]);
+    expect(await store.countEligibleMembers({ ...eligibility(), segmentId: onlyFresh.id })).toBe(1);
+
+    const exclude = await createSegment(t.db, org, {
+      name: "Never the flushed",
+      definition: {
+        id: "g",
+        op: "and",
+        rules: [{ id: "r", field: "first_name", operator: "equals", value: "flushed" }],
+      },
+      isTemplate: false,
+      globalExclude: true,
+    });
+    const rows = await store.selectEligibleMembers(eligibility(), 100);
+    expect(rows.map((r) => r.firstName)).not.toContain("flushed");
+    expect(rows.map((r) => r.firstName)).toContain("fresh");
+    const skips = await store.countSkipReasons(eligibility());
+    expect(skips.suppressed).toBeGreaterThanOrEqual(2);
+
+    await deleteSegment(t.db, org, exclude.id);
+    await deleteSegment(t.db, org, onlyFresh.id);
+    const after = await store.selectEligibleMembers(eligibility(), 100);
+    expect(after.map((r) => r.firstName)).toContain("flushed");
   });
 });

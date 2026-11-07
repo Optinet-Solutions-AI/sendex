@@ -542,3 +542,18 @@ export async function cleanupE2eFlow(namePrefix: string): Promise<void> {
     await sql.end();
   }
 }
+
+/** Remove the suppressions (by number prefix) and the fixture's suppression files the unsubscribe spec made. */
+export async function cleanupE2eSuppressions(e164Prefixes: readonly string[]): Promise<void> {
+  const url = process.env.DATABASE_URL;
+  if (!url) throw new Error("DATABASE_URL must be set to run the unsubscribe e2e spec");
+  const sql = postgres(url, { max: 1 });
+  try {
+    for (const prefix of e164Prefixes) {
+      await sql`delete from suppressions where e164 like ${`${prefix}%`}`;
+    }
+    await sql`delete from suppression_imports where file_name = 'es-numbers.csv'`;
+  } finally {
+    await sql.end();
+  }
+}

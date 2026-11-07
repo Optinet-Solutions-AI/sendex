@@ -50,3 +50,4 @@ export * from "./queries/postbacks.js";
 export * from "./queries/receipts.js";
 export * from "./queries/results.js";
 export * from "./queries/route-performance.js";
+export * from "./queries/suppressions.js";

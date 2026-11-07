@@ -300,10 +300,20 @@ erDiagram
     text name
     uuid organisation_id FK
   }
+  suppression_imports {
+    integer count
+    timestamp_with_time_zone created_at
+    text file_name
+    uuid id PK
+    uuid organisation_id FK
+    integer rejected
+  }
   suppressions {
+    char(2) country
     timestamp_with_time_zone created_at
     text e164 UK "unique with organisation_id"
     uuid id PK
+    uuid import_id FK
     uuid organisation_id FK, UK "unique with e164"
     text reason
     text source
@@ -362,12 +372,14 @@ erDiagram
   organisations ||--o{ routes : "organisation_id"
   organisations ||--o{ sender_ids : "organisation_id"
   organisations ||--o{ sid_groups : "organisation_id"
+  organisations ||--o{ suppression_imports : "organisation_id"
   organisations ||--o{ suppressions : "organisation_id"
   routes ||--o{ laps : "route_id"
   routes ||--o{ messages : "route_id"
   routes ||--o{ route_prices : "route_id"
   sid_groups ||--o{ campaign_sid_group : "sid_group_id"
   sid_groups ||--o{ sender_ids : "sid_group_id"
+  suppression_imports ||--o{ suppressions : "import_id"
   users ||--o{ api_tokens : "created_by"
   users ||--o{ audit_log : "actor_user_id"
   users ||--o{ campaigns : "created_by"
@@ -375,4 +387,4 @@ erDiagram
   users ||--o{ organisation_alerts : "acknowledged_by"
 ```
 
-Generated from the Drizzle schema by `pnpm --filter @sendex/db erd` (28 tables, 57 relationships). Do not edit by hand: regenerate after every schema change. CI runs `pnpm --filter @sendex/db erd:check` and fails when this file is stale.
+Generated from the Drizzle schema by `pnpm --filter @sendex/db erd` (29 tables, 59 relationships). Do not edit by hand: regenerate after every schema change. CI runs `pnpm --filter @sendex/db erd:check` and fails when this file is stale.

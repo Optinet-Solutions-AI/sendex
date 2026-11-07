@@ -100,14 +100,32 @@ export const suppressions = pgTable(
       .notNull()
       .references(() => organisations.id, { onDelete: "cascade" }),
     e164: text("e164").notNull(),
+    /** ISO-2 of the number when known. */
+    country: char("country", { length: 2 }),
     /** e.g. unsubscribe, complaint, invalid, manual */
     reason: text("reason").notNull(),
-    /** Where it came from: sms (STOP reply), ui, import, provider */
+    /** Where it came from: manual (Add number), upload, api, sms (STOP reply), provider */
     source: text("source").notNull(),
+    /** The suppression file it came from, when uploaded. */
+    importId: uuid("import_id").references(() => suppressionImports.id, { onDelete: "set null" }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [uniqueIndex("suppressions_org_e164_idx").on(t.organisationId, t.e164)],
 );
+
+/** One uploaded suppression file ("Imported lists" on the Unsubscribe page). */
+export const suppressionImports = pgTable("suppression_imports", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  organisationId: uuid("organisation_id")
+    .notNull()
+    .references(() => organisations.id, { onDelete: "cascade" }),
+  fileName: text("file_name").notNull(),
+  /** Numbers the file added to the suppression list. */
+  count: integer("count").notNull().default(0),
+  /** Rows that did not parse as an international number. */
+  rejected: integer("rejected").notNull().default(0),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
 
 /**
  * One upload of a file (or pasted numbers) into a list: the counts the Files page and the

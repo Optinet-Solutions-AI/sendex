@@ -499,7 +499,7 @@ describe("sendLap with daily caps (D3-11)", () => {
     expect(store.lap.costMicro).toBe(1_000_000n);
     expect(capsStore.alerts[0]).toMatchObject({
       kind: "daily_spend_cap",
-      message: "Daily spend cap of EUR 1.00 reached: 560 messages refused.",
+      message: "Daily spend cap of €1.00 reached: 560 messages refused.",
     });
   });
 

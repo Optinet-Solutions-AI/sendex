@@ -200,7 +200,7 @@ describe("runAlertChecks", () => {
       organisationId: "org-low",
       kind: "low_balance",
       periodKey: "2026-11-06T13",
-      message: "Balance EUR 4.50 is below the low balance threshold of EUR 5.00.",
+      message: "Balance €4.50 is below the low balance threshold of €5.00.",
       details: { balanceMicro: "4500000", thresholdMicro: "5000000", recipients: 1 },
     });
 

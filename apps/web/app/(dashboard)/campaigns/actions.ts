@@ -158,7 +158,7 @@ export async function createSidGroupAction(
     await setCampaignSidGroup(database, ctx.organisationId, campaignId, group.id);
     revalidateCampaign(campaignId);
     const groups = await listSidGroups(database, ctx.organisationId, country);
-    return { groupId: group.id, groups: groups.map(toSidGroupView) };
+    return { groupId: group.id, groups: groups.map((g) => toSidGroupView(g)) };
   });
 }
 
@@ -221,9 +221,13 @@ const createLinkInput = campaignRef.extend(linkSchema.shape);
 /** Create a link for the organisation and attach it to the campaign. */
 export async function createLinkAction(input: unknown): Promise<ActionResult<{ linkId: string }>> {
   return run("campaign.create", async (ctx) => {
-    const { campaignId, name, url } = createLinkInput.parse(input);
+    const { campaignId, name, url, profitEur } = createLinkInput.parse(input);
     const database = db();
-    const link = await createLink(database, ctx.organisationId, { name, url });
+    const link = await createLink(database, ctx.organisationId, {
+      name,
+      url,
+      profitMicro: BigInt(Math.round(profitEur * 1_000_000)),
+    });
     await attachLink(database, ctx.organisationId, campaignId, link.id);
     revalidateCampaign(campaignId);
     return { linkId: link.id };
@@ -340,6 +344,7 @@ export async function updateSendSettingsAction(input: unknown): Promise<ActionRe
       contactReuse: data.contactReuse,
       sendNow: data.sendNow,
       ...(data.scheduledAt !== undefined ? { scheduledAt: data.scheduledAt } : {}),
+      ...(data.autosender !== undefined ? { autosender: data.autosender } : {}),
     });
     revalidateCampaign(data.campaignId);
     return null;

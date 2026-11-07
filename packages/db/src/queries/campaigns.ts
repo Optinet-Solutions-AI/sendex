@@ -256,6 +256,22 @@ export interface CampaignListSummary {
   numbersCount: number;
   /** Members that can still be messaged. */
   available: number;
+  /** Members messaged since the last flush. */
+  sent: number;
+  /** Members flagged bad (landline, invalid, carrier rejected). */
+  bad: number;
+}
+
+function sentSql(): SQL<number> {
+  return sql<number>`(select count(*) from list_members m
+    where m.list_id = lists.id
+      and m.sent_at is not null
+      and (m.flushed_at is null or m.flushed_at <= m.sent_at))::int`.mapWith(Number);
+}
+
+function badSql(): SQL<number> {
+  return sql<number>`(select count(*) from list_members m
+    where m.list_id = lists.id and m.bad = true)::int`.mapWith(Number);
 }
 
 export interface SidGroupWithIds extends SidGroupRow {
@@ -269,6 +285,8 @@ export interface CampaignLinkSummary {
   url: string;
   /** Whether the link is switched on for this campaign. */
   active: boolean;
+  /** Revenue per conversion in micro-EUR (Advanced › Profit). */
+  profitMicro: bigint;
 }
 
 export interface LapSummary extends LapRow {
@@ -295,6 +313,8 @@ async function campaignListsWithAvailable(
       country: lists.country,
       numbersCount: lists.numbersCount,
       available: availableSql(),
+      sent: sentSql(),
+      bad: badSql(),
     })
     .from(campaignLists)
     .innerJoin(lists, eq(lists.id, campaignLists.listId))
@@ -326,7 +346,13 @@ async function campaignSidGroupWithIds(
 
 async function campaignLinkSummaries(db: Db, campaignId: string): Promise<CampaignLinkSummary[]> {
   return db
-    .select({ id: links.id, name: links.name, url: links.url, active: campaignLinks.active })
+    .select({
+      id: links.id,
+      name: links.name,
+      url: links.url,
+      active: campaignLinks.active,
+      profitMicro: links.profitMicro,
+    })
     .from(campaignLinks)
     .innerJoin(links, eq(links.id, campaignLinks.linkId))
     .where(eq(campaignLinks.campaignId, campaignId))
@@ -619,11 +645,16 @@ export async function listLinks(db: Db, organisationId: string): Promise<LinkRow
 export async function createLink(
   db: Db,
   organisationId: string,
-  input: { name: string; url: string },
+  input: { name: string; url: string; profitMicro?: bigint },
 ): Promise<LinkRow> {
   const [row] = await db
     .insert(links)
-    .values({ organisationId, name: input.name, url: input.url })
+    .values({
+      organisationId,
+      name: input.name,
+      url: input.url,
+      profitMicro: input.profitMicro ?? 0n,
+    })
     .returning();
   if (!row) throw new Error("createLink: no row returned");
   return row;
@@ -702,6 +733,8 @@ export async function listsForCountry(
       country: lists.country,
       numbersCount: lists.numbersCount,
       available: availableSql(),
+      sent: sentSql(),
+      bad: badSql(),
     })
     .from(lists)
     .where(and(eq(lists.organisationId, organisationId), eq(lists.country, country.toUpperCase())))
@@ -798,9 +831,10 @@ export async function routesForCountry(
 // ---------------------------------------------------------------------------
 
 /** The persisted part of the send form; `sendAll` is passed per send instead. */
-export type SendSettingsInput = Pick<SendSettings, "testSize" | "contactReuse" | "sendNow"> & {
-  scheduledAt?: string;
-};
+export type SendSettingsInput = Pick<SendSettings, "testSize" | "contactReuse" | "sendNow"> &
+  Partial<Pick<SendSettings, "autosender">> & {
+    scheduledAt?: string;
+  };
 
 export async function updateSendSettings(
   db: Db,
@@ -813,6 +847,7 @@ export async function updateSendSettings(
     .set({
       testSize: settings.testSize,
       contactReuse: settings.contactReuse,
+      ...(settings.autosender === undefined ? {} : { autosender: settings.autosender }),
       scheduledAt:
         !settings.sendNow && settings.scheduledAt ? new Date(settings.scheduledAt) : null,
       updatedAt: new Date(),
@@ -958,4 +993,44 @@ export async function createLaps(
     });
     return rows;
   });
+}
+
+// ---------------------------------------------------------------------------
+// Sender id group performance (D4-02)
+// ---------------------------------------------------------------------------
+
+export interface SidGroupStats {
+  groupId: string;
+  /** Messages the carriers accepted with a sender id of the group, across every campaign. */
+  sent: number;
+  clicks: number;
+}
+
+/**
+ * "14,000 sent · 1.26% CTR" per group in the SIDs tab: messages are matched to a group by
+ * the sender id value they carried, within the organisation. Clicks are counted once per
+ * message.
+ */
+export async function sidGroupStats(
+  db: Db,
+  organisationId: string,
+  groupIds: readonly string[],
+): Promise<SidGroupStats[]> {
+  if (groupIds.length === 0) return [];
+  const members = sql`(select s.value from sender_ids s where s.sid_group_id = ${sidGroups.id})`;
+  const rows = await db
+    .select({
+      groupId: sidGroups.id,
+      sent: sql<number>`(select count(*) from messages m
+        where m.organisation_id = ${organisationId}
+          and m.status in ('sent', 'delivered', 'expired')
+          and m.sender_id in ${members})::int`.mapWith(Number),
+      clicks: sql<number>`(select count(distinct c.message_id) from clicks c
+        join messages m on m.id = c.message_id
+        where m.organisation_id = ${organisationId}
+          and m.sender_id in ${members})::int`.mapWith(Number),
+    })
+    .from(sidGroups)
+    .where(and(eq(sidGroups.organisationId, organisationId), inArray(sidGroups.id, [...groupIds])));
+  return rows;
 }

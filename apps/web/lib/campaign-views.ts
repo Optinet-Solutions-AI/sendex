@@ -2,6 +2,7 @@ import type {
   AuditRow,
   CampaignDetail,
   CampaignListSummary,
+  CampaignMessagesPage,
   CampaignResults,
   CampaignSummary,
   LapSummary,
@@ -12,6 +13,7 @@ import type {
 } from "@sendex/db";
 import type {
   AuditView,
+  CampaignMessagesView,
   CampaignResultsView,
   CampaignSummaryView,
   CampaignView,
@@ -37,21 +39,28 @@ export function toListOption(list: CampaignListSummary): ListOption {
     country: list.country,
     numbersCount: list.numbersCount,
     available: list.available,
+    sent: list.sent,
+    bad: list.bad,
   };
 }
 
-export function toSidGroupView(group: SidGroupWithIds): SidGroupView {
+export function toSidGroupView(
+  group: SidGroupWithIds,
+  stats?: { sent: number; clicks: number },
+): SidGroupView {
   return {
     id: group.id,
     name: group.name,
     country: group.country,
     senderIds: group.senderIds.map((s) => ({ id: s.id, value: s.value, active: s.active })),
     activeCount: group.activeCount,
+    sent: stats?.sent ?? 0,
+    clicks: stats?.clicks ?? 0,
   };
 }
 
 export function toLinkOption(link: LinkRow): LinkOption {
-  return { id: link.id, name: link.name, url: link.url };
+  return { id: link.id, name: link.name, url: link.url, profitMicro: Number(link.profitMicro) };
 }
 
 export function toRouteView(route: RouteOption): RouteView {
@@ -89,7 +98,10 @@ export function toLapView(lap: LapSummary): LapView {
   };
 }
 
-export function toCampaignView(detail: CampaignDetail): CampaignView {
+export function toCampaignView(
+  detail: CampaignDetail,
+  sidStats?: { sent: number; clicks: number },
+): CampaignView {
   return {
     id: detail.id,
     name: detail.name,
@@ -98,11 +110,12 @@ export function toCampaignView(detail: CampaignDetail): CampaignView {
     status: detail.status,
     contactReuse: detail.contactReuse,
     testSize: detail.testSize,
+    autosender: detail.autosender,
     scheduledAt: iso(detail.scheduledAt),
     createdAt: detail.createdAt.toISOString(),
     updatedAt: detail.updatedAt.toISOString(),
     lists: detail.lists.map(toListOption),
-    sidGroup: detail.sidGroup ? toSidGroupView(detail.sidGroup) : null,
+    sidGroup: detail.sidGroup ? toSidGroupView(detail.sidGroup, sidStats) : null,
     adTexts: detail.adTexts.map((t) => ({
       id: t.id,
       text: t.text,
@@ -111,7 +124,13 @@ export function toCampaignView(detail: CampaignDetail): CampaignView {
       active: t.active,
       position: t.position,
     })),
-    links: detail.links.map((l) => ({ id: l.id, name: l.name, url: l.url, active: l.active })),
+    links: detail.links.map((l) => ({
+      id: l.id,
+      name: l.name,
+      url: l.url,
+      active: l.active,
+      profitMicro: Number(l.profitMicro),
+    })),
     laps: detail.laps.map(toLapView),
   };
 }
@@ -210,5 +229,25 @@ export function toResultsView(results: CampaignResults): CampaignResultsView {
       clicks: h.clicks,
     })),
     clicksPerLink: results.clicksPerLink.map((l) => ({ ...l })),
+  };
+}
+
+export function toMessagesView(page: CampaignMessagesPage): CampaignMessagesView {
+  return {
+    rows: page.rows.map((m) => ({
+      id: m.id,
+      at: (m.sentAt ?? m.createdAt).toISOString(),
+      lapId: m.lapId,
+      routeName: m.routeName,
+      senderId: m.senderId,
+      recipient: m.recipient,
+      text: m.text,
+      status: m.status,
+      errorCode: m.errorCode,
+      clicked: m.clicked,
+    })),
+    total: page.total,
+    page: page.page,
+    pageSize: page.pageSize,
   };
 }

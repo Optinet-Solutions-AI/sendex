@@ -47,6 +47,8 @@ export const campaigns = pgTable("campaigns", {
   contactReuse: contactReuseEnum("contact_reuse").notNull().default("account_wide"),
   /** Numbers per test lap before a route is ranked. */
   testSize: integer("test_size").notNull().default(200),
+  /** Run AutoSender (D4-02): test batch first, then scale out the best message and route. */
+  autosender: boolean("autosender").notNull().default(false),
   scheduledAt: timestamp("scheduled_at", { withTimezone: true }),
   createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
@@ -93,6 +95,8 @@ export const links = pgTable("links", {
   name: text("name").notNull(),
   url: text("url").notNull(),
   active: boolean("active").notNull().default(true),
+  /** Revenue per conversion in micro-EUR, for profit and ROI (SMS Edge: Advanced › Profit). */
+  profitMicro: bigint("profit_micro", { mode: "bigint" }).notNull().default(sql`0`),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

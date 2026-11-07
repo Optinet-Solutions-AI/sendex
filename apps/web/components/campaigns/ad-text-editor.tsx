@@ -1,15 +1,26 @@
 "use client";
 
-import {
-  analyseSmsText,
-  hasDomainPlaceholder,
-  splitAdTexts,
-  TEXT_PLACEHOLDERS,
-} from "@sendex/core";
+import { analyseSmsText, hasDomainPlaceholder, splitAdTexts } from "@sendex/core";
+import { Button, Toggle, Tooltip } from "@sendex/ui";
+import { ChevronDown, Info } from "lucide-react";
 import { useId, useRef, useState } from "react";
-import { Button, Chips, ErrorText, Field, inputClass, Toggle } from "./ui";
+import { ErrorText, inputClass } from "./ui";
 
-const CHIPS = TEXT_PLACEHOLDERS.map((p) => ({ key: p.key, token: p.token, title: p.description }));
+/** The insert chips of the spec, in its order. */
+const PRIMARY_CHIPS: ReadonlyArray<{ label: string; token: string; title?: string }> = [
+  { label: "Domain", token: "{{domain}}", title: "The tracked short link of the active offer" },
+  { label: "First Name", token: "{{first_name}}" },
+  { label: "Phone", token: "{{phone}}" },
+  { label: "Opt-Out", token: "{{opt_out}}" },
+  {
+    label: "Words Randomizer",
+    token: "{word1|word2}",
+    title: "One of the words is picked per message: {word1|word2}",
+  },
+];
+const MORE_CHIPS: ReadonlyArray<{ label: string; token: string }> = [
+  { label: "Last Name", token: "{{last_name}}" },
+];
 
 export interface AdTextEditorProps {
   initial?: string;
@@ -22,8 +33,9 @@ export interface AdTextEditorProps {
 }
 
 /**
- * Textarea with placeholder chips, a GSM-7 / UCS-2 counter per text from `analyseSmsText`
- * and a "Check {{domain}} exists" toggle that blocks saving while a text lacks it.
+ * The Add Ad Texts dialog body of the spec: insert chips, the textarea, the live counter in
+ * red monospace (`GSM_7BIT · 0 chars · 1 part · 160 left`), "Check {{domain}} exists" (on)
+ * and "Long message" (off) toggles, Cancel and Add Text.
  */
 export function AdTextEditor({
   initial = "",
@@ -37,16 +49,19 @@ export function AdTextEditor({
   const ref = useRef<HTMLTextAreaElement>(null);
   const [text, setText] = useState(initial);
   const [requireDomain, setRequireDomain] = useState(true);
+  const [longMessage, setLongMessage] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
   const texts = multi ? splitAdTexts(text) : text.trim() ? [text.trim()] : [];
   const missingDomain = requireDomain && texts.some((t) => !hasDomainPlaceholder(t));
-  // Keys that survive duplicates without falling back to the array index.
   const seen = new Map<string, number>();
-  const entries = texts.map((text) => {
-    const n = (seen.get(text) ?? 0) + 1;
-    seen.set(text, n);
-    return { text, key: `${text}#${n}` };
+  const entries = texts.map((t) => {
+    const n = (seen.get(t) ?? 0) + 1;
+    seen.set(t, n);
+    return { text: t, key: `${t}#${n}`, analysis: analyseSmsText(t) };
   });
-  const canSave = texts.length > 0 && !missingDomain && !pending;
+  const tooLong = !longMessage && entries.some((e) => e.analysis.parts > 1);
+  const canSave = texts.length > 0 && !missingDomain && !tooLong && !pending;
+  const first = entries[0]?.analysis ?? analyseSmsText("");
 
   function insert(token: string) {
     const area = ref.current;
@@ -64,6 +79,22 @@ export function AdTextEditor({
     });
   }
 
+  const chip = (c: { label: string; token: string; title?: string }) => (
+    <button
+      key={c.token}
+      type="button"
+      onClick={() => insert(c.token)}
+      className="inline-flex items-center gap-1 rounded-full border border-rule bg-page px-2 py-0.5 text-xs text-ink hover:border-navy"
+    >
+      {c.label}
+      {c.title ? (
+        <Tooltip content={c.title}>
+          <Info className="h-3 w-3 text-muted" aria-label={c.title} />
+        </Tooltip>
+      ) : null}
+    </button>
+  );
+
   return (
     <form
       className="space-y-3"
@@ -72,76 +103,121 @@ export function AdTextEditor({
         if (canSave) onSave({ text, requireDomain });
       }}
     >
-      <Chips items={CHIPS} onPick={insert} />
-      <Field
-        label={multi ? "Texts" : "Text"}
-        htmlFor={`${id}-text`}
-        hint={
-          multi
-            ? "Several texts: separate them with a line containing only //. Use {word1|word2} to randomise words."
-            : "Use {word1|word2} to randomise words."
-        }
-      >
-        <textarea
-          id={`${id}-text`}
-          ref={ref}
-          className={`${inputClass} h-40 font-mono`}
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          data-testid="ad-text-input"
-        />
-      </Field>
-      <ul className="space-y-1 text-xs" aria-label="Counter" data-testid="ad-text-counter">
-        {texts.length === 0 ? (
-          <li className="text-neutral-500">Type a text to see its size.</li>
+      <p className="text-sm text-muted">
+        Line breaks are kept in the message.
+        {multi ? (
+          <>
+            {" "}
+            To add several texts at once, separate them with a line containing only{" "}
+            <code className="rounded bg-page px-1 font-mono">{"//"}</code>. Nothing is saved unless
+            every text is valid.
+          </>
         ) : null}
-        {entries.map(({ text: t, key }, i) => {
-          const a = analyseSmsText(t);
-          const domain = hasDomainPlaceholder(t);
-          return (
-            <li key={key} className="flex flex-wrap items-center gap-2">
-              <span className="font-medium">Text {i + 1}:</span>
-              <span className="rounded bg-neutral-100 px-1.5 font-mono">
-                {a.encoding === "GSM_7BIT" ? "GSM-7" : "UCS-2"}
-              </span>
-              <span>{a.chars} chars</span>
-              <span data-testid={`ad-text-parts-${i + 1}`}>
-                {a.parts} {a.parts === 1 ? "part" : "parts"}
-              </span>
-              <span className="text-neutral-500">{a.left} left</span>
-              {!domain ? (
-                <span className={requireDomain ? "text-red-600" : "text-amber-600"}>
-                  no {"{{domain}}"}
-                </span>
-              ) : null}
-            </li>
-          );
-        })}
-      </ul>
-      <div className="flex items-center gap-2 text-sm">
+      </p>
+      <div className="flex flex-wrap items-center gap-1">
+        {PRIMARY_CHIPS.map(chip)}
+        <div className="relative">
+          <button
+            type="button"
+            onClick={() => setMoreOpen((o) => !o)}
+            aria-expanded={moreOpen}
+            className="inline-flex items-center gap-1 rounded-full border border-rule bg-page px-2 py-0.5 text-xs text-ink hover:border-navy"
+          >
+            More <ChevronDown className="h-3 w-3" aria-hidden="true" />
+          </button>
+          {moreOpen ? (
+            <div className="absolute left-0 z-10 mt-1 flex flex-col rounded-md border border-rule bg-surface p-1 shadow-md">
+              {MORE_CHIPS.map((c) => (
+                <button
+                  key={c.token}
+                  type="button"
+                  onClick={() => {
+                    insert(c.token);
+                    setMoreOpen(false);
+                  }}
+                  className="rounded px-2 py-1 text-left text-xs hover:bg-neutral-100"
+                >
+                  {c.label}
+                </button>
+              ))}
+            </div>
+          ) : null}
+        </div>
+      </div>
+      <textarea
+        id={`${id}-text`}
+        ref={ref}
+        aria-label={multi ? "Ad texts" : "Ad text"}
+        className={`${inputClass} h-40 font-mono`}
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        placeholder={
+          multi
+            ? "First ad text with {{domain}} inside\n//\nSecond ad text — newlines stay in the message"
+            : "Ad text with {{domain}} inside"
+        }
+        data-testid="ad-text-input"
+      />
+      <div
+        className="font-mono text-xs text-signal"
+        aria-live="polite"
+        data-testid="ad-text-counter"
+      >
+        {entries.length <= 1 ? (
+          <span>
+            {first.encoding} · {first.chars} chars ·{" "}
+            <span data-testid="ad-text-parts-1">
+              {first.parts} {first.parts === 1 ? "part" : "parts"}
+            </span>{" "}
+            · {first.left} left
+          </span>
+        ) : (
+          <ul className="space-y-0.5">
+            {entries.map(({ key, analysis: a }, i) => (
+              <li key={key}>
+                Text {i + 1}: {a.encoding} · {a.chars} chars ·{" "}
+                <span data-testid={`ad-text-parts-${i + 1}`}>
+                  {a.parts} {a.parts === 1 ? "part" : "parts"}
+                </span>{" "}
+                · {a.left} left
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+      <div className="flex flex-wrap items-center gap-6">
         <Toggle
           name="require-domain"
           label="Check {{domain}} exists"
           checked={requireDomain}
-          onChange={setRequireDomain}
+          onCheckedChange={setRequireDomain}
         />
-        <span>Check {"{{domain}}"} exists</span>
+        <Toggle
+          name="long-message"
+          label="Long message"
+          hint="allow more than one SMS part"
+          checked={longMessage}
+          onCheckedChange={setLongMessage}
+        />
       </div>
       {missingDomain ? (
-        <p className="text-xs text-red-600">
+        <p className="text-xs text-signal">
           Every text needs {"{{domain}}"} so the tracked link is inserted. Switch the check off to
           save anyway.
         </p>
       ) : null}
+      {tooLong ? (
+        <p className="text-xs text-signal">
+          A text needs more than one SMS part. Shorten it or switch Long message on.
+        </p>
+      ) : null}
       <ErrorText error={error} />
       <div className="flex justify-end gap-2">
-        <Button onClick={onCancel}>Cancel</Button>
-        <Button type="submit" variant="primary" disabled={!canSave} data-testid="save-ad-text">
-          {pending
-            ? "Saving…"
-            : multi
-              ? `Add ${texts.length || ""} text${texts.length === 1 ? "" : "s"}`
-              : "Save"}
+        <Button variant="outline" onClick={onCancel}>
+          Cancel
+        </Button>
+        <Button type="submit" disabled={!canSave} data-testid="save-ad-text">
+          {pending ? "Saving…" : multi ? "Add Text" : "Save"}
         </Button>
       </div>
     </form>

@@ -15,6 +15,10 @@ export interface ListOption {
   numbersCount: number;
   /** Members that can still be messaged. */
   available: number;
+  /** Members messaged since the last flush. */
+  sent: number;
+  /** Members flagged bad. */
+  bad: number;
 }
 
 export interface SenderIdView {
@@ -29,6 +33,10 @@ export interface SidGroupView {
   country: string;
   senderIds: SenderIdView[];
   activeCount: number;
+  /** Messages accepted with a sender id of the group, across campaigns. */
+  sent: number;
+  /** Messages of the group that were clicked. */
+  clicks: number;
 }
 
 export interface AdTextView {
@@ -40,17 +48,20 @@ export interface AdTextView {
   position: number;
 }
 
+/** An offer (SMS Edge's word for a tracked link) attached to the campaign. */
 export interface CampaignLinkView {
   id: string;
   name: string;
   url: string;
   active: boolean;
+  profitMicro: number;
 }
 
 export interface LinkOption {
   id: string;
   name: string;
   url: string;
+  profitMicro: number;
 }
 
 export interface RouteView {
@@ -93,6 +104,7 @@ export interface CampaignView {
   status: CampaignStatus;
   contactReuse: ContactReuse;
   testSize: number;
+  autosender: boolean;
   scheduledAt: string | null;
   createdAt: string;
   updatedAt: string;
@@ -128,6 +140,27 @@ export interface AuditView {
   actorUserId: string | null;
   details: Record<string, unknown> | null;
   createdAt: string;
+}
+
+/** One row of Logs › Messages. */
+export interface CampaignMessageView {
+  id: string;
+  at: string;
+  lapId: string;
+  routeName: string;
+  senderId: string;
+  recipient: string;
+  text: string;
+  status: string;
+  errorCode: string | null;
+  clicked: boolean;
+}
+
+export interface CampaignMessagesView {
+  rows: CampaignMessageView[];
+  total: number;
+  page: number;
+  pageSize: number;
 }
 
 export interface CampaignSummaryView {

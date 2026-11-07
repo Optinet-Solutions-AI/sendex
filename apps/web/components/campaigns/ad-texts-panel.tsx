@@ -1,6 +1,8 @@
 "use client";
 
 import { renderPreview } from "@sendex/core";
+import { Button, EmptyState, IconButton, Toggle } from "@sendex/ui";
+import { MessageSquareText, Pencil, Plus } from "lucide-react";
 import { useState, useTransition } from "react";
 import {
   addAdTextsAction,
@@ -9,7 +11,7 @@ import {
 } from "../../app/(dashboard)/campaigns/actions";
 import { AdTextEditor } from "./ad-text-editor";
 import type { AdTextView, CampaignView } from "./types";
-import { Button, ErrorText, Modal, Panel, Toggle } from "./ui";
+import { ErrorText, Modal } from "./ui";
 
 const SAMPLE = {
   domain: "https://snd.ex/a1b2c3",
@@ -19,7 +21,7 @@ const SAMPLE = {
   opt_out: "STOP to 12345",
 } as const;
 
-/** Table of the campaign's texts (preview, parts, on/off, edit) and the Add Texts dialog. */
+/** The Ad Texts context tab: "AD TEXTS" with + Add Texts, the texts with their switch, and the dialogs. */
 export function AdTextsPanel({
   campaign,
   onChanged,
@@ -76,71 +78,49 @@ export function AdTextsPanel({
   }
 
   return (
-    <Panel
-      title="Ad Texts"
-      testId="ad-texts-panel"
-      action={
-        <Button size="sm" onClick={() => setAdding(true)} data-testid="add-texts">
-          Add Texts
+    <div className="space-y-3" data-testid="ad-texts-panel">
+      <div className="flex items-center justify-between">
+        <h4 className="font-mono text-[11px] uppercase tracking-[0.06em] text-muted">Ad texts</h4>
+        <Button size="sm" variant="outline" onClick={() => setAdding(true)} data-testid="add-texts">
+          <Plus className="h-4 w-4" aria-hidden="true" /> Add Texts
         </Button>
-      }
-    >
-      <table className="w-full text-sm">
-        <thead className="text-left text-xs uppercase text-neutral-500">
-          <tr>
-            <th className="py-1">#</th>
-            <th className="py-1">Preview</th>
-            <th className="py-1">Encoding</th>
-            <th className="py-1 text-right">Parts</th>
-            <th className="py-1">On</th>
-            <th className="py-1" />
-          </tr>
-        </thead>
-        <tbody>
-          {campaign.adTexts.length === 0 ? (
-            <tr>
-              <td colSpan={6} className="py-2 text-xs text-neutral-500">
-                No texts yet. Add at least one with {"{{domain}}"}.
-              </td>
-            </tr>
-          ) : null}
+      </div>
+      {campaign.adTexts.length === 0 ? (
+        <EmptyState icon={<MessageSquareText />} title="No ad texts yet." />
+      ) : (
+        <ul className="divide-y divide-rule rounded-md border border-rule bg-surface">
           {campaign.adTexts.map((t, i) => (
-            <tr
-              key={t.id}
-              className="border-t border-neutral-100 align-top"
-              data-testid="ad-text-row"
-            >
-              <td className="py-1.5 pr-2 text-neutral-500">{i + 1}</td>
-              <td className="py-1.5 pr-2">
-                <div className={t.active ? "" : "text-neutral-400"}>
+            <li key={t.id} className="flex items-start gap-3 px-3 py-2" data-testid="ad-text-row">
+              <span className="pt-0.5 font-mono text-xs text-muted">{i + 1}</span>
+              <div className="min-w-0 flex-1">
+                <div className={`text-sm ${t.active ? "text-ink" : "text-muted"}`}>
                   {renderPreview(t.text, SAMPLE)}
                 </div>
-                <div className="mt-0.5 font-mono text-[11px] text-neutral-500">{t.text}</div>
-              </td>
-              <td className="py-1.5 pr-2 text-xs">
-                {t.encoding === "GSM_7BIT" ? "GSM-7" : "UCS-2"}
-              </td>
-              <td className="py-1.5 pr-2 text-right">{t.parts}</td>
-              <td className="py-1.5 pr-2">
-                <Toggle
-                  label={`Text ${i + 1} ${t.active ? "on" : "off"}`}
-                  checked={t.active}
-                  onChange={(next) => toggle(t.id, next)}
-                  disabled={pending}
-                />
-              </td>
-              <td className="py-1.5 text-right">
-                <Button size="sm" variant="ghost" onClick={() => setEditing(t)} disabled={pending}>
-                  Edit
-                </Button>
-              </td>
-            </tr>
+                <div className="mt-0.5 font-mono text-[11px] text-muted">
+                  {t.encoding} · {t.parts} {t.parts === 1 ? "part" : "parts"}
+                </div>
+              </div>
+              <Toggle
+                label={`Text ${i + 1} ${t.active ? "on" : "off"}`}
+                labelHidden
+                checked={t.active}
+                onCheckedChange={(next) => toggle(t.id, next)}
+                disabled={pending}
+              />
+              <IconButton
+                label={`Edit text ${i + 1}`}
+                tooltip="Edit"
+                icon={<Pencil />}
+                disabled={pending}
+                onClick={() => setEditing(t)}
+              />
+            </li>
           ))}
-        </tbody>
-      </table>
+        </ul>
+      )}
       <ErrorText error={error} />
 
-      <Modal open={adding} title="Add Texts" onClose={() => setAdding(false)} wide>
+      <Modal open={adding} title="Add Ad Texts" onClose={() => setAdding(false)} wide>
         <AdTextEditor
           multi
           pending={pending}
@@ -162,6 +142,6 @@ export function AdTextsPanel({
           />
         ) : null}
       </Modal>
-    </Panel>
+    </div>
   );
 }

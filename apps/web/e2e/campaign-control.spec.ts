@@ -17,9 +17,9 @@ function headerStatus(page: Page) {
 
 async function logActions(page: Page): Promise<string[]> {
   await page.getByRole("tab", { name: "Logs" }).click();
-  const rows = page.getByTestId("logs-table").locator("tbody tr td:nth-child(2)");
+  const rows = page.getByTestId("logs-table").locator("tbody tr[data-action]");
   await expect(rows.first()).toBeVisible();
-  return rows.allTextContents();
+  return rows.evaluateAll((trs) => trs.map((tr) => tr.getAttribute("data-action") ?? ""));
 }
 
 test.describe("campaign control", () => {

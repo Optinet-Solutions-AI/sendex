@@ -191,6 +191,8 @@ export const linkSchema = z.object({
     .min(1, "URL is required")
     .max(2000)
     .refine(isHttpUrlWithPlaceholders, "URL must start with http:// or https://"),
+  /** Revenue per conversion in EUR (Advanced › Profit); 0 when unknown. */
+  profitEur: z.coerce.number().min(0).max(1_000_000).default(0),
 });
 export type LinkInput = z.infer<typeof linkSchema>;
 
@@ -204,6 +206,8 @@ export const sendSettingsSchema = z
     sendAll: z.boolean().default(false),
     sendNow: z.boolean().default(true),
     scheduledAt: z.iso.datetime({ offset: true }).optional(),
+    /** Run AutoSender: a test batch first, then scale out the best message and route. Left alone when absent. */
+    autosender: z.boolean().optional(),
   })
   .refine((v) => v.sendNow || v.scheduledAt !== undefined, {
     message: "Pick a start time or send now",

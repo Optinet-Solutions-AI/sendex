@@ -14,13 +14,15 @@ A campaign is **one country, one or more lists from that country, one sender ID 
 
 ## Steps
 
-1. Open **Campaigns** and choose **New campaign**. (coming on Day 2)
-2. Pick the **country**.
-3. Tick the **lists** to include. The total unique numbers updates as you tick.
-4. Pick a **sender ID group**, or create one first under **Sender IDs**.
-5. Write the **text** and place `{{domain}}` where the link goes. Check the part count: a text that fits in one part costs a third of one that needs three.
-6. Set the **destination URL** that the short link redirects to. Add `{{click_id}}` to it if your landing page will send registration and sale postbacks.
-7. **Save**. The campaign is created in the draft state; nothing is sent until you start a test batch from [Send and scale](/using/send-and-scale/).
+1. Open **Campaigns** and press **+ New Campaign**: name, country, and the UI timezone that follows the country. The campaign opens on its page.
+2. The page is one card, **Send this campaign**: the form on the left, a context panel on the right. Each row of the form opens the matching tab on the right, where the details are managed.
+3. **SIDs**: pick a SID group in the select, or open the SIDs tab for **+ New group** and **+ Add SID**. Only one group is active per campaign; each sender ID has its own switch.
+4. **Lists**: open the Lists tab and tick the lists of the campaign country. Each row shows its progress bar, **Sent 600 / 1,896**, Bad, and a flush button that resets its sending progress.
+5. **Offers**: open the Offers tab, choose an existing offer or **— New offer —** with a name, the URL and the token chips (Dynamic, Geo, Phone, First Name, Campaign ID, Route Name, Custom 1–5, …). **Advanced › Profit (€)** records the revenue per conversion for ROI. Press **Add Offer**.
+6. **Ad Texts**: open the Ad Texts tab, **+ Add Texts**, and write the message with `{{domain}}` where the link goes. Several texts at once are separated by a line containing only `//`. The red counter shows `GSM_7BIT · chars · parts · left`; keep to one part where you can. **Check {{domain}} exists** is on; **Long message** allows more than one part.
+7. **Routes**: open the Routes tab and tick the routes to test; the price per SMS is shown next to each.
+8. **Advanced Settings** (switch): Send All, the test size, the contact reuse cards and Run AutoSender.
+9. The dark bar at the bottom shows **CONTACTS · SIDS · TEXTS · OFFERS · TEST SIZE · SMS · COST** and the first thing still missing. **Send** lights up once the setup is valid; see [Send and scale](/using/send-and-scale/).
 
 ## Good texts
 

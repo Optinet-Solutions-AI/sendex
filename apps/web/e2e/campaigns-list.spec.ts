@@ -99,12 +99,15 @@ test.describe("campaigns list", () => {
     expect(page.url()).not.toContain(seeded.campaignId);
     await expect(page.getByTestId("campaign-name")).toHaveText(`Copy of ${seeded.campaignName}`);
     await expect(page.getByTestId("sending-progress")).toContainText("0 /");
+    await page.getByRole("button", { name: "Lists", exact: true }).click();
     await expect(
-      page.getByTestId("lists-panel").getByLabel("Roy Boy_ES_14092026_Batch2"),
+      page.getByTestId("lists-panel").getByLabel("Roy Boy_ES_14092026_Batch2", { exact: true }),
     ).toBeChecked();
     await expect(page.getByTestId("sid-group-select")).toContainText("ES Casino");
+    await page.getByRole("button", { name: "Ad Texts", exact: true }).click();
     await expect(page.getByTestId("ad-text-row")).toHaveCount(1);
     await expect(page.getByTestId("ad-text-row")).toContainText("E2E results text");
+    await page.getByRole("button", { name: "Offers", exact: true }).click();
     await expect(page.getByText(`${PREFIX} link`)).toBeVisible();
     await expect(page.getByTestId("lap-row")).toHaveCount(0);
   });

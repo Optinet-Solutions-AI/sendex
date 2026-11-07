@@ -1,37 +1,40 @@
 "use client";
 
-import { type ReactNode, useState } from "react";
+import { PillTabs } from "@sendex/ui";
+import { BarChart3, FileText, ListChecks, Send } from "lucide-react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import type { ReactNode } from "react";
+import type { CampaignTab } from "./tabs";
 
-const TABS = ["Status", "Logs", "Analytics", "Send Single"] as const;
-export type CampaignTab = (typeof TABS)[number];
+const TABS = [
+  { value: "status", label: "Status", icon: <ListChecks /> },
+  { value: "logs", label: "Logs", icon: <FileText /> },
+  { value: "analytics", label: "Analytics", icon: <BarChart3 /> },
+  { value: "single", label: "Send Single", icon: <Send /> },
+] as const satisfies readonly { value: CampaignTab; label: string; icon: ReactNode }[];
 
-/** Status (the send form), Logs (audit), Analytics and Send Single placeholders. */
-export function CampaignTabs({ panels }: { panels: Record<CampaignTab, ReactNode> }) {
-  const [active, setActive] = useState<CampaignTab>("Status");
+/** Status (the send form), Logs, Analytics and Send Single, as pills; the active one is in `?tab=`. */
+export function CampaignTabs({
+  active,
+  panels,
+}: {
+  active: CampaignTab;
+  panels: Record<CampaignTab, ReactNode>;
+}) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const params = useSearchParams();
+  const go = (tab: CampaignTab) => {
+    const next = new URLSearchParams(params.toString());
+    if (tab === "status") next.delete("tab");
+    else next.set("tab", tab);
+    if (tab !== "logs") next.delete("logs");
+    const qs = next.toString();
+    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+  };
   return (
     <div>
-      <div
-        role="tablist"
-        aria-label="Campaign sections"
-        className="flex gap-1 border-b border-neutral-200"
-      >
-        {TABS.map((tab) => (
-          <button
-            key={tab}
-            type="button"
-            role="tab"
-            aria-selected={active === tab}
-            onClick={() => setActive(tab)}
-            className={`-mb-px border-b-2 px-3 py-2 text-sm ${
-              active === tab
-                ? "border-neutral-900 font-medium text-neutral-900"
-                : "border-transparent text-neutral-500 hover:text-neutral-800"
-            }`}
-          >
-            {tab}
-          </button>
-        ))}
-      </div>
+      <PillTabs label="Campaign sections" value={active} tabs={TABS} onChange={go} />
       <div role="tabpanel" className="pt-4">
         {panels[active]}
       </div>

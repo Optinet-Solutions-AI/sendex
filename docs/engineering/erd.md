@@ -54,6 +54,7 @@ erDiagram
     uuid sid_group_id FK
   }
   campaigns {
+    boolean autosender
     contact_reuse contact_reuse
     char(2) country
     timestamp_with_time_zone created_at
@@ -135,6 +136,7 @@ erDiagram
     uuid id PK
     text name
     uuid organisation_id FK
+    bigint profit_micro
     text url
   }
   list_members {

@@ -79,6 +79,8 @@ export function SelectItem({
 export interface SelectOption {
   value: string;
   label: string;
+  /** Shown greyed out and not selectable, e.g. a field already used by another column. */
+  disabled?: boolean;
 }
 
 export interface SimpleSelectProps {
@@ -110,7 +112,7 @@ export function SimpleSelect({
       </SelectTrigger>
       <SelectContent>
         {options.map((o) => (
-          <SelectItem key={o.value} value={o.value}>
+          <SelectItem key={o.value} value={o.value} disabled={o.disabled}>
             {o.label}
           </SelectItem>
         ))}

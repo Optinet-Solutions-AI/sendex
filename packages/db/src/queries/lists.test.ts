@@ -46,7 +46,15 @@ describe("importContacts", () => {
     const result = await importContacts(t.db, orgA, {
       newList: { name: "Import_ES", country: "ES" },
       rows: [
-        { ...es(1), firstName: "Ana", custom1: "VIP" },
+        {
+          ...es(1),
+          firstName: "Ana",
+          custom1: "VIP",
+          dateOfBirth: "1990-01-02",
+          gender: "F",
+          state: "Madrid",
+          address: "Calle Mayor 1",
+        },
         { ...es(2), email: "b@example.com" },
         es(3),
       ],
@@ -67,6 +75,12 @@ describe("importContacts", () => {
     });
     expect(contact?.firstName).toBe("Ana");
     expect(contact?.custom1).toBe("VIP");
+    expect(contact).toMatchObject({
+      dateOfBirth: "1990-01-02",
+      gender: "F",
+      state: "Madrid",
+      address: "Calle Mayor 1",
+    });
   });
 
   it("keeps Bad rows as bad members and reports the skipped numbers", async () => {

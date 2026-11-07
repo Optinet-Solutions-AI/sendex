@@ -101,13 +101,26 @@ test.describe("lists", () => {
     await page.getByRole("button", { name: "Paste CSV" }).click();
     await page.getByLabel("Paste phone numbers, one per line").fill(numbers);
     await page.getByRole("button", { name: "Upload", exact: true }).click();
-    await expect(page.getByText("20 rows from pasted text")).toBeVisible();
-    await expect(page.getByRole("combobox", { name: "Type of column 1" })).toContainText("Phone");
+    // The Import step after SMS Edge: Settings and File Details on the left, Field Types grid.
+    await expect(page.getByRole("heading", { level: 1, name: "Import pasted text" })).toBeVisible();
+    await expect(page.getByTestId("import-rows")).toHaveText("20 rows");
+    await expect(page.getByRole("combobox", { name: "Type of column A" })).toContainText(
+      "Phone Number",
+    );
+    await expect(page.getByTestId("number-column")).toContainText("Set");
+    await expect(page.getByRole("combobox", { name: "List" })).toContainText("+ New List");
 
-    await page.getByRole("radio", { name: "New list" }).check();
-    await page.getByLabel("List name").fill(listName);
-    await pickOption(page, "Country", /Spain/);
-    await expect(page.getByRole("checkbox", { name: /Logical check/ })).toBeChecked();
+    // No country column, so "Auto-detect from file" blocks the import until a country is picked.
+    await expect(page.getByTestId("country-error")).toContainText("Pick a country");
+    await expect(page.getByTestId("import-button")).toBeDisabled();
+    await pickOption(page, "Fixed Country", /Spain/);
+    await expect(page.getByTestId("country-error")).toHaveCount(0);
+
+    await page.getByLabel("New List Name").fill(listName);
+    await expect(page.getByRole("checkbox", { name: /Logical Check/ })).toBeChecked();
+    await expect(page.getByRole("combobox", { name: "Duplicates" })).toContainText(
+      "Allow duplicates",
+    );
 
     await page.getByTestId("import-button").click();
 

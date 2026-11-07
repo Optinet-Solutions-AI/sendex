@@ -13,6 +13,7 @@ export * from "./phone.js";
 export * from "./postbacks.js";
 export * from "./rates.js";
 export * from "./render.js";
+export * from "./reports.js";
 export * from "./results.js";
 export * from "./route-ranks.js";
 export * from "./segments.js";

@@ -39,5 +39,7 @@ export const ledgerEntries = pgTable(
   (t) => [
     uniqueIndex("ledger_entries_idempotency_key_idx").on(t.idempotencyKey),
     index("ledger_entries_org_created_idx").on(t.organisationId, t.createdAt),
+    /** Spend per message for the send log and route statistics (D4-05). */
+    index("ledger_entries_reference_idx").on(t.referenceType, t.referenceId),
   ],
 );

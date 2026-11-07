@@ -5,7 +5,7 @@ import type { ReactNode } from "react";
 import { Button } from "./button.js";
 import { cn } from "./cn.js";
 
-export type PaginationStyle = "page-of-total" | "short" | "showing";
+export type PaginationStyle = "page-of-total" | "page-of" | "short" | "showing";
 
 export interface PaginationLabelInput {
   page: number;
@@ -24,8 +24,9 @@ export function pageWindow(page: number, pageSize: number, total: number) {
 }
 
 /**
- * The three footers SMS Edge uses: "Page 1 of 8 (187 total)" on campaigns, "1 of 6" on
- * lists, "Showing 1 - 25 of 4,339 contacts" on list contacts ("Showing 0-0 of 0 items" when empty).
+ * The footers SMS Edge uses: "Page 1 of 8 (187 total)" on campaigns, "Page 1 of 2" on the
+ * reports, "1 of 6" on lists, "Showing 1 - 25 of 4,339 contacts" on list contacts
+ * ("Showing 0-0 of 0 items" when empty).
  */
 export function paginationLabel(input: PaginationLabelInput): string {
   const { page, pageSize, total, style } = input;
@@ -33,6 +34,8 @@ export function paginationLabel(input: PaginationLabelInput): string {
   switch (style) {
     case "page-of-total":
       return `Page ${page} of ${pageCount} (${thousands(total)} total)`;
+    case "page-of":
+      return `Page ${page} of ${pageCount}`;
     case "short":
       return `${page} of ${pageCount}`;
     case "showing": {

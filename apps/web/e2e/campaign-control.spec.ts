@@ -64,7 +64,8 @@ test.describe("campaign control", () => {
 
     // The Scheduled view lists it under its Madrid day at 10:00.
     await page.goto("/campaigns/scheduled");
-    await expect(page.getByRole("heading", { level: 1, name: "Scheduled sends" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "Send Calendar" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 2, name: "Scheduled sends" })).toBeVisible();
     const row = page.getByTestId("scheduled-row").filter({ hasText: seeded.campaignName });
     await expect(row).toBeVisible();
     await expect(row).toContainText("10:00");

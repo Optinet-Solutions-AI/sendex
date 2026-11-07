@@ -7,6 +7,9 @@ describe("paginationLabel", () => {
       "Page 1 of 8 (187 total)",
     );
     expect(paginationLabel({ page: 2, pageSize: 25, total: 131, style: "short" })).toBe("2 of 6");
+    expect(paginationLabel({ page: 1, pageSize: 50, total: 72, style: "page-of" })).toBe(
+      "Page 1 of 2",
+    );
     expect(
       paginationLabel({ page: 1, pageSize: 25, total: 4339, style: "showing", noun: "contacts" }),
     ).toBe("Showing 1 - 25 of 4,339 contacts");

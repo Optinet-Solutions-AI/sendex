@@ -30,7 +30,7 @@ test.describe("postbacks", () => {
 
     const row = page.getByTestId(`postback-row-${seeded.eventKey}`);
     await expect(row).toBeVisible();
-    await expect(row).toContainText("lead");
+    await expect(row).toContainText("Lead");
     await expect(row).toContainText(seeded.campaignName);
     await expect(row).toContainText("sub_id=e2e");
 

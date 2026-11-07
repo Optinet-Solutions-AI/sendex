@@ -37,6 +37,7 @@ export const NAV_TREE: readonly NavGroup[] = [
       {
         label: "Reports",
         children: [
+          { label: "Campaigns Log", href: "/reports/campaigns-log", action: "campaign.view" },
           { label: "Calendar", href: "/campaigns/scheduled", action: "campaign.view" },
           { label: "Postback Logs", href: "/reports/postbacks", action: "campaign.view" },
         ],

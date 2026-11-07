@@ -90,6 +90,8 @@ export const messages = pgTable(
     index("messages_provider_message_id_idx").on(t.providerMessageId),
     /** The expiry tick scans `sent` messages by age; nothing else needs this (D3-01). */
     index("messages_sent_pending_receipt_idx").on(t.sentAt).where(sql`"status" = 'sent'`),
+    /** The Campaigns Log and Send Calendar window messages by sent_at (D4-05). */
+    index("messages_org_sent_idx").on(t.organisationId, t.sentAt),
   ],
 );
 
@@ -156,5 +158,7 @@ export const postbacks = pgTable(
     index("postbacks_dynamic_id_idx").on(t.dynamicId),
     index("postbacks_org_received_idx").on(t.organisationId, t.receivedAt),
     index("postbacks_campaign_idx").on(t.campaignId),
+    /** Per-message conversion counts in the send log (D4-05). */
+    index("postbacks_message_idx").on(t.messageId),
   ],
 );

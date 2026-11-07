@@ -1,6 +1,18 @@
 "use client";
 
 import { countryName, countryOptions, flagEmoji } from "@sendex/core";
+import {
+  Badge,
+  Button,
+  ConfirmDialog,
+  CountPill,
+  cn,
+  EmptyState,
+  IconButton,
+  PaginationBar,
+  useToast,
+} from "@sendex/ui";
+import { Copy, Download, Eye, Megaphone, SlidersHorizontal, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
@@ -11,7 +23,7 @@ import {
 import { type CampaignsQuery, campaignsQueryString } from "../../lib/campaigns-params";
 import { formatMicro, formatPercent, formatPeriod, shortId } from "./format";
 import type { CampaignStatus, CampaignSummaryView } from "./types";
-import { Button, ErrorText, inputClass, StatusBadge } from "./ui";
+import { ErrorText, inputClass } from "./ui";
 
 const STATUSES: readonly CampaignStatus[] = [
   "draft",
@@ -22,19 +34,43 @@ const STATUSES: readonly CampaignStatus[] = [
   "completed",
 ];
 
+/** The spec shows one badge per campaign: Active while it can send, Paused, Done afterwards. */
+const STATUS_LABEL: Record<
+  CampaignStatus,
+  { label: string; variant: "active" | "warning" | "secondary" }
+> = {
+  draft: { label: "Active", variant: "active" },
+  scheduled: { label: "Active", variant: "active" },
+  sending: { label: "Active", variant: "active" },
+  paused: { label: "Paused", variant: "warning" },
+  stopped: { label: "Done", variant: "secondary" },
+  completed: { label: "Done", variant: "secondary" },
+};
+
+export function CampaignStatusBadge({ status }: { status: CampaignStatus }) {
+  const { label, variant } = STATUS_LABEL[status];
+  return (
+    <Badge variant={variant} data-status={status} title={status}>
+      {label}
+    </Badge>
+  );
+}
+
 function Check({ name, label, checked }: { name: string; label: string; checked: boolean }) {
   return (
-    <label className="inline-flex items-center gap-1 text-sm">
+    <label className="inline-flex items-center gap-1.5 text-sm">
       <input type="checkbox" name={name} value="1" defaultChecked={checked} />
       {label}
     </label>
   );
 }
 
+const Dash = () => <span className="text-muted">-</span>;
+
 /**
- * Search, filters (country, status, period, leads, sales, spend, no clicks), the campaigns
- * table with a per-row actions menu (view, duplicate, delete) and the CSV export link that
- * carries the same filters.
+ * The campaigns list of the spec: search and a count pill, a Filters toggle that reveals the
+ * filter row, the table (ID, Campaign, Status, Country, Laps, Sent, Clicks, CTR, Cost,
+ * Leads, Sales, Period, Actions), icon row actions with tooltips, "Page 1 of 8 (187 total)".
  */
 export function CampaignsTable({
   items,
@@ -50,9 +86,17 @@ export function CampaignsTable({
   filters: CampaignsQuery;
 }) {
   const router = useRouter();
+  const { toast } = useToast();
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
-  const pages = Math.max(1, Math.ceil(total / pageSize));
+  const filtersActive =
+    Boolean(filters.country || filters.status || filters.from || filters.to) ||
+    filters.hasLeads ||
+    filters.hasSales ||
+    filters.noClicks ||
+    Boolean(filters.spendMin || filters.spendMax);
+  const [showFilters, setShowFilters] = useState(filtersActive);
+  const [deleting, setDeleting] = useState<CampaignSummaryView | null>(null);
 
   function duplicate(id: string) {
     start(async () => {
@@ -65,13 +109,11 @@ export function CampaignsTable({
     });
   }
 
-  function remove(campaign: CampaignSummaryView) {
-    if (!window.confirm(`Delete draft "${campaign.name}"? This cannot be undone.`)) return;
-    start(async () => {
-      const result = await deleteCampaignAction({ campaignId: campaign.id });
-      if (!result.ok) setError(result.error);
-      router.refresh();
-    });
+  async function remove(campaign: CampaignSummaryView) {
+    const result = await deleteCampaignAction({ campaignId: campaign.id });
+    if (!result.ok) throw new Error(result.error);
+    toast({ title: "Campaign deleted", variant: "success" });
+    router.refresh();
   }
 
   function pageHref(next: number): string {
@@ -83,22 +125,36 @@ export function CampaignsTable({
   return (
     <div className="space-y-3">
       <form method="get" action="/campaigns" className="space-y-2" data-testid="campaign-filters">
-        <div className="flex flex-wrap items-end gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <input
             type="search"
             name="search"
-            placeholder="Search campaigns"
+            placeholder="Search campaigns…"
             defaultValue={filters.search}
             aria-label="Search"
-            className={`${inputClass} w-56`}
+            className={cn(inputClass, "w-64")}
           />
+          <Button type="submit" variant="outline">
+            Filter
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            aria-pressed={showFilters}
+            onClick={() => setShowFilters((v) => !v)}
+          >
+            <SlidersHorizontal className="h-4 w-4" aria-hidden="true" /> Filters
+          </Button>
+          <CountPill count={total} noun="campaign" className="ml-auto" testId="campaign-count" />
+        </div>
+        <div className={showFilters ? "flex flex-wrap items-center gap-3" : "hidden"}>
           <select
             name="country"
             defaultValue={filters.country}
             aria-label="Country"
-            className={`${inputClass} w-44`}
+            className={cn(inputClass, "w-44")}
           >
-            <option value="">All countries</option>
+            <option value="">All Countries</option>
             {countryOptions.map((c) => (
               <option key={c.code} value={c.code}>
                 {c.flag} {c.name}
@@ -109,7 +165,7 @@ export function CampaignsTable({
             name="status"
             defaultValue={filters.status}
             aria-label="Status"
-            className={`${inputClass} w-40`}
+            className={cn(inputClass, "w-40")}
           >
             <option value="">All statuses</option>
             {STATUSES.map((s) => (
@@ -118,29 +174,30 @@ export function CampaignsTable({
               </option>
             ))}
           </select>
-          <input
-            type="date"
-            name="from"
-            defaultValue={filters.from}
-            aria-label="From"
-            className={`${inputClass} w-40`}
-          />
-          <input
-            type="date"
-            name="to"
-            defaultValue={filters.to}
-            aria-label="To"
-            className={`${inputClass} w-40`}
-          />
-          <span className="ml-auto text-sm text-neutral-600" data-testid="campaign-count">
-            {total} {total === 1 ? "campaign" : "campaigns"}
-          </span>
-        </div>
-        <div className="flex flex-wrap items-center gap-3">
+          <label className="inline-flex items-center gap-1.5 text-sm text-muted">
+            From
+            <input
+              type="date"
+              name="from"
+              defaultValue={filters.from}
+              aria-label="From"
+              className={cn(inputClass, "w-40")}
+            />
+          </label>
+          <label className="inline-flex items-center gap-1.5 text-sm text-muted">
+            To
+            <input
+              type="date"
+              name="to"
+              defaultValue={filters.to}
+              aria-label="To"
+              className={cn(inputClass, "w-40")}
+            />
+          </label>
           <Check name="hasLeads" label="Has leads" checked={filters.hasLeads} />
           <Check name="hasSales" label="Has sales" checked={filters.hasSales} />
           <Check name="noClicks" label="No clicks" checked={filters.noClicks} />
-          <label className="inline-flex items-center gap-1 text-sm">
+          <label className="inline-flex items-center gap-1.5 text-sm">
             Spend above
             <input
               type="text"
@@ -148,11 +205,11 @@ export function CampaignsTable({
               inputMode="decimal"
               defaultValue={filters.spendMin}
               aria-label="Spend above (EUR)"
-              placeholder="EUR"
-              className={`${inputClass} w-24`}
+              placeholder="€"
+              className={cn(inputClass, "w-24")}
             />
           </label>
-          <label className="inline-flex items-center gap-1 text-sm">
+          <label className="inline-flex items-center gap-1.5 text-sm">
             below
             <input
               type="text"
@@ -160,143 +217,167 @@ export function CampaignsTable({
               inputMode="decimal"
               defaultValue={filters.spendMax}
               aria-label="Spend below (EUR)"
-              placeholder="EUR"
-              className={`${inputClass} w-24`}
+              placeholder="€"
+              className={cn(inputClass, "w-24")}
             />
           </label>
-          <Button type="submit">Filter</Button>
-          <Link href="/campaigns" className="text-sm underline">
+          <Link href="/campaigns" className="text-sm text-muted underline-offset-2 hover:underline">
             Clear
           </Link>
-          <a
-            href={exportHref}
-            data-testid="export-csv"
-            className="ml-auto rounded border border-neutral-300 bg-white px-3 py-1.5 text-sm font-medium text-neutral-800 hover:bg-neutral-50"
-          >
-            Export CSV
-          </a>
+          <Button variant="outline" asChild className="ml-auto">
+            <a href={exportHref} data-testid="export-csv">
+              <Download className="h-4 w-4" aria-hidden="true" /> Export
+            </a>
+          </Button>
         </div>
       </form>
       <ErrorText error={error} />
-      <div className="overflow-x-auto rounded border border-neutral-200 bg-white">
+      <div className="overflow-x-auto rounded-lg border border-rule bg-surface [scrollbar-width:thin]">
         <table className="w-full text-sm" data-testid="campaigns-table">
-          <thead className="bg-neutral-50 text-left text-xs uppercase text-neutral-500">
+          <thead className="bg-page text-left font-mono text-[11px] font-semibold uppercase tracking-[0.07em] text-muted">
             <tr>
-              <th className="px-3 py-2">ID</th>
-              <th className="px-3 py-2">Campaign</th>
-              <th className="px-3 py-2">Status</th>
-              <th className="px-3 py-2">Country</th>
-              <th className="px-3 py-2 text-right">Laps</th>
-              <th className="px-3 py-2 text-right">Sent</th>
-              <th className="px-3 py-2 text-right">Clicks</th>
-              <th className="px-3 py-2 text-right">CTR</th>
-              <th className="px-3 py-2 text-right">Cost</th>
-              <th className="px-3 py-2 text-right">Leads</th>
-              <th className="px-3 py-2 text-right">Sales</th>
-              <th className="px-3 py-2">Period</th>
-              <th className="px-3 py-2">Actions</th>
+              <th className="px-3 py-2.5">ID</th>
+              <th className="px-3 py-2.5">Campaign</th>
+              <th className="px-3 py-2.5">Status</th>
+              <th className="px-3 py-2.5">Country</th>
+              <th className="px-3 py-2.5 text-right">Laps</th>
+              <th className="px-3 py-2.5 text-right">Sent</th>
+              <th className="px-3 py-2.5 text-right">Clicks</th>
+              <th className="px-3 py-2.5 text-right">CTR</th>
+              <th className="px-3 py-2.5 text-right">Cost</th>
+              <th className="px-3 py-2.5 text-right">Leads</th>
+              <th className="px-3 py-2.5 text-right">Sales</th>
+              <th className="px-3 py-2.5">Period</th>
+              <th className="px-3 py-2.5 text-right">Actions</th>
             </tr>
           </thead>
           <tbody>
             {items.length === 0 ? (
               <tr>
-                <td colSpan={13} className="px-3 py-6 text-center text-neutral-500">
-                  No campaigns match. Clear the filters or create one with "New Campaign".
+                <td colSpan={13}>
+                  <EmptyState
+                    icon={<Megaphone />}
+                    title="No campaigns yet"
+                    hint={
+                      filtersActive || filters.search
+                        ? "No campaigns match these filters."
+                        : "Create your first campaign to start sending"
+                    }
+                  />
                 </td>
               </tr>
             ) : null}
             {items.map((c) => (
               <tr
                 key={c.id}
-                className="border-t border-neutral-100"
+                className="border-t border-rule hover:bg-neutral-50"
                 data-testid="campaign-row"
                 data-campaign-id={c.id}
               >
-                <td className="px-3 py-2 font-mono text-xs text-neutral-500" title={c.id}>
+                <td className="px-3 py-2.5 font-mono text-xs text-muted" title={c.id}>
                   {shortId(c.id)}
                 </td>
-                <td className="px-3 py-2">
-                  <Link href={`/campaigns/${c.id}`} className="font-medium hover:underline">
+                <td className="max-w-[18rem] px-3 py-2.5">
+                  <Link
+                    href={`/campaigns/${c.id}`}
+                    className="font-medium text-ink hover:underline"
+                  >
                     {c.name}
                   </Link>
                 </td>
-                <td className="px-3 py-2">
-                  <StatusBadge status={c.status} />
+                <td className="px-3 py-2.5">
+                  <CampaignStatusBadge status={c.status} />
                 </td>
-                <td className="px-3 py-2" title={countryName(c.country)}>
-                  <span className="mr-1">{flagEmoji(c.country)}</span>
-                  {c.country}
+                <td className="whitespace-nowrap px-3 py-2.5">
+                  <span className="mr-1.5">{flagEmoji(c.country)}</span>
+                  {countryName(c.country)}
                 </td>
-                <td className="px-3 py-2 text-right tabular-nums">{c.lapsCount}</td>
-                <td className="px-3 py-2 text-right tabular-nums">{c.sent}</td>
-                <td className="px-3 py-2 text-right tabular-nums">{c.clicks}</td>
-                <td className="px-3 py-2 text-right tabular-nums">{formatPercent(c.ctr)}</td>
-                <td className="px-3 py-2 text-right tabular-nums">{formatMicro(c.costMicro)}</td>
-                <td className="px-3 py-2 text-right tabular-nums">{c.leads}</td>
-                <td className="px-3 py-2 text-right tabular-nums">{c.sales}</td>
-                <td className="px-3 py-2 whitespace-nowrap text-xs text-neutral-600">
+                <td className="px-3 py-2.5 text-right font-mono tabular-nums">{c.lapsCount}</td>
+                <td className="px-3 py-2.5 text-right font-mono tabular-nums">
+                  {c.sent.toLocaleString("en-GB")}
+                </td>
+                <td className="px-3 py-2.5 text-right font-mono tabular-nums">
+                  {c.clicks.toLocaleString("en-GB")}
+                </td>
+                <td className="px-3 py-2.5 text-right font-mono tabular-nums">
+                  {formatPercent(c.ctr)}
+                </td>
+                <td className="px-3 py-2.5 text-right font-mono tabular-nums">
+                  {formatMicro(c.costMicro)}
+                </td>
+                <td className="px-3 py-2.5 text-right font-mono tabular-nums">
+                  {c.leads > 0 ? c.leads : <Dash />}
+                </td>
+                <td className="px-3 py-2.5 text-right font-mono tabular-nums">
+                  {c.sales > 0 ? c.sales : <Dash />}
+                </td>
+                <td className="whitespace-nowrap px-3 py-2.5 font-mono text-xs text-muted">
                   {formatPeriod(c.firstLapAt, c.lastLapAt, c.timezone)}
                 </td>
-                <td className="px-3 py-2 whitespace-nowrap">
-                  <details className="relative">
-                    <summary
-                      className="cursor-pointer list-none rounded border border-neutral-300 px-2 py-1 text-xs hover:bg-neutral-50"
-                      aria-label={`Actions for ${c.name}`}
-                    >
-                      Actions ▾
-                    </summary>
-                    <div className="absolute right-0 z-10 mt-1 flex w-36 flex-col rounded border border-neutral-200 bg-white py-1 text-sm shadow-lg">
-                      <Link
-                        href={`/campaigns/${c.id}`}
-                        className="px-3 py-1 text-left hover:bg-neutral-100"
-                        aria-label={`View ${c.name}`}
-                      >
-                        View
-                      </Link>
-                      <button
-                        type="button"
-                        disabled={pending}
-                        onClick={() => duplicate(c.id)}
-                        aria-label={`Duplicate ${c.name}`}
-                        className="px-3 py-1 text-left hover:bg-neutral-100 disabled:text-neutral-400"
-                      >
-                        Duplicate
-                      </button>
-                      <button
-                        type="button"
-                        disabled={pending || c.status !== "draft"}
-                        title={c.status === "draft" ? undefined : "Only drafts can be deleted"}
-                        onClick={() => remove(c)}
-                        aria-label={`Delete ${c.name}`}
-                        className="px-3 py-1 text-left text-red-700 hover:bg-red-50 disabled:text-neutral-400"
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  </details>
+                <td className="whitespace-nowrap px-3 py-2.5 text-right">
+                  <div className="inline-flex items-center">
+                    <IconButton
+                      label={`View ${c.name}`}
+                      tooltip="View campaign"
+                      icon={<Eye />}
+                      onClick={() => router.push(`/campaigns/${c.id}`)}
+                    />
+                    <IconButton
+                      label={`Duplicate ${c.name}`}
+                      tooltip="Duplicate"
+                      icon={<Copy />}
+                      disabled={pending}
+                      onClick={() => duplicate(c.id)}
+                    />
+                    <IconButton
+                      label={`Delete ${c.name}`}
+                      tooltip={
+                        c.status === "draft" ? "Delete campaign" : "Only drafts can be deleted"
+                      }
+                      icon={<Trash2 />}
+                      tone="danger"
+                      disabled={pending || c.status !== "draft"}
+                      onClick={() => setDeleting(c)}
+                    />
+                  </div>
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
-      {pages > 1 ? (
-        <nav aria-label="Pagination" className="flex items-center gap-2 text-sm">
-          {page > 1 ? (
-            <Link href={pageHref(page - 1)} className="underline">
-              Previous
+      <PaginationBar
+        page={page}
+        pageSize={pageSize}
+        total={total}
+        style="page-of-total"
+        pageHref={pageHref}
+        renderLink={(href, children, disabled) => (
+          <Button
+            variant="outline"
+            size="sm"
+            asChild
+            className={disabled ? "pointer-events-none opacity-50" : undefined}
+          >
+            <Link href={href} aria-disabled={disabled}>
+              {children}
             </Link>
-          ) : null}
-          <span className="text-neutral-600">
-            Page {page} of {pages}
-          </span>
-          {page < pages ? (
-            <Link href={pageHref(page + 1)} className="underline">
-              Next
-            </Link>
-          ) : null}
-        </nav>
-      ) : null}
+          </Button>
+        )}
+      />
+      <ConfirmDialog
+        open={deleting !== null}
+        onOpenChange={(open) => {
+          if (!open) setDeleting(null);
+        }}
+        title="Delete Campaign"
+        description={deleting ? `Delete "${deleting.name}"? This action cannot be undone.` : null}
+        confirmLabel="Delete"
+        destructive
+        onConfirm={async () => {
+          if (deleting) await remove(deleting);
+        }}
+      />
     </div>
   );
 }

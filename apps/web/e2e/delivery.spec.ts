@@ -33,7 +33,7 @@ test.describe("delivery status and click rates", () => {
     await expect(page.getByTestId("total-delivery-rate")).toHaveText("95.00%");
     await expect(page.getByTestId("total-clicks")).toHaveText("5");
     await expect(page.getByTestId("total-ctr")).toHaveText("5.00%");
-    await expect(page.getByTestId("total-cpc")).toHaveText("EUR 0.50");
+    await expect(page.getByTestId("total-cpc")).toHaveText("€0.50");
 
     const row = page.getByTestId("lap-row");
     await expect(row).toHaveCount(1);

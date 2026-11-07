@@ -22,7 +22,7 @@ export const MAX_LOW_BALANCE_EMAILS = 5;
 const groupThousands = new Intl.NumberFormat("en-GB", { useGrouping: true });
 
 /**
- * "EUR 4,988.31" from micro-EUR, rounded to the cent half away from zero.
+ * "€4,988.31" from micro-EUR, rounded to the cent half away from zero.
  * Negative amounts (debits) render as "-EUR 0.04".
  */
 export function formatEur(micro: bigint): string {
@@ -33,7 +33,7 @@ export function formatEur(micro: bigint): string {
   const whole = cents / 100n;
   const frac = cents % 100n;
   const body = `${groupThousands.format(whole)}.${frac.toString().padStart(2, "0")}`;
-  return `${negative ? "-" : ""}EUR ${body}`;
+  return `${negative ? "-" : ""}€${body}`;
 }
 
 const EUR_PATTERN = /^(\d{1,3}(?:,\d{3})*|\d+)(?:\.(\d{1,6}))?$/;

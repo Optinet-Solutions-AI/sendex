@@ -7,11 +7,11 @@ import { expect, test } from "@playwright/test";
  */
 
 function eur(amount: number): string {
-  return `EUR ${amount.toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  return `€${amount.toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
 function parseEur(text: string): number {
-  const match = /EUR\s([\d,]+\.\d{2})/.exec(text);
+  const match = /€([\d,]+\.\d{2})/.exec(text);
   if (!match?.[1]) throw new Error(`no EUR amount in "${text}"`);
   return Number.parseFloat(match[1].replace(/,/g, ""));
 }
@@ -23,7 +23,7 @@ test.describe("billing", () => {
   }) => {
     await page.goto("/");
     const header = page.getByTestId("header-balance");
-    await expect(header).toContainText(/^Balance: EUR [\d,]+\.\d{2}$/);
+    await expect(header).toContainText(/^Balance: €[\d,]+\.\d{2}$/);
     // The seed deposits EUR 4,988.31; other specs and earlier runs move it, so only its shape is fixed.
     const before = parseEur((await header.textContent()) ?? "");
     const nav = page.getByRole("navigation", { name: "Main" });
@@ -55,7 +55,7 @@ test.describe("billing", () => {
     // The Deposits tab (default) lists it.
     const depositRow = page.getByRole("row", { name: new RegExp(reference) });
     await expect(depositRow).toBeVisible();
-    await expect(depositRow).toContainText("EUR 25.00");
+    await expect(depositRow).toContainText("€25.00");
     await expect(depositRow).toContainText("Playwright deposit");
 
     // The same reference is refused.

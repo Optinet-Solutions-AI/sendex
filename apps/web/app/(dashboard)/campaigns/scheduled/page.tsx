@@ -1,5 +1,5 @@
 import { db, listScheduledCampaigns } from "@sendex/db";
-import Link from "next/link";
+import { CountPill, PageHeader } from "@sendex/ui";
 import {
   type ScheduledDayView,
   ScheduledList,
@@ -58,18 +58,22 @@ export default async function ScheduledCampaignsPage({
         const total = view.reduce((sum, g) => sum + g.campaigns.length, 0);
         return (
           <section className="space-y-4">
-            <nav aria-label="Breadcrumb" className="text-sm text-neutral-500">
-              <Link href="/campaigns" className="hover:underline">
-                Campaigns
-              </Link>{" "}
-              / Scheduled
-            </nav>
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <h1 className="text-2xl font-semibold">Scheduled sends</h1>
-              <p className="text-sm text-neutral-600" data-testid="scheduled-count">
-                {total} scheduled in the next {days} days
-              </p>
-            </div>
+            <PageHeader
+              breadcrumb={[
+                { label: "Campaigns", href: "/campaigns" },
+                { label: "Reports" },
+                { label: "Calendar" },
+              ]}
+              title="Scheduled sends"
+              actions={
+                <CountPill
+                  count={total}
+                  noun={`scheduled in the next ${days} days`}
+                  plural={`scheduled in the next ${days} days`}
+                  testId="scheduled-count"
+                />
+              }
+            />
             <p className="text-sm text-neutral-600">
               Times are shown in each campaign's own timezone. Open a campaign to change or cancel
               its start time.

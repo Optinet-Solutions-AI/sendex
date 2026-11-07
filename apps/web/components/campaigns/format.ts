@@ -7,7 +7,7 @@ const eur = new Intl.NumberFormat("en-GB", { minimumFractionDigits: 2, maximumFr
 const eur4 = new Intl.NumberFormat("en-GB", { minimumFractionDigits: 4, maximumFractionDigits: 4 });
 
 export function formatEur(amount: number): string {
-  return `EUR ${eur.format(amount)}`;
+  return `€${eur.format(amount)}`;
 }
 
 /** Micro-EUR (number, bigint or the string a JSON boundary turns a bigint into) as EUR. */
@@ -17,7 +17,7 @@ export function formatMicro(micro: number | bigint | string): string {
 
 export function formatPricePerSms(priceMicro: number | bigint | string | null): string {
   if (priceMicro === null) return "no price";
-  return `EUR ${eur4.format(Number(priceMicro) / MICRO)}`;
+  return `€${eur4.format(Number(priceMicro) / MICRO)}`;
 }
 
 export function formatPercent(ratio: number): string {

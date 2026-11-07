@@ -26,5 +26,5 @@ export function formatNumber(value: number): string {
 
 /** Micro-EUR as a plain decimal ("4988.31", "-0.04") for CSV cells and form values. */
 export function eurDecimal(micro: bigint): string {
-  return formatEur(micro).replace("EUR ", "").replace(/,/g, "");
+  return formatEur(micro).replace("€", "").replace(/,/g, "");
 }

@@ -11,22 +11,22 @@ import {
 
 describe("formatEur", () => {
   it("formats micro-EUR with thousands separators and two decimals", () => {
-    expect(formatEur(4_988_310_000n)).toBe("EUR 4,988.31");
-    expect(formatEur(3_470_510_000n)).toBe("EUR 3,470.51");
-    expect(formatEur(0n)).toBe("EUR 0.00");
-    expect(formatEur(1_000_000n)).toBe("EUR 1.00");
-    expect(formatEur(25_000_000n)).toBe("EUR 25.00");
+    expect(formatEur(4_988_310_000n)).toBe("€4,988.31");
+    expect(formatEur(3_470_510_000n)).toBe("€3,470.51");
+    expect(formatEur(0n)).toBe("€0.00");
+    expect(formatEur(1_000_000n)).toBe("€1.00");
+    expect(formatEur(25_000_000n)).toBe("€25.00");
   });
 
   it("rounds sub-cent amounts half away from zero", () => {
-    expect(formatEur(35_700n)).toBe("EUR 0.04");
-    expect(formatEur(34_999n)).toBe("EUR 0.03");
-    expect(formatEur(5_000n)).toBe("EUR 0.01");
+    expect(formatEur(35_700n)).toBe("€0.04");
+    expect(formatEur(34_999n)).toBe("€0.03");
+    expect(formatEur(5_000n)).toBe("€0.01");
   });
 
   it("keeps the sign of debits", () => {
-    expect(formatEur(-35_700n)).toBe("-EUR 0.04");
-    expect(formatEur(-1_234_560_000n)).toBe("-EUR 1,234.56");
+    expect(formatEur(-35_700n)).toBe("-€0.04");
+    expect(formatEur(-1_234_560_000n)).toBe("-€1,234.56");
   });
 });
 

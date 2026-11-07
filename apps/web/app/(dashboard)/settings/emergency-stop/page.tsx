@@ -1,5 +1,5 @@
 import type { EmergencyStopState } from "@sendex/core";
-import Link from "next/link";
+import { PageHeader } from "@sendex/ui";
 import { readEmergencyStop, WorkerApiError, workerApiConfig } from "../../../../lib/worker-api";
 import { workerPublicUrl } from "../../../../lib/worker-public-url";
 import { RequireOrg } from "../../require-org";
@@ -33,13 +33,10 @@ export default function EmergencyStopPage() {
         const { state, unavailable } = await currentState(ctx.organisationId);
         return (
           <section className="max-w-2xl space-y-4">
-            <nav aria-label="Breadcrumb" className="text-sm text-neutral-500">
-              <Link href="/settings" className="hover:underline">
-                Settings
-              </Link>{" "}
-              / Emergency stop
-            </nav>
-            <h1 className="text-2xl font-semibold">Emergency stop</h1>
+            <PageHeader
+              breadcrumb={[{ label: "Settings", href: "/settings" }, { label: "Emergency stop" }]}
+              title="Emergency stop"
+            />
             <p className="text-sm text-neutral-600">
               Halts every campaign of the organisation at once: running laps stop after the batch
               they are on, nothing new is dispatched, and scheduled sends wait. Messages already

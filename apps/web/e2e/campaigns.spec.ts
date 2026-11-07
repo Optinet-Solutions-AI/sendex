@@ -62,12 +62,12 @@ test.describe("campaigns", () => {
     await expect(page.getByTestId("test-size")).toHaveValue("200");
     await page.getByTestId("route-405").check();
     await expect(page.getByTestId("footer-sms")).toHaveText("200");
-    await expect(page.getByTestId("footer-cost")).toHaveText("EUR 5.00");
+    await expect(page.getByTestId("footer-cost")).toHaveText("€5.00");
 
     // A second route doubles the laps: 400 SMS.
     await page.getByTestId("route-403").check();
     await expect(page.getByTestId("footer-sms")).toHaveText("400");
-    await expect(page.getByTestId("footer-cost")).toHaveText("EUR 10.40");
+    await expect(page.getByTestId("footer-cost")).toHaveText("€10.40");
 
     // Send: two laps queued, one per route.
     await page.getByTestId("send-button").click();
@@ -82,7 +82,7 @@ test.describe("campaigns", () => {
     await page.goto("/campaigns");
     const row = page.getByTestId("campaign-row").filter({ hasText: name });
     await expect(row).toBeVisible();
-    await expect(row).toContainText("sending");
+    await expect(row.locator("[data-status]")).toHaveAttribute("data-status", "sending");
     await expect(row.locator("td").nth(4)).toHaveText("2");
   });
 });

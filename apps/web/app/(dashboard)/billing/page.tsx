@@ -8,7 +8,15 @@ import {
   listLedgerEntries,
   spendByCampaign,
 } from "@sendex/db";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@sendex/ui";
+import {
+  PageHeader,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@sendex/ui";
 import Link from "next/link";
 import { AuthError, requireAction } from "../../../lib/auth";
 import {
@@ -341,25 +349,25 @@ export default async function BillingPage({
     );
   return (
     <section>
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold">Billing</h1>
-          <p className="mt-1 text-sm text-neutral-600">
+      <PageHeader
+        breadcrumb={[{ label: "Settings" }, { label: "Billing" }]}
+        title="Billing"
+        subtitle={
+          <>
             Current balance{" "}
-            <span
-              data-testid="billing-balance"
-              className="font-medium tabular-nums text-neutral-900"
-            >
+            <span data-testid="billing-balance" className="font-mono font-medium text-ink">
               {formatEur(balanceMicro)}
             </span>
-          </p>
-        </div>
-        {can(ctx.role, "settings.manage") ? (
-          <Link href="/settings/billing" className={linkButton}>
-            Low balance alert and caps
-          </Link>
-        ) : null}
-      </div>
+          </>
+        }
+        actions={
+          can(ctx.role, "settings.manage") ? (
+            <Link href="/settings/billing" className={linkButton}>
+              Low balance alert and caps
+            </Link>
+          ) : null
+        }
+      />
       <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
         <div className="min-w-0">
           <Tabs active={query.tab} />

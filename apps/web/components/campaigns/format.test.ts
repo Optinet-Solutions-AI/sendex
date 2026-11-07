@@ -13,14 +13,14 @@ import {
 
 describe("money and percentages", () => {
   it("formats micro-EUR with two decimals", () => {
-    expect(formatMicro(5_000_000)).toBe("EUR 5.00");
-    expect(formatMicro("4988310000")).toBe("EUR 4,988.31");
-    expect(formatMicro(0)).toBe("EUR 0.00");
+    expect(formatMicro(5_000_000)).toBe("€5.00");
+    expect(formatMicro("4988310000")).toBe("€4,988.31");
+    expect(formatMicro(0)).toBe("€0.00");
   });
 
   it("formats EUR amounts and prices per SMS", () => {
-    expect(formatEur(12.5)).toBe("EUR 12.50");
-    expect(formatPricePerSms(25_000)).toBe("EUR 0.0250");
+    expect(formatEur(12.5)).toBe("€12.50");
+    expect(formatPricePerSms(25_000)).toBe("€0.0250");
     expect(formatPricePerSms(null)).toBe("no price");
   });
 

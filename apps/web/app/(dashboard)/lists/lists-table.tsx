@@ -6,12 +6,16 @@ import {
   Button,
   type ColumnDef,
   ConfirmDialog,
+  CountPill,
   DataTable,
   Input,
+  PageHeader,
+  PaginationBar,
   SimpleSelect,
   type SortingState,
   useToast,
 } from "@sendex/ui";
+import { Download, RefreshCw, Upload } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { type FormEvent, useMemo, useState } from "react";
@@ -187,47 +191,39 @@ export function ListsTable({ rows, total, pageSize, query, canUpload, canFlush }
     navigate({ search: search.trim() });
   };
 
-  const from = total === 0 ? 0 : (query.page - 1) * pageSize + 1;
-  const to = Math.min(total, query.page * pageSize);
-  const pages = Math.max(1, Math.ceil(total / pageSize));
-
   return (
     <section>
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold">Lists</h1>
-          <p className="mt-1 text-sm text-neutral-600" data-testid="lists-count">
-            {formatNumber(total)} {total === 1 ? "list" : "lists"}
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <a
-            href={`/lists/export${listsQueryString(query)}`}
-            className="inline-flex h-9 items-center rounded-md border border-neutral-300 bg-white px-4 text-sm font-medium hover:bg-neutral-100"
-          >
-            Export CSV
-          </a>
-          {canFlush ? (
-            <Button variant="outline" onClick={() => setFlushAllOpen(true)}>
-              Flush All Lists
+      <PageHeader
+        breadcrumb={[{ label: "Contacts" }, { label: "Lists" }]}
+        title="Lists"
+        actions={
+          <>
+            <Button variant="outline" asChild>
+              <a href={`/lists/export${listsQueryString(query)}`}>
+                <Download className="h-4 w-4" aria-hidden="true" /> Export CSV
+              </a>
             </Button>
-          ) : null}
-          {canUpload ? (
-            <Link
-              href="/lists/upload"
-              className="inline-flex h-9 items-center rounded-md bg-neutral-900 px-4 text-sm font-medium text-white hover:bg-neutral-700"
-            >
-              Upload List
-            </Link>
-          ) : null}
-        </div>
-      </div>
+            {canFlush ? (
+              <Button variant="outline" onClick={() => setFlushAllOpen(true)}>
+                <RefreshCw className="h-4 w-4" aria-hidden="true" /> Flush All Lists
+              </Button>
+            ) : null}
+            {canUpload ? (
+              <Button asChild>
+                <Link href="/lists/upload">
+                  <Upload className="h-4 w-4" aria-hidden="true" /> Upload List
+                </Link>
+              </Button>
+            ) : null}
+          </>
+        }
+      />
 
-      <form onSubmit={onSearch} className="mt-4 flex flex-wrap items-center gap-2">
+      <form onSubmit={onSearch} className="flex flex-wrap items-center gap-2">
         <Input
           type="search"
           name="search"
-          placeholder="Search lists"
+          placeholder="Search lists…"
           aria-label="Search lists"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
@@ -243,6 +239,7 @@ export function ListsTable({ rows, total, pageSize, query, canUpload, canFlush }
         <Button type="submit" variant="outline">
           Search
         </Button>
+        <CountPill count={total} noun="list" className="ml-auto" testId="lists-count" />
       </form>
 
       <div className="mt-4">
@@ -257,32 +254,14 @@ export function ListsTable({ rows, total, pageSize, query, canUpload, canFlush }
         />
       </div>
 
-      <div className="mt-3 flex items-center justify-between text-sm text-neutral-600">
-        <span>
-          Showing {formatNumber(from)}–{formatNumber(to)} of {formatNumber(total)}
-        </span>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={query.page <= 1}
-            onClick={() => navigate({ page: query.page - 1 })}
-          >
-            Previous
-          </Button>
-          <span>
-            Page {query.page} of {pages}
-          </span>
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={query.page >= pages}
-            onClick={() => navigate({ page: query.page + 1 })}
-          >
-            Next
-          </Button>
-        </div>
-      </div>
+      <PaginationBar
+        className="mt-3"
+        page={query.page}
+        pageSize={pageSize}
+        total={total}
+        style="short"
+        onPageChange={(next) => navigate({ page: next })}
+      />
 
       <ConfirmDialog
         open={flushTarget !== null}

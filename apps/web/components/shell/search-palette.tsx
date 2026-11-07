@@ -48,7 +48,7 @@ export function SearchPalette({ pages }: { pages: readonly NavPage[] }) {
         type="button"
         onClick={() => setOpen(true)}
         className="hidden h-9 w-64 items-center gap-2 rounded-md border border-neutral-300 bg-surface px-3 text-sm text-muted hover:bg-neutral-50 md:inline-flex"
-        aria-label="Search pages"
+        aria-label="Find a page"
       >
         <Search className="h-4 w-4" aria-hidden="true" />
         <span className="flex-1 text-left">Search pages…</span>
@@ -58,7 +58,7 @@ export function SearchPalette({ pages }: { pages: readonly NavPage[] }) {
       </button>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="top-24 max-w-lg translate-y-0 p-0">
-          <DialogTitle className="sr-only">Search pages</DialogTitle>
+          <DialogTitle className="sr-only">Find a page</DialogTitle>
           <div className="flex items-center gap-2 border-b border-rule px-3">
             <Search className="h-4 w-4 text-muted" aria-hidden="true" />
             <input
@@ -81,7 +81,7 @@ export function SearchPalette({ pages }: { pages: readonly NavPage[] }) {
                 }
               }}
               placeholder="Search pages…"
-              aria-label="Search pages"
+              aria-label="Find a page"
               className="h-11 flex-1 bg-transparent text-sm outline-none"
             />
           </div>

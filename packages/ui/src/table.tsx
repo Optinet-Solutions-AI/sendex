@@ -3,14 +3,14 @@ import { cn } from "./cn.js";
 
 export function Table({ className, ...props }: HTMLAttributes<HTMLTableElement>) {
   return (
-    <div className="w-full overflow-x-auto rounded-md border border-neutral-200 bg-white">
+    <div className="w-full overflow-x-auto rounded-lg border border-rule bg-surface [scrollbar-width:thin]">
       <table className={cn("w-full caption-bottom text-sm", className)} {...props} />
     </div>
   );
 }
 
 export function TableHeader({ className, ...props }: HTMLAttributes<HTMLTableSectionElement>) {
-  return <thead className={cn("bg-neutral-50 [&_tr]:border-b", className)} {...props} />;
+  return <thead className={cn("bg-page [&_tr]:border-b", className)} {...props} />;
 }
 
 export function TableBody({ className, ...props }: HTMLAttributes<HTMLTableSectionElement>) {
@@ -30,7 +30,7 @@ export function TableHead({ className, ...props }: ThHTMLAttributes<HTMLTableCel
   return (
     <th
       className={cn(
-        "h-10 px-3 text-left align-middle text-xs font-medium whitespace-nowrap text-neutral-500 uppercase tracking-wide",
+        "h-10 px-3 text-left align-middle font-mono text-[11px] font-semibold whitespace-nowrap text-muted uppercase tracking-[0.07em]",
         className,
       )}
       {...props}

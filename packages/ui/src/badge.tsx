@@ -13,6 +13,18 @@ export const badgeVariants = cva(
         success: "border-transparent bg-emerald-100 text-emerald-800",
         warning: "border-transparent bg-amber-100 text-amber-900",
         destructive: "border-transparent bg-red-100 text-red-800",
+        /** Green outlined "Active". */
+        active: "border-good bg-transparent text-good",
+        /** Red "Bad" on a contact. */
+        bad: "border-transparent bg-red-100 text-red-800",
+        /** Green "Sale". */
+        sale: "border-transparent bg-emerald-100 text-emerald-800",
+        /** Grey "Lead". */
+        lead: "border-transparent bg-neutral-100 text-neutral-700",
+        /** Grey monospace "SMPP" / "HTTP". */
+        code: "border-rule bg-neutral-50 font-mono text-[11px] text-neutral-700",
+        /** Amber "No pricing". */
+        amber: "border-transparent bg-amber-100 text-amber-900",
       },
     },
     defaultVariants: { variant: "default" },

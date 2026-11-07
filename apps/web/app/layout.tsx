@@ -1,10 +1,20 @@
 import { ClerkProvider } from "@clerk/nextjs";
 import type { Metadata } from "next";
+import { JetBrains_Mono, Public_Sans } from "next/font/google";
 import { connection } from "next/server";
 import type { ReactNode } from "react";
 import { authMode, missingClerkEnv } from "../lib/env";
 import "./globals.css";
 import { SetupRequired } from "./setup-required";
+
+// Self-hosted by Next at build time, so the CSP's font-src 'self' holds.
+const sans = Public_Sans({ subsets: ["latin"], variable: "--font-public-sans", display: "swap" });
+const mono = JetBrains_Mono({
+  subsets: ["latin"],
+  variable: "--font-jetbrains-mono",
+  display: "swap",
+});
+const fontClass = `${sans.variable} ${mono.variable}`;
 
 export const metadata: Metadata = {
   title: "Sendex",
@@ -21,7 +31,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
   if (mode === "unconfigured") {
     return (
       <html lang="en">
-        <body className="min-h-screen antialiased">
+        <body className={`${fontClass} min-h-screen antialiased`}>
           <SetupRequired missing={missingClerkEnv()} />
         </body>
       </html>
@@ -29,7 +39,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
   }
   const document = (
     <html lang="en">
-      <body className="min-h-screen antialiased">{children}</body>
+      <body className={`${fontClass} min-h-screen antialiased`}>{children}</body>
     </html>
   );
   if (mode === "dev") {

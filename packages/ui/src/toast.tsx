@@ -1,6 +1,6 @@
 "use client";
 
-import { X } from "lucide-react";
+import { Check, X } from "lucide-react";
 import {
   createContext,
   type ReactNode,
@@ -60,19 +60,22 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       {children}
       <div
         aria-live="polite"
-        className="pointer-events-none fixed right-4 bottom-4 z-50 flex w-80 flex-col gap-2"
+        className="pointer-events-none fixed top-4 right-4 z-50 flex w-80 flex-col gap-2"
       >
         {items.map((item) => (
           <output
             key={item.id}
             data-testid="toast"
             className={cn(
-              "pointer-events-auto flex items-start gap-3 rounded-md border bg-white p-3 text-sm shadow-md",
-              item.variant === "success" && "border-emerald-300",
-              item.variant === "error" && "border-red-300",
-              (item.variant ?? "default") === "default" && "border-neutral-200",
+              "pointer-events-auto flex items-start gap-3 rounded-md border p-3 text-sm shadow-md",
+              item.variant === "success" && "border-emerald-200 bg-good-soft",
+              item.variant === "error" && "border-red-200 bg-red-50",
+              (item.variant ?? "default") === "default" && "border-rule bg-surface",
             )}
           >
+            {item.variant === "success" ? (
+              <Check className="mt-0.5 h-4 w-4 shrink-0 text-good" aria-hidden="true" />
+            ) : null}
             <div className="min-w-0 flex-1">
               <p className="font-medium text-neutral-900">{item.title}</p>
               {item.description ? (

@@ -26,9 +26,11 @@ test.describe("billing", () => {
     await expect(header).toContainText(/^Balance: EUR [\d,]+\.\d{2}$/);
     // The seed deposits EUR 4,988.31; other specs and earlier runs move it, so only its shape is fixed.
     const before = parseEur((await header.textContent()) ?? "");
-    await expect(
-      page.getByRole("navigation", { name: "Main" }).getByRole("link", { name: "Audit log" }),
-    ).toBeVisible();
+    const nav = page.getByRole("navigation", { name: "Main" });
+    await nav.hover();
+    await nav.getByRole("button", { name: "Settings", exact: true }).click();
+    await expect(nav.getByRole("link", { name: "Logs", exact: true })).toBeVisible();
+    await page.mouse.move(600, 300);
 
     await header.click();
     await expect(page).toHaveURL(/\/billing$/);

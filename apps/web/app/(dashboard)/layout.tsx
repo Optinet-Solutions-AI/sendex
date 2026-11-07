@@ -1,9 +1,13 @@
 import { OrganizationSwitcher, UserButton } from "@clerk/nextjs";
 import { type Action, can, formatEur, type Role } from "@sendex/core";
 import { db, getBalanceMicro } from "@sendex/db";
-import { ToastProvider } from "@sendex/ui";
+import { ToastProvider, TooltipProvider } from "@sendex/ui";
+import { CircleHelp } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { flattenNav, visibleNav } from "../../components/shell/nav";
+import { Rail } from "../../components/shell/rail";
+import { SearchPalette } from "../../components/shell/search-palette";
 import { isAuthError, requireOrg } from "../../lib/auth";
 import { authMode, devAuthConfig } from "../../lib/env";
 import { AlertsBanner } from "./alerts-banner";
@@ -12,24 +16,6 @@ import { EmergencyStopBanner } from "./emergency-stop-banner";
 
 /** The balance in the header must never be stale; the shell is rendered per request. */
 export const dynamic = "force-dynamic";
-
-interface NavItem {
-  href: string;
-  label: string;
-  /** Shown only to roles that may perform this action. */
-  action?: Action;
-}
-
-const NAV: readonly NavItem[] = [
-  { href: "/", label: "Dashboard" },
-  { href: "/campaigns", label: "Campaigns" },
-  { href: "/campaigns/scheduled", label: "Scheduled" },
-  { href: "/lists", label: "Lists" },
-  { href: "/billing", label: "Billing" },
-  { href: "/reports/postbacks", label: "Reports" },
-  { href: "/settings", label: "Settings" },
-  { href: "/audit", label: "Audit log", action: "audit.view" },
-];
 
 interface Shell {
   organisationId: string;
@@ -52,74 +38,92 @@ async function shellContext(): Promise<Shell | null> {
   }
 }
 
+const DOCS_URL = process.env.NEXT_PUBLIC_DOCS_URL;
+
 /**
- * Minimal admin shell: left nav, top bar with the balance, organisation switcher and user
- * menu. Under the development auth stub the top bar shows an amber banner instead of the
- * Clerk widgets. Owner-only screens (audit log) appear in the nav only for owners.
+ * The app shell of the spec: a dark icon rail on the left that expands on hover, a white top
+ * bar with the product tab, the page search, help, the balance and the user menu, and the
+ * grey page underneath. Under the development auth stub the top bar shows an amber banner
+ * instead of the Clerk widgets. Pages a role may not open are left out of the rail.
  */
 export default async function DashboardLayout({ children }: { children: ReactNode }) {
   const mode = authMode();
   const shell = await shellContext();
-  const items = NAV.filter((item) => !item.action || (shell && can(shell.role, item.action)));
+  const allowed = (action: Action) => Boolean(shell && can(shell.role, action));
+  const tree = visibleNav(allowed);
+  const pages = flattenNav(tree);
   const balance = shell ? (
     <Link
       href="/billing"
       data-testid="header-balance"
-      className="rounded border border-neutral-200 bg-neutral-50 px-3 py-1 text-sm font-medium tabular-nums text-neutral-800 hover:bg-neutral-100"
+      className="rounded-md border border-rule bg-page px-3 py-1 text-sm font-medium tabular-nums text-ink hover:bg-neutral-100"
     >
       Balance: {formatEur(shell.balanceMicro)}
     </Link>
   ) : null;
+
   return (
-    <div className="flex min-h-screen">
-      <aside className="flex w-56 shrink-0 flex-col border-r border-neutral-200 bg-white">
-        <div className="border-b border-neutral-200 px-4 py-4">
-          <Link href="/" className="text-lg font-semibold tracking-tight">
-            Sendex
-          </Link>
-        </div>
-        <nav aria-label="Main" className="flex-1 px-2 py-3">
-          <ul className="space-y-1">
-            {items.map((item) => (
-              <li key={item.href}>
-                <Link
-                  href={item.href}
-                  className="block rounded px-3 py-2 text-sm text-neutral-700 hover:bg-neutral-100 hover:text-neutral-900"
+    <TooltipProvider delayDuration={200}>
+      <div className="flex min-h-screen">
+        <Rail tree={tree} brand={<Brand />} />
+        <div className="flex min-w-0 flex-1 flex-col">
+          <header className="flex h-14 items-center gap-4 border-b border-rule bg-surface pr-6 pl-6">
+            <span
+              className="rounded-md bg-neutral-100 px-3 py-1 text-sm font-semibold text-ink"
+              aria-current="true"
+              data-testid="product-tab"
+            >
+              SMS
+            </span>
+            {mode === "dev" ? <DevAuthBanner config={devAuthConfig()} /> : null}
+            <div className="ml-auto flex items-center gap-3">
+              <SearchPalette pages={pages} />
+              {DOCS_URL ? (
+                <a
+                  href={DOCS_URL}
+                  target="_blank"
+                  rel="noreferrer"
+                  aria-label="Help"
+                  className="rounded-md p-1.5 text-muted hover:bg-neutral-100 hover:text-ink"
                 >
-                  {item.label}
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </nav>
-      </aside>
-      <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex h-14 items-center justify-between gap-4 border-b border-neutral-200 bg-white px-6">
-          {mode === "dev" ? (
-            <>
-              <DevAuthBanner config={devAuthConfig()} />
+                  <CircleHelp className="h-5 w-5" aria-hidden="true" />
+                </a>
+              ) : null}
               {balance}
-            </>
-          ) : (
-            <>
-              <OrganizationSwitcher afterSelectOrganizationUrl="/" afterCreateOrganizationUrl="/" />
-              <div className="flex items-center gap-4">
-                {balance}
-                <UserButton />
-              </div>
-            </>
-          )}
-        </header>
-        {shell ? <EmergencyStopBanner organisationId={shell.organisationId} /> : null}
-        <main className="flex-1 p-6">
-          <ToastProvider>
-            {shell ? (
-              <AlertsBanner organisationId={shell.organisationId} role={shell.role} />
-            ) : null}
-            {children}
-          </ToastProvider>
-        </main>
+              {mode === "dev" ? null : (
+                <>
+                  <OrganizationSwitcher
+                    afterSelectOrganizationUrl="/"
+                    afterCreateOrganizationUrl="/"
+                  />
+                  <UserButton />
+                </>
+              )}
+            </div>
+          </header>
+          {shell ? <EmergencyStopBanner organisationId={shell.organisationId} /> : null}
+          <main className="flex-1 px-6 py-6">
+            <ToastProvider>
+              {shell ? (
+                <AlertsBanner organisationId={shell.organisationId} role={shell.role} />
+              ) : null}
+              {children}
+            </ToastProvider>
+          </main>
+        </div>
       </div>
-    </div>
+    </TooltipProvider>
+  );
+}
+
+/** A small mark for the rail: the product initial on a navy tile. */
+function Brand() {
+  return (
+    <span
+      aria-hidden="true"
+      className="flex h-8 w-8 items-center justify-center rounded-md bg-navy font-bold text-white"
+    >
+      S
+    </span>
   );
 }

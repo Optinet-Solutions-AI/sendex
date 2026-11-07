@@ -2,13 +2,41 @@
 /* Shared primitives live in the workspace package; Tailwind must scan their class names. */
 @source "../../../packages/ui/src";
 
+/*
+ * Design tokens after the SMS Edge spec: a very light grey page, white cards with 1 px
+ * borders, dark navy as the primary colour, the logo red as the accent, green / amber / red
+ * for status, monospace numbers. Exposed as Tailwind utilities (bg-navy, text-ink, border-rule…).
+ */
+@theme {
+  --color-page: #f4f6f9;
+  --color-surface: #ffffff;
+  --color-ink: #142033;
+  --color-muted: #566275;
+  --color-rule: #dde3eb;
+  --color-navy: #1c3a63;
+  --color-navy-hover: #15304f;
+  --color-navy-soft: #e6edf6;
+  --color-signal: #d8343f;
+  --color-good: #1b7a46;
+  --color-good-soft: #e3f3ea;
+  --color-amber: #94590a;
+  --color-amber-soft: #fbf1e1;
+  --color-rail: #1f232a;
+  --color-rail-hover: #2a2f38;
+  --color-rail-active: #343a45;
+  --font-sans: var(--font-public-sans), ui-sans-serif, system-ui, "Segoe UI", sans-serif;
+  --font-mono:
+    var(--font-jetbrains-mono), ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+
 :root {
-  --background: #f6f7f9;
-  --foreground: #1b1b1f;
+  --background: var(--color-page);
+  --foreground: var(--color-ink);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: ui-sans-serif, system-ui, "Segoe UI", sans-serif;
+  font-family: var(--font-sans);
+  font-variant-numeric: tabular-nums;
 }

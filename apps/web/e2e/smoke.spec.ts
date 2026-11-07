@@ -1,16 +1,23 @@
 import { expect, test } from "@playwright/test";
 
-const NAV_LABELS = ["Dashboard", "Campaigns", "Lists", "Settings"] as const;
+const NAV_GROUPS = ["Campaigns", "Contacts", "Settings"] as const;
 
 test.describe("dashboard shell under the development auth stub", () => {
-  test("the home page shows the nav and the development login banner", async ({ page }) => {
+  test("the home page shows the rail and the development login banner", async ({ page }) => {
     await page.goto("/");
 
+    // Collapsed: icons with hidden labels. Hovering expands the rail with its groups.
     const nav = page.getByRole("navigation", { name: "Main" });
     await expect(nav).toBeVisible();
-    for (const label of NAV_LABELS) {
-      await expect(nav.getByRole("link", { name: label, exact: true })).toBeVisible();
+    await expect(nav.getByRole("link", { name: "Dashboard", exact: true })).toBeVisible();
+    await nav.hover();
+    await expect(nav).toHaveAttribute("data-expanded", "true");
+    for (const label of NAV_GROUPS) {
+      await expect(nav.getByRole("button", { name: label, exact: true })).toBeVisible();
     }
+    await nav.getByRole("button", { name: "Contacts", exact: true }).click();
+    await expect(nav.getByRole("link", { name: "Lists", exact: true })).toBeVisible();
+    await expect(page.getByTestId("product-tab")).toHaveText("SMS");
 
     const banner = page.getByTestId("dev-auth-banner");
     await expect(banner).toBeVisible();

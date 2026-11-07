@@ -11,6 +11,7 @@ import {
   listLinks,
   listSidGroups,
   listsForCountry,
+  routePerformance,
   routesForCountry,
   sidGroupStats,
 } from "@sendex/db";
@@ -34,6 +35,7 @@ import {
   toListOption,
   toMessagesView,
   toResultsView,
+  toRoutePerformanceView,
   toRouteView,
   toSidGroupView,
 } from "../../../../lib/campaign-views";
@@ -81,6 +83,7 @@ export default async function CampaignPage({
           clicks,
           messages,
           balanceMicro,
+          performance,
         ] = await Promise.all([
           listSidGroups(database, ctx.organisationId, detail.country),
           listsForCountry(database, ctx.organisationId, detail.country),
@@ -92,6 +95,7 @@ export default async function CampaignPage({
           clickStats(database, ctx.organisationId, id),
           listCampaignMessages(database, ctx.organisationId, id, { page: messagePage }),
           getBalanceMicro(database, ctx.organisationId),
+          routePerformance(database, ctx.organisationId, detail.country),
         ]);
         const stats = await sidGroupStats(
           database,
@@ -129,6 +133,7 @@ export default async function CampaignPage({
                     lists={lists.map(toListOption)}
                     links={links.map(toLinkOption)}
                     routes={routes.map(toRouteView)}
+                    performance={toRoutePerformanceView(performance)}
                     canSend={canSend}
                     canFlush={can(ctx.role, "list.flush")}
                     balanceMicro={Number(balanceMicro)}

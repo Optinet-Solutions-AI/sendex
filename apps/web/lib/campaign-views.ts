@@ -8,6 +8,7 @@ import type {
   LapSummary,
   LinkRow,
   RouteOption,
+  RoutePerformance,
   SendEstimate,
   SidGroupWithIds,
 } from "@sendex/db";
@@ -22,6 +23,7 @@ import type {
   LinkOption,
   ListOption,
   ResultRatesView,
+  RoutePerformanceView,
   RouteView,
   SidGroupView,
 } from "../components/campaigns/types";
@@ -261,4 +263,33 @@ export function toMessagesView(page: CampaignMessagesPage): CampaignMessagesView
     page: page.page,
     pageSize: page.pageSize,
   };
+}
+
+const nullableMicro = (v: bigint | null): number | null => (v === null ? null : Number(v));
+
+export function toRoutePerformanceView(perf: RoutePerformance): RoutePerformanceView {
+  const periods = ["daily", "weekly", "monthly"] as const;
+  const platform = {} as RoutePerformanceView["platform"];
+  const account = {} as RoutePerformanceView["account"];
+  for (const period of periods) {
+    platform[period] = perf.platform[period].map((r) => ({
+      routeId: r.routeId,
+      name: r.name,
+      priceMicro: nullableMicro(r.priceMicro),
+      ctrRank: r.ctrRank,
+      cpcRank: r.cpcRank,
+      overallRank: r.overallRank,
+    }));
+    account[period] = perf.account[period].map((r) => ({
+      routeId: r.routeId,
+      name: r.name,
+      priceMicro: nullableMicro(r.priceMicro),
+      costMicro: Number(r.costMicro),
+      sent: r.sent,
+      clicks: r.clicks,
+      ctr: r.ctr,
+      cpcMicro: nullableMicro(r.cpcMicro),
+    }));
+  }
+  return { country: perf.country, platform, account };
 }

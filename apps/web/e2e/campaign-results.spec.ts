@@ -109,6 +109,21 @@ test.describe("campaign results", () => {
     await expect(page.getByTestId("logs-table")).toContainText("lap.comment");
   });
 
+  test("the Routes tab shows platform ranks and the account's own statistics", async ({ page }) => {
+    await page.goto(`/campaigns/${seeded.campaignId}`);
+    await page.getByRole("button", { name: "Routes", exact: true }).click();
+    const perf = page.getByTestId("routes-performance");
+    await expect(perf).toContainText("Spain Routes Performance");
+    await expect(perf).toContainText("Rank 1 = best performing route on the platform");
+    await expect(page.locator('[data-testid="platform-rank-row"][data-route="405"]')).toBeVisible();
+    // The seeded sends are dated September, outside every window: the account rows show zeros.
+    const own405 = page.locator('[data-testid="account-stat-row"][data-route="405"]');
+    await expect(own405).toContainText("Route 405");
+    await expect(own405.locator("td").nth(3)).toHaveText("0");
+    await page.getByRole("button", { name: "Monthly" }).last().click();
+    await expect(own405.locator("td").nth(6)).toHaveText("–");
+  });
+
   test("the Analytics tab reconciles networks, clicks per hour and clicks per link", async ({
     page,
   }) => {

@@ -25,6 +25,7 @@ import type {
   EstimateView,
   LinkOption,
   ListOption,
+  RoutePerformanceView,
   RouteView,
   SidGroupView,
 } from "./types";
@@ -36,6 +37,8 @@ export interface SendFormProps {
   lists: ListOption[];
   links: LinkOption[];
   routes: RouteView[];
+  /** Platform ranks and the organisation's own statistics per route, for the Routes tab. */
+  performance?: RoutePerformanceView;
   /** Whether the current role may press Send (`campaign.send`). */
   canSend: boolean;
   /** Whether the role may flush lists (`list.flush`). */
@@ -76,6 +79,7 @@ export function SendForm({
   lists,
   links,
   routes,
+  performance,
   canSend,
   canFlush,
   balanceMicro,
@@ -345,7 +349,14 @@ export function SendForm({
               offers: <OffersPanel campaign={campaign} links={links} onChanged={onChanged} />,
               texts: <AdTextsPanel campaign={campaign} onChanged={onChanged} />,
               sids: <SidPanel campaign={campaign} groups={sidGroups} onChanged={onChanged} />,
-              routes: <RoutesPanel routes={routes} selected={routeIds} onChange={setRouteIds} />,
+              routes: (
+                <RoutesPanel
+                  routes={routes}
+                  selected={routeIds}
+                  onChange={setRouteIds}
+                  {...(performance ? { performance } : {})}
+                />
+              ),
             }}
           />
         </div>

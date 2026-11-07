@@ -12,6 +12,14 @@ A campaign is **one country, one or more lists from that country, one sender ID 
 - **Sender ID group.** A named set of sender IDs (alphanumeric or numeric). Sendex rotates through the group and only keeps the ones each route and country accept.
 - **Text.** The message body. Write `{{domain}}` where the link should go; the counter under the text box shows the GSM-7 or UCS-2 character count and how many SMS parts the message will cost, taking the length of the short link into account.
 
+## Routes tab
+
+Under the route picker, **{Country} Routes Performance** shows two tables, each switchable
+between Daily, Weekly and Monthly: **Platform Statistics** ranks every platform route for the
+country by CTR, by cost per click and overall, pooled across all accounts on the platform
+(ranks only, never anyone's numbers; "–" when a route carried nothing in the period), and
+**Account Statistics** is your own cost, sent, clicks, CTR and CPC per route.
+
 ## Steps
 
 1. Open **Campaigns** and press **+ New Campaign**: name, country, and the UI timezone that follows the country. The campaign opens on its page.

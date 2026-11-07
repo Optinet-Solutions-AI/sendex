@@ -267,3 +267,33 @@ export interface CampaignResultsView {
   clicksPerHour: ClicksPerHourView[];
   clicksPerLink: ClicksPerLinkView[];
 }
+
+export type PerformancePeriodView = "daily" | "weekly" | "monthly";
+
+/** A platform route's anonymous ranks for the country (never another tenant's numbers). */
+export interface PlatformRankView {
+  routeId: string;
+  name: string;
+  priceMicro: number | null;
+  ctrRank: number | null;
+  cpcRank: number | null;
+  overallRank: number | null;
+}
+
+/** The organisation's own numbers on a route for the country. */
+export interface AccountStatView {
+  routeId: string;
+  name: string;
+  priceMicro: number | null;
+  costMicro: number;
+  sent: number;
+  clicks: number;
+  ctr: number;
+  cpcMicro: number | null;
+}
+
+export interface RoutePerformanceView {
+  country: string;
+  platform: Record<PerformancePeriodView, PlatformRankView[]>;
+  account: Record<PerformancePeriodView, AccountStatView[]>;
+}

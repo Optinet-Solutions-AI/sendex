@@ -215,6 +215,37 @@ describe("recordClicks", () => {
     expect(lap?.clicks).toBe(2);
   });
 
+  it("a bot hit is counted as a preview on the lap, never as a click", async () => {
+    const [before] = await t.db
+      .select({ clicks: laps.clicks, previews: laps.previews })
+      .from(laps)
+      .where(eq(laps.id, lapId));
+    const rowsBefore = await t.db.select().from(clicks).where(eq(clicks.lapId, lapId));
+    const inserted = await recordClicks(t.db, [
+      {
+        organisationId: org,
+        messageId,
+        campaignId,
+        lapId,
+        at: new Date("2026-11-06T10:05:00.000Z"),
+        ip: null,
+        country: null,
+        userAgent: "facebookexternalhit/1.1",
+        device: "bot",
+        operator: null,
+      },
+    ]);
+    expect(inserted).toBe(0);
+    const [after] = await t.db
+      .select({ clicks: laps.clicks, previews: laps.previews })
+      .from(laps)
+      .where(eq(laps.id, lapId));
+    expect(after?.clicks).toBe(before?.clicks);
+    expect(after?.previews).toBe((before?.previews ?? 0) + 1);
+    const rowsAfter = await t.db.select().from(clicks).where(eq(clicks.lapId, lapId));
+    expect(rowsAfter).toHaveLength(rowsBefore.length);
+  });
+
   it("does nothing for an empty batch", async () => {
     await expect(recordClicks(t.db, [])).resolves.toBe(0);
     const [lap] = await t.db.select({ clicks: laps.clicks }).from(laps).where(eq(laps.id, lapId));

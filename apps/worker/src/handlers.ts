@@ -1,4 +1,4 @@
-import type { CapsStore, Db, SendingStore } from "@sendex/db";
+import type { AutosenderStore, CapsStore, Db, SendingStore } from "@sendex/db";
 import type { ProviderRegistry } from "@sendex/providers";
 import { type AlertChecksStore, type CheckThrottle, runAlertChecks } from "./alerts/checks.js";
 import { createDlrHandler } from "./dlr/handler.js";
@@ -7,6 +7,7 @@ import { createClickIngestHandler } from "./links/ingest.js";
 import { log as defaultLog, type Logger } from "./log.js";
 import { createPostbackIngestHandler } from "./postbacks/ingest.js";
 import type { JobHandlers } from "./queues.js";
+import { runAutosenderTick } from "./send/autosender.js";
 import { dispatchQueuedLaps, type SendQueueLike } from "./send/dispatcher.js";
 import { createExpiryTick } from "./send/expiry.js";
 import type { ProgressTracker, SendRedis } from "./send/progress.js";
@@ -34,6 +35,8 @@ export interface HandlerDeps {
   caps?: CapsStore;
   /** Spike and low balance checks run from the dispatcher tick (D3-11). */
   alerts?: { store: AlertChecksStore; throttle: CheckThrottle };
+  /** AutoSender (D4-02) rides on the tick too; without it no campaign is scaled out. */
+  autosender?: AutosenderStore;
 }
 
 /**
@@ -103,6 +106,15 @@ export function createHandlers(deps: HandlerDeps): JobHandlers {
         await receiptPoll().catch((err: unknown) =>
           log("error", "receipt poll sweep failed", { jobId: meta.id, err }),
         );
+      }
+      // AutoSender (D4-02): measure test rounds and queue scale-out laps for the next tick.
+      if (deps.autosender) {
+        await runAutosenderTick({ store: deps.autosender, log })
+          .then((r) => {
+            if (r.scaled + r.stopped + r.failed > 0)
+              log("info", "autosender tick", { jobId: meta.id, ...r });
+          })
+          .catch((err: unknown) => log("error", "autosender tick failed", { jobId: meta.id, err }));
       }
     },
   };

@@ -166,3 +166,65 @@ export function rankLaps(laps: readonly LapStats[]): RankedLap[] {
     cpcMicro: lap.cpcMicro,
   }));
 }
+
+export interface TopUpLap {
+  id: string;
+  /** The lap's On switch: only active laps receive a top-up. */
+  active: boolean;
+  /** Price per SMS of the lap's route in micro-EUR; null when the route is unpriced. */
+  priceMicro: number | null;
+}
+
+export interface TopUpPlanInput {
+  amountMicro: number;
+  laps: readonly TopUpLap[];
+}
+
+export interface TopUpPlan {
+  /** The laps that receive the top-up and how many more messages each one buys. */
+  laps: Array<{ id: string; extra: number }>;
+  activeLaps: number;
+  /** amount × active laps: what the top-up will cost in total. */
+  totalMicro: number;
+  /** The messages the top-up buys across the laps, at each lap's price. */
+  newSms: number;
+}
+
+/** The budget top-up buttons of the laps header, in EUR. */
+export const TOP_UP_AMOUNTS_EUR: readonly number[] = [5, 10, 20, 50, 100, 200];
+
+/**
+ * A budget top-up adds `amountMicro` to every active, priced lap; each one then sends
+ * `amount / price` more messages (`budgetPlan`). Inactive and unpriced laps are left out.
+ */
+export function topUpPlan(input: TopUpPlanInput): TopUpPlan {
+  if (!Number.isInteger(input.amountMicro) || input.amountMicro <= 0) {
+    throw new RangeError(`amountMicro must be a positive integer, got ${input.amountMicro}`);
+  }
+  const laps: Array<{ id: string; extra: number }> = [];
+  for (const lap of input.laps) {
+    if (!lap.active || lap.priceMicro === null || lap.priceMicro <= 0) continue;
+    laps.push({
+      id: lap.id,
+      extra: budgetPlan({ budgetMicro: input.amountMicro, priceMicro: lap.priceMicro }),
+    });
+  }
+  return {
+    laps,
+    activeLaps: laps.length,
+    totalMicro: laps.length * input.amountMicro,
+    newSms: laps.reduce((sum, lap) => sum + lap.extra, 0),
+  };
+}
+
+function eurShort(micro: number): string {
+  const eur = micro / 1_000_000;
+  return `€${Number.isInteger(eur) ? eur.toLocaleString("en-GB") : eur.toFixed(2)}`;
+}
+
+/** The tooltip of a top-up button, as the spec words it. */
+export function topUpTooltip(plan: TopUpPlan, amountMicro: number): string {
+  if (plan.activeLaps === 0) return "No active lap to top up";
+  const sends = plan.activeLaps === 1 ? "1 active send" : `${plan.activeLaps} active sends`;
+  return `${sends} × ${eurShort(amountMicro)} = ${eurShort(plan.totalMicro)} · New SMS sent: ~${plan.newSms.toLocaleString("en-GB")} · Will spend an additional ${eurShort(amountMicro)} per each highlighted lap`;
+}

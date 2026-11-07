@@ -4,12 +4,15 @@ import {
   type Action,
   adTextSchema,
   hasDomainPlaceholder,
+  lapCommentSchema,
+  lapScheduleSchema,
   linkSchema,
   newCampaignSchema,
   senderIdsInputSchema,
   sendSettingsSchema,
   sidGroupSchema,
   splitAdTexts,
+  topUpSchema,
 } from "@sendex/core";
 import {
   addAdTexts,
@@ -24,14 +27,19 @@ import {
   detachLink,
   duplicateCampaign,
   estimateSend,
+  flushLap,
   listSidGroups,
   recordAudit,
+  rescheduleLap,
+  setAllLapsOn,
   setCampaignLists,
   setCampaignSidGroup,
+  setLapComment,
   setLapOn,
   toggleAdText,
   toggleCampaignLink,
   toggleSenderId,
+  topUpLaps,
   updateAdText,
   updateSendSettings,
 } from "@sendex/db";
@@ -158,7 +166,7 @@ export async function createSidGroupAction(
     await setCampaignSidGroup(database, ctx.organisationId, campaignId, group.id);
     revalidateCampaign(campaignId);
     const groups = await listSidGroups(database, ctx.organisationId, country);
-    return { groupId: group.id, groups: groups.map(toSidGroupView) };
+    return { groupId: group.id, groups: groups.map((g) => toSidGroupView(g)) };
   });
 }
 
@@ -221,9 +229,13 @@ const createLinkInput = campaignRef.extend(linkSchema.shape);
 /** Create a link for the organisation and attach it to the campaign. */
 export async function createLinkAction(input: unknown): Promise<ActionResult<{ linkId: string }>> {
   return run("campaign.create", async (ctx) => {
-    const { campaignId, name, url } = createLinkInput.parse(input);
+    const { campaignId, name, url, profitEur } = createLinkInput.parse(input);
     const database = db();
-    const link = await createLink(database, ctx.organisationId, { name, url });
+    const link = await createLink(database, ctx.organisationId, {
+      name,
+      url,
+      profitMicro: BigInt(Math.round(profitEur * 1_000_000)),
+    });
     await attachLink(database, ctx.organisationId, campaignId, link.id);
     revalidateCampaign(campaignId);
     return { linkId: link.id };
@@ -340,6 +352,16 @@ export async function updateSendSettingsAction(input: unknown): Promise<ActionRe
       contactReuse: data.contactReuse,
       sendNow: data.sendNow,
       ...(data.scheduledAt !== undefined ? { scheduledAt: data.scheduledAt } : {}),
+      ...(data.autosender !== undefined ? { autosender: data.autosender } : {}),
+      ...(data.autosenderMeasureMinutes !== undefined
+        ? { autosenderMeasureMinutes: data.autosenderMeasureMinutes }
+        : {}),
+      ...(data.autosenderScaleFactor !== undefined
+        ? { autosenderScaleFactor: data.autosenderScaleFactor }
+        : {}),
+      ...(data.autosenderCtrFloorPercent !== undefined
+        ? { autosenderCtrFloorPercent: data.autosenderCtrFloorPercent }
+        : {}),
     });
     revalidateCampaign(data.campaignId);
     return null;
@@ -372,7 +394,7 @@ export async function sendCampaignAction(input: unknown): Promise<ActionResult<L
       actorUserId: ctx.userId,
     });
     revalidateCampaign(data.campaignId);
-    return rows.map((lap) => toLapView({ ...lap, routeName: "", listName: "" }));
+    return rows.map((lap) => toLapView({ ...lap, routeName: "", listName: "", priceMicro: null }));
   });
 }
 
@@ -398,5 +420,92 @@ export async function toggleLapAction(input: unknown): Promise<ActionResult<LapV
     if (lap.campaignId !== data.campaignId) throw new Error("Lap not found");
     revalidateCampaign(data.campaignId);
     return toLapView(lap);
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Laps header and lap menu (D4-02): top-up, All switch, comment, reschedule, flush
+// ---------------------------------------------------------------------------
+
+const topUpInput = campaignRef.extend(topUpSchema.shape);
+
+/** Add the amount to every active lap's budget (`topUpLaps` checks the balance and audits). */
+export async function topUpLapsAction(
+  input: unknown,
+): Promise<ActionResult<{ laps: number; totalMicro: number; newSms: number }>> {
+  return run("campaign.send", async (ctx) => {
+    const data = topUpInput.parse(input);
+    const result = await topUpLaps(db(), ctx.organisationId, {
+      campaignId: data.campaignId,
+      amountMicro: Math.round(data.amountEur * 1_000_000),
+      actorUserId: ctx.userId,
+    });
+    revalidateCampaign(data.campaignId);
+    return result;
+  });
+}
+
+const allLapsInput = campaignRef.extend({ on: z.boolean() });
+
+/** The All switch of the laps header. Returns how many laps were switched. */
+export async function toggleAllLapsAction(input: unknown): Promise<ActionResult<number>> {
+  return run("campaign.send", async (ctx) => {
+    const data = allLapsInput.parse(input);
+    const switched = await setAllLapsOn(db(), ctx.organisationId, {
+      campaignId: data.campaignId,
+      on: data.on,
+      actorUserId: ctx.userId,
+    });
+    revalidateCampaign(data.campaignId);
+    return switched;
+  });
+}
+
+const lapRef = campaignRef.extend({ lapId: uuid });
+const lapCommentInput = lapRef.extend(lapCommentSchema.shape);
+
+export async function setLapCommentAction(input: unknown): Promise<ActionResult<null>> {
+  return run("campaign.create", async (ctx) => {
+    const data = lapCommentInput.parse(input);
+    const lap = await setLapComment(db(), ctx.organisationId, {
+      lapId: data.lapId,
+      comment: data.comment,
+      actorUserId: ctx.userId,
+    });
+    if (lap.campaignId !== data.campaignId) throw new Error("Lap not found");
+    revalidateCampaign(data.campaignId);
+    return null;
+  });
+}
+
+const lapScheduleInput = lapRef.extend(lapScheduleSchema.shape);
+
+export async function rescheduleLapAction(input: unknown): Promise<ActionResult<null>> {
+  return run("campaign.send", async (ctx) => {
+    const data = lapScheduleInput.parse(input);
+    const lap = await rescheduleLap(db(), ctx.organisationId, {
+      lapId: data.lapId,
+      scheduledAt: new Date(data.scheduledAt),
+      actorUserId: ctx.userId,
+    });
+    if (lap.campaignId !== data.campaignId) throw new Error("Lap not found");
+    revalidateCampaign(data.campaignId);
+    return null;
+  });
+}
+
+/** Flush the lap's list so its contacts can be sent to again (`list.flush` role). */
+export async function flushLapAction(
+  input: unknown,
+): Promise<ActionResult<{ listId: string; members: number }>> {
+  return run("list.flush", async (ctx) => {
+    const data = lapRef.parse(input);
+    const result = await flushLap(db(), ctx.organisationId, {
+      lapId: data.lapId,
+      actorUserId: ctx.userId,
+    });
+    revalidateCampaign(data.campaignId);
+    revalidatePath(`/lists/${result.listId}`);
+    return result;
   });
 }

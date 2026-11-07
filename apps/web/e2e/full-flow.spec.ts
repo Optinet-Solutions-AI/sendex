@@ -55,25 +55,34 @@ test.describe("full flow: send, progress, click", () => {
       .getAttribute("value");
     if (!groupValue) throw new Error("seeded group ES Casino not found");
     await sidSelect.selectOption(groupValue);
-    await page.getByTestId("lists-panel").getByLabel("Roy Boy_ES_14092026_Batch2").check();
+    await page.getByRole("button", { name: "Lists", exact: true }).click();
+    await page
+      .getByTestId("lists-panel")
+      .getByLabel("Roy Boy_ES_14092026_Batch2", { exact: true })
+      .check();
     await expect(page.getByTestId("footer-contacts")).toHaveText("1,738");
 
+    await page.getByRole("button", { name: "Ad Texts", exact: true }).click();
     await page.getByTestId("add-texts").click();
-    const editor = page.getByRole("dialog", { name: "Add Texts" });
+    const editor = page.getByRole("dialog", { name: "Add Ad Texts" });
     await editor.getByTestId("ad-text-input").fill("Gira y gana hoy en {{domain}}");
     await editor.getByTestId("save-ad-text").click();
     await expect(editor).toBeHidden();
 
+    await page.getByRole("button", { name: "Offers", exact: true }).click();
     const linksPanel = page.getByTestId("links-panel");
-    await linksPanel.getByLabel("Attach an existing link").selectOption({ label: "Rolling Slots" });
-    await linksPanel.getByRole("button", { name: "Attach" }).click();
+    await linksPanel.getByLabel("Offer").selectOption({ label: "Rolling Slots" });
+    await linksPanel.getByRole("button", { name: "Add Offer" }).click();
     await expect(linksPanel).toContainText("Rolling Slots");
 
     // A small test lap on route 405 (EUR 0.025): 20 SMS for EUR 0.50.
+    await page.getByRole("switch", { name: "Advanced Settings" }).click();
     await page.getByTestId("test-size").fill(String(TEST_SIZE));
+    await page.getByTestId("test-size").blur();
+    await page.getByRole("button", { name: "Routes", exact: true }).click();
     await page.getByTestId("route-405").check();
     await expect(page.getByTestId("footer-sms")).toHaveText(String(TEST_SIZE));
-    await expect(page.getByTestId("footer-cost")).toHaveText("€0.50");
+    await expect(page.getByTestId("footer-cost")).toHaveText("~€0.50");
     await page.getByTestId("send-button").click();
     await expect(page.getByTestId("lap-row")).toHaveCount(1);
 

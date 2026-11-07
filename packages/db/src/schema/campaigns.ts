@@ -47,6 +47,15 @@ export const campaigns = pgTable("campaigns", {
   contactReuse: contactReuseEnum("contact_reuse").notNull().default("account_wide"),
   /** Numbers per test lap before a route is ranked. */
   testSize: integer("test_size").notNull().default(200),
+  /** Run AutoSender (D4-02): test batch first, then scale out the best message and route. */
+  autosender: boolean("autosender").notNull().default(false),
+  /** AutoSender knobs (D4-02): measure window, scale-out multiple and the CTR floor. */
+  autosenderMeasureMinutes: integer("autosender_measure_minutes").notNull().default(60),
+  autosenderScaleFactor: integer("autosender_scale_factor").notNull().default(5),
+  autosenderCtrFloorPercent: integer("autosender_ctr_floor_percent").notNull().default(80),
+  /** Set when AutoSender stopped on its own (CTR floor, lists finished, no clicks). */
+  autosenderStoppedAt: timestamp("autosender_stopped_at", { withTimezone: true }),
+  autosenderStopReason: text("autosender_stop_reason"),
   scheduledAt: timestamp("scheduled_at", { withTimezone: true }),
   createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
@@ -93,6 +102,8 @@ export const links = pgTable("links", {
   name: text("name").notNull(),
   url: text("url").notNull(),
   active: boolean("active").notNull().default(true),
+  /** Revenue per conversion in micro-EUR, for profit and ROI (SMS Edge: Advanced › Profit). */
+  profitMicro: bigint("profit_micro", { mode: "bigint" }).notNull().default(sql`0`),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
@@ -202,6 +213,18 @@ export const laps = pgTable(
     refusalReason: text("refusal_reason"),
     /** 1 = best route of the test round; null until ranked. */
     rank: integer("rank"),
+    /** Micro-EUR added by budget top-ups; each top-up also raises `test_size` by amount / price. */
+    budgetMicro: bigint("budget_micro", { mode: "bigint" }).notNull().default(sql`0`),
+    /** Link-preview bot hits on this lap's links (never counted as clicks). */
+    previews: integer("previews").notNull().default(0),
+    /** A note from the lap menu ("Add comment"). */
+    comment: text("comment"),
+    /** The lap's On switch; off cancels sending, on re-queues it. */
+    active: boolean("active").notNull().default(true),
+    /** A rescheduled lap is not claimed before this time. */
+    scheduledAt: timestamp("scheduled_at", { withTimezone: true }),
+    /** True for the scale-out laps AutoSender creates; the test round stays false. */
+    autosender: boolean("autosender").notNull().default(false),
     startedAt: timestamp("started_at", { withTimezone: true }),
     finishedAt: timestamp("finished_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

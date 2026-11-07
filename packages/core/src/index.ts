@@ -1,4 +1,5 @@
 export * from "./api-tokens.js";
+export * from "./autosender.js";
 export * from "./billing.js";
 export * from "./campaign-control.js";
 export * from "./campaigns.js";
@@ -13,5 +14,6 @@ export * from "./postbacks.js";
 export * from "./rates.js";
 export * from "./render.js";
 export * from "./results.js";
+export * from "./route-ranks.js";
 export * from "./send-count.js";
 export * from "./sms-encoding.js";

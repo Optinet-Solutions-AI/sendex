@@ -44,13 +44,16 @@ test.describe("campaigns", () => {
     await expect(page.getByTestId("footer-sids")).not.toHaveText(/^(0|–)$/);
 
     // Lists: the seeded ES list.
+    // Each form row opens its context tab on the right.
+    await page.getByRole("button", { name: "Lists", exact: true }).click();
     const listsPanel = page.getByTestId("lists-panel");
-    await listsPanel.getByLabel("Roy Boy_ES_14092026_Batch2").check();
+    await listsPanel.getByLabel("Roy Boy_ES_14092026_Batch2", { exact: true }).check();
     await expect(page.getByTestId("footer-contacts")).toHaveText("1,738");
 
     // Ad text with {{domain}}: the counter shows one part.
+    await page.getByRole("button", { name: "Ad Texts", exact: true }).click();
     await page.getByTestId("add-texts").click();
-    const editor = page.getByRole("dialog", { name: "Add Texts" });
+    const editor = page.getByRole("dialog", { name: "Add Ad Texts" });
     await editor.getByTestId("ad-text-input").fill("Gira y gana hoy en {{domain}}");
     await expect(editor.getByTestId("ad-text-parts-1")).toHaveText("1 part");
     await editor.getByTestId("save-ad-text").click();
@@ -59,15 +62,17 @@ test.describe("campaigns", () => {
     await expect(page.getByTestId("footer-texts")).toHaveText("1");
 
     // Test size 200 (the default) and route 405 at EUR 0.025: 200 SMS for EUR 5.00.
+    await page.getByRole("switch", { name: "Advanced Settings" }).click();
     await expect(page.getByTestId("test-size")).toHaveValue("200");
+    await page.getByRole("button", { name: "Routes", exact: true }).click();
     await page.getByTestId("route-405").check();
     await expect(page.getByTestId("footer-sms")).toHaveText("200");
-    await expect(page.getByTestId("footer-cost")).toHaveText("€5.00");
+    await expect(page.getByTestId("footer-cost")).toHaveText("~€5.00");
 
     // A second route doubles the laps: 400 SMS.
     await page.getByTestId("route-403").check();
     await expect(page.getByTestId("footer-sms")).toHaveText("400");
-    await expect(page.getByTestId("footer-cost")).toHaveText("€10.40");
+    await expect(page.getByTestId("footer-cost")).toHaveText("~€10.40");
 
     // Send: two laps queued, one per route.
     await page.getByTestId("send-button").click();

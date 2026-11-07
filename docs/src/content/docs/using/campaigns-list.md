@@ -28,7 +28,8 @@ page, with the totals of its laps.
 The row above the table narrows the list. Press **Filter** to apply, **Clear** to reset.
 
 - **Search**: part of the name, case-insensitive.
-- **Country** and **Status**.
+- **Countries** (a searchable multi-select: tick as many as you like; All countries clears it) and **Status**.
+- **Date Range**: Today, Yesterday, Last 7 / 14 / 30 / 90 Days, or your own From and To days.
 - **From** / **To**: keep campaigns whose sending period overlaps the days you pick (both days
   included). A campaign that has not sent yet is placed at the day it was created.
 - **Has leads**, **Has sales**: only campaigns with at least one lead / sale.

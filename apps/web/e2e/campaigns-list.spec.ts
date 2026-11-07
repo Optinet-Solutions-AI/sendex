@@ -88,6 +88,28 @@ test.describe("campaigns list", () => {
     expect(lines[1]).toContain(seeded.campaignName);
     expect(lines[1]).toContain(",sending,ES,2,9,4,44.44%,0.23,1,1,");
     expect(body).not.toContain(draftName);
+
+    // Countries is a searchable multi-select and Date Range a presets popover; both land in the URL.
+    await page.getByLabel("Spend above (EUR)").fill("");
+    // Radix popovers need the hydrated client; retry the open like the Filters toggle above.
+    const countriesButton = page.getByRole("button", { name: /All countries/ });
+    await expect(async () => {
+      await countriesButton.click();
+      await expect(page.getByPlaceholder("Search countries…")).toBeVisible({ timeout: 2_000 });
+    }).toPass();
+    await page.getByPlaceholder("Search countries…").fill("Spain");
+    await page
+      .locator("label", { hasText: /Spain$/ })
+      .first()
+      .click();
+    await page.keyboard.press("Escape");
+    await page.getByRole("button", { name: "Date Range" }).click();
+    await page.getByRole("button", { name: "Last 90 Days" }).click();
+    await page.getByRole("button", { name: "Filter", exact: true }).click();
+    await expect(page).toHaveURL(/country=ES/);
+    await expect(page).toHaveURL(/from=\d{4}-\d{2}-\d{2}/);
+    await expect(page.getByTestId("campaign-row")).toHaveCount(2);
+    await expect(page.getByRole("button", { name: /Spain/ })).toBeVisible();
   });
 
   test("duplicate from the actions menu opens a copy with the same settings", async ({ page }) => {
@@ -99,12 +121,15 @@ test.describe("campaigns list", () => {
     expect(page.url()).not.toContain(seeded.campaignId);
     await expect(page.getByTestId("campaign-name")).toHaveText(`Copy of ${seeded.campaignName}`);
     await expect(page.getByTestId("sending-progress")).toContainText("0 /");
+    await page.getByRole("button", { name: "Lists", exact: true }).click();
     await expect(
-      page.getByTestId("lists-panel").getByLabel("Roy Boy_ES_14092026_Batch2"),
+      page.getByTestId("lists-panel").getByLabel("Roy Boy_ES_14092026_Batch2", { exact: true }),
     ).toBeChecked();
     await expect(page.getByTestId("sid-group-select")).toContainText("ES Casino");
+    await page.getByRole("button", { name: "Ad Texts", exact: true }).click();
     await expect(page.getByTestId("ad-text-row")).toHaveCount(1);
     await expect(page.getByTestId("ad-text-row")).toContainText("E2E results text");
+    await page.getByRole("button", { name: "Offers", exact: true }).click();
     await expect(page.getByText(`${PREFIX} link`)).toBeVisible();
     await expect(page.getByTestId("lap-row")).toHaveCount(0);
   });

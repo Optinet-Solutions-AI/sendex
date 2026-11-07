@@ -108,16 +108,30 @@ export interface NewClick {
  */
 export async function recordClicks(db: Db, rows: readonly NewClick[]): Promise<number> {
   if (rows.length === 0) return 0;
-  const lapIds = [...new Set(rows.map((row) => row.lapId))];
+  const previews = new Map<string, number>();
+  const human: NewClick[] = [];
+  for (const row of rows) {
+    if (row.device === "bot") previews.set(row.lapId, (previews.get(row.lapId) ?? 0) + 1);
+    else human.push(row);
+  }
+  const lapIds = [...new Set(human.map((row) => row.lapId))];
 
   await db.transaction(async (tx) => {
-    await tx.insert(clicks).values([...rows]);
-    await tx
-      .update(laps)
-      .set({
-        clicks: sql`(select count(distinct ${clicks.messageId}) from ${clicks} where ${clicks.lapId} = ${laps.id})`,
-      })
-      .where(inArray(laps.id, lapIds));
+    if (human.length > 0) {
+      await tx.insert(clicks).values(human);
+      await tx
+        .update(laps)
+        .set({
+          clicks: sql`(select count(distinct ${clicks.messageId}) from ${clicks} where ${clicks.lapId} = ${laps.id})`,
+        })
+        .where(inArray(laps.id, lapIds));
+    }
+    for (const [lapId, n] of previews) {
+      await tx
+        .update(laps)
+        .set({ previews: sql`${laps.previews} + ${n}` })
+        .where(eq(laps.id, lapId));
+    }
   });
-  return rows.length;
+  return human.length;
 }

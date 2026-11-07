@@ -5,6 +5,8 @@ import {
   flagEmoji,
   hasDomainPlaceholder,
   LINK_PLACEHOLDERS,
+  lapCommentSchema,
+  lapScheduleSchema,
   linkSchema,
   newCampaignSchema,
   parseSenderIds,
@@ -16,6 +18,7 @@ import {
   TEXT_PLACEHOLDERS,
   timezoneForCountry,
   timezoneOptions,
+  topUpSchema,
 } from "./campaigns.js";
 
 describe("newCampaignSchema", () => {
@@ -177,5 +180,24 @@ describe("placeholders", () => {
       domain: "https://snd.ex/abc",
     });
     expect(out).toBe("Hi Ana, open https://snd.ex/abc {{unknown}}");
+  });
+});
+
+describe("lap schemas", () => {
+  it("topUpSchema coerces the amount and refuses zero", () => {
+    expect(topUpSchema.parse({ amountEur: "50" })).toEqual({ amountEur: 50 });
+    expect(() => topUpSchema.parse({ amountEur: 0 })).toThrow();
+  });
+
+  it("lapCommentSchema trims and caps at 500 characters", () => {
+    expect(lapCommentSchema.parse({ comment: "  note  " })).toEqual({ comment: "note" });
+    expect(() => lapCommentSchema.parse({ comment: "x".repeat(501) })).toThrow();
+  });
+
+  it("lapScheduleSchema wants an ISO time with an offset", () => {
+    expect(lapScheduleSchema.parse({ scheduledAt: "2026-11-08T09:00:00+01:00" })).toEqual({
+      scheduledAt: "2026-11-08T09:00:00+01:00",
+    });
+    expect(() => lapScheduleSchema.parse({ scheduledAt: "tomorrow" })).toThrow();
   });
 });

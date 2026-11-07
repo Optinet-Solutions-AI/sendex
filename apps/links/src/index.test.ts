@@ -339,7 +339,7 @@ describe("redirects that are not recorded", () => {
     expect(calls).toHaveLength(0);
   });
 
-  it("a bot user agent is redirected but not recorded", async () => {
+  it("a bot user agent is redirected and recorded as a bot (a preview, not a click)", async () => {
     const { kv } = fakeKv({ [`code:${CODE}`]: PAYLOAD });
     const { sent, queue } = fakeQueue();
     const { ctx, flush } = fakeCtx();
@@ -357,6 +357,7 @@ describe("redirects that are not recorded", () => {
     expect(res.status).toBe(302);
     expect(res.headers.get("location")).toBe(PAYLOAD.url);
     await flush();
-    expect(sent).toHaveLength(0);
+    expect(sent).toHaveLength(1);
+    expect(sent[0]).toMatchObject({ shortCode: CODE, device: "bot" });
   });
 });

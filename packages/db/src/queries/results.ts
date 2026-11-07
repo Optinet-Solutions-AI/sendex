@@ -11,7 +11,7 @@ import { routes } from "../schema/routes.js";
 import { clicks, messages } from "../schema/tracking.js";
 import type { Db } from "../types.js";
 import { recordAudit } from "./audit.js";
-import type { LapSummary } from "./campaigns.js";
+import { type LapSummary, lapPriceSql } from "./campaigns.js";
 import { createSendingStore } from "./sending.js";
 
 /**
@@ -105,7 +105,7 @@ const FAILED = sql`${messages.status} in ('failed', 'expired')`;
 
 async function lapResults(db: Db, campaignId: string): Promise<LapResult[]> {
   const rows = await db
-    .select({ lap: laps, routeName: routes.name, listName: lists.name })
+    .select({ lap: laps, routeName: routes.name, listName: lists.name, priceMicro: lapPriceSql() })
     .from(laps)
     .innerJoin(routes, eq(routes.id, laps.routeId))
     .innerJoin(lists, eq(lists.id, laps.listId))
@@ -121,6 +121,7 @@ async function lapResults(db: Db, campaignId: string): Promise<LapResult[]> {
     ...r.lap,
     routeName: r.routeName,
     listName: r.listName,
+    priceMicro: r.priceMicro,
     on: r.lap.status !== "cancelled",
     ...resultRates(r.lap),
   }));
@@ -314,7 +315,7 @@ export async function setLapOn(
   input: SetLapOnInput,
 ): Promise<LapSummary> {
   const [current] = await db
-    .select({ lap: laps, routeName: routes.name, listName: lists.name })
+    .select({ lap: laps, routeName: routes.name, listName: lists.name, priceMicro: lapPriceSql() })
     .from(laps)
     .innerJoin(routes, eq(routes.id, laps.routeId))
     .innerJoin(lists, eq(lists.id, laps.listId))
@@ -338,6 +339,7 @@ export async function setLapOn(
       reason: "switched off on the results page",
     });
   }
+  await db.update(laps).set({ active: input.on }).where(eq(laps.id, input.lapId));
 
   const [updated] = await db.select().from(laps).where(eq(laps.id, input.lapId)).limit(1);
   if (!updated) throw new Error("Lap not found");
@@ -348,5 +350,10 @@ export async function setLapOn(
     targetId: current.lap.campaignId,
     details: { lapId: input.lapId, on: input.on, from, to: updated.status },
   });
-  return { ...updated, routeName: current.routeName, listName: current.listName };
+  return {
+    ...updated,
+    routeName: current.routeName,
+    listName: current.listName,
+    priceMicro: current.priceMicro,
+  };
 }

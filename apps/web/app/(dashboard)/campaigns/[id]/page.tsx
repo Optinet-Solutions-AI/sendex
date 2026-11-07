@@ -4,70 +4,67 @@ import {
   clickStats,
   conversionStats,
   db,
+  getBalanceMicro,
   getCampaign,
   listAuditLog,
+  listCampaignMessages,
   listLinks,
   listSidGroups,
   listsForCountry,
+  routePerformance,
   routesForCountry,
+  sidGroupStats,
 } from "@sendex/db";
-import Link from "next/link";
 import { notFound } from "next/navigation";
+import { AdTextsPanel } from "../../../../components/campaigns/ad-texts-panel";
 import { AnalyticsSection } from "../../../../components/campaigns/analytics-section";
 import { CampaignControls } from "../../../../components/campaigns/campaign-controls";
 import { CampaignHeader } from "../../../../components/campaigns/campaign-header";
 import { CampaignTabs } from "../../../../components/campaigns/campaign-tabs";
 import { ClicksSection } from "../../../../components/campaigns/clicks-section";
 import { ConversionsSection } from "../../../../components/campaigns/conversions-section";
-import { formatDateTime } from "../../../../components/campaigns/format";
+import { LogsTab } from "../../../../components/campaigns/logs-tab";
+import { OffersPanel } from "../../../../components/campaigns/offers-panel";
 import { SendForm } from "../../../../components/campaigns/send-form";
-import type { AuditView } from "../../../../components/campaigns/types";
+import { SidPanel } from "../../../../components/campaigns/sid-panel";
+import { isCampaignTab, isLogsSubTab } from "../../../../components/campaigns/tabs";
 import {
   toAuditView,
   toCampaignView,
   toLinkOption,
   toListOption,
+  toMessagesView,
   toResultsView,
+  toRoutePerformanceView,
   toRouteView,
   toSidGroupView,
 } from "../../../../lib/campaign-views";
+import type { SearchParams } from "../../../../lib/lists-params";
 import { RequireOrg } from "../../require-org";
+import { LogPanelRefresh } from "./log-panel-refresh";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-function LogsTab({ entries, timezone }: { entries: AuditView[]; timezone: string }) {
-  if (entries.length === 0) {
-    return <p className="text-sm text-neutral-500">Nothing logged for this campaign yet.</p>;
-  }
-  return (
-    <table className="w-full text-sm" data-testid="logs-table">
-      <thead className="text-left text-xs uppercase text-neutral-500">
-        <tr>
-          <th className="py-1 pr-3">When</th>
-          <th className="py-1 pr-3">Action</th>
-          <th className="py-1">Details</th>
-        </tr>
-      </thead>
-      <tbody>
-        {entries.map((e) => (
-          <tr key={e.id} className="border-t border-neutral-100 align-top">
-            <td className="whitespace-nowrap py-1.5 pr-3 text-neutral-600">
-              {formatDateTime(e.createdAt, timezone)}
-            </td>
-            <td className="py-1.5 pr-3 font-mono text-xs">{e.action}</td>
-            <td className="py-1.5 font-mono text-xs text-neutral-600">
-              {e.details ? JSON.stringify(e.details) : ""}
-            </td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
-  );
+function first(value: string | string[] | undefined): string | null {
+  const v = Array.isArray(value) ? value[0] : value;
+  return v ?? null;
 }
 
-export default async function CampaignPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function CampaignPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<SearchParams>;
+}) {
   const { id } = await params;
   if (!UUID.test(id)) notFound();
+  const query = await searchParams;
+  const tabParam = first(query.tab);
+  const tab = isCampaignTab(tabParam) ? tabParam : "status";
+  const logsParam = first(query.logs);
+  const logs = isLogsSubTab(logsParam) ? logsParam : "actions";
+  const messagePage = Math.max(1, Number.parseInt(first(query.mpage) ?? "1", 10) || 1);
 
   return (
     <RequireOrg action="campaign.view">
@@ -75,47 +72,109 @@ export default async function CampaignPage({ params }: { params: Promise<{ id: s
         const database = db();
         const detail = await getCampaign(database, ctx.organisationId, id);
         if (!detail) notFound();
-        const [sidGroups, lists, links, routes, audit, conversions, resultRows, clicks] =
-          await Promise.all([
-            listSidGroups(database, ctx.organisationId, detail.country),
-            listsForCountry(database, ctx.organisationId, detail.country),
-            listLinks(database, ctx.organisationId),
-            routesForCountry(database, ctx.organisationId, detail.country),
-            listAuditLog(database, ctx.organisationId, { targetType: "campaign", targetId: id }),
-            conversionStats(database, ctx.organisationId, id),
-            campaignResults(database, ctx.organisationId, id),
-            clickStats(database, ctx.organisationId, id),
-          ]);
-        const campaign = toCampaignView(detail);
+        const [
+          sidGroups,
+          lists,
+          links,
+          routes,
+          audit,
+          conversions,
+          resultRows,
+          clicks,
+          messages,
+          balanceMicro,
+          performance,
+        ] = await Promise.all([
+          listSidGroups(database, ctx.organisationId, detail.country),
+          listsForCountry(database, ctx.organisationId, detail.country),
+          listLinks(database, ctx.organisationId),
+          routesForCountry(database, ctx.organisationId, detail.country),
+          listAuditLog(database, ctx.organisationId, { targetType: "campaign", targetId: id }),
+          conversionStats(database, ctx.organisationId, id),
+          campaignResults(database, ctx.organisationId, id),
+          clickStats(database, ctx.organisationId, id),
+          listCampaignMessages(database, ctx.organisationId, id, { page: messagePage }),
+          getBalanceMicro(database, ctx.organisationId),
+          routePerformance(database, ctx.organisationId, detail.country),
+        ]);
+        const stats = await sidGroupStats(
+          database,
+          ctx.organisationId,
+          sidGroups.map((g) => g.id),
+        );
+        const statsById = new Map(stats.map((s) => [s.groupId, s]));
+        const groups = sidGroups.map((g) => toSidGroupView(g, statsById.get(g.id)));
+        const campaign = toCampaignView(
+          detail,
+          detail.sidGroup ? statsById.get(detail.sidGroup.id) : undefined,
+        );
         const results = resultRows ? toResultsView(resultRows) : null;
+        const canSend = can(ctx.role, "campaign.send");
+        const canEdit = can(ctx.role, "campaign.create");
         return (
           <section className="space-y-6">
-            <nav aria-label="Breadcrumb" className="text-sm text-neutral-500">
-              <Link href="/campaigns" className="hover:underline">
-                Campaigns
-              </Link>{" "}
-              / {campaign.name}
-            </nav>
-            <CampaignHeader campaign={campaign} {...(results ? { totals: results.totals } : {})} />
+            <CampaignHeader
+              campaign={campaign}
+              canEdit={canEdit}
+              {...(results ? { totals: results.totals } : {})}
+            />
             <CampaignControls
               campaign={campaign}
               canStop={can(ctx.role, "campaign.stop")}
-              canSend={can(ctx.role, "campaign.send")}
+              canSend={canSend}
             />
             <CampaignTabs
+              active={tab}
               panels={{
-                Status: (
+                status: (
                   <SendForm
                     campaign={campaign}
-                    sidGroups={sidGroups.map(toSidGroupView)}
+                    sidGroups={groups}
                     lists={lists.map(toListOption)}
                     links={links.map(toLinkOption)}
                     routes={routes.map(toRouteView)}
-                    canSend={can(ctx.role, "campaign.send")}
+                    performance={toRoutePerformanceView(performance)}
+                    canSend={canSend}
+                    canFlush={can(ctx.role, "list.flush")}
+                    balanceMicro={Number(balanceMicro)}
                   />
                 ),
-                Logs: <LogsTab entries={audit.map(toAuditView)} timezone={campaign.timezone} />,
-                Analytics: (
+                logs: (
+                  <LogsTab
+                    campaign={campaign}
+                    active={logs}
+                    audit={audit.map(toAuditView)}
+                    messages={toMessagesView(messages)}
+                    panels={{
+                      adtexts: (
+                        <LogPanelRefresh>
+                          {(onChanged) => (
+                            <AdTextsPanel campaign={campaign} onChanged={onChanged} />
+                          )}
+                        </LogPanelRefresh>
+                      ),
+                      offers: (
+                        <LogPanelRefresh>
+                          {(onChanged) => (
+                            <OffersPanel
+                              campaign={campaign}
+                              links={links.map(toLinkOption)}
+                              onChanged={onChanged}
+                            />
+                          )}
+                        </LogPanelRefresh>
+                      ),
+                      sids: (
+                        <LogPanelRefresh>
+                          {(onChanged) => (
+                            <SidPanel campaign={campaign} groups={groups} onChanged={onChanged} />
+                          )}
+                        </LogPanelRefresh>
+                      ),
+                    }}
+                  />
+                ),
+                analytics: (
                   <div className="space-y-6">
                     {results ? (
                       <AnalyticsSection results={results} timezone={campaign.timezone} />
@@ -124,9 +183,9 @@ export default async function CampaignPage({ params }: { params: Promise<{ id: s
                     <ConversionsSection stats={conversions} />
                   </div>
                 ),
-                "Send Single": (
-                  <p className="text-sm text-neutral-500">
-                    Sending a single test message to one number arrives with the sending engine.
+                single: (
+                  <p className="text-sm text-muted">
+                    Sending a single test message to one number arrives with the routes phase.
                   </p>
                 ),
               }}

@@ -54,6 +54,12 @@ erDiagram
     uuid sid_group_id FK
   }
   campaigns {
+    boolean autosender
+    integer autosender_ctr_floor_percent
+    integer autosender_measure_minutes
+    integer autosender_scale_factor
+    text autosender_stop_reason
+    timestamp_with_time_zone autosender_stopped_at
     contact_reuse contact_reuse
     char(2) country
     timestamp_with_time_zone created_at
@@ -96,8 +102,12 @@ erDiagram
     uuid organisation_id FK, UK "unique with e164"
   }
   laps {
+    boolean active
+    boolean autosender
+    bigint budget_micro
     uuid campaign_id FK
     integer clicks
+    text comment
     bigint cost_micro
     timestamp_with_time_zone created_at
     integer delivered
@@ -107,12 +117,14 @@ erDiagram
     integer leads
     uuid list_id FK
     uuid organisation_id FK
+    integer previews
     integer rank
     text refusal_reason
     integer refused
     bigint revenue_micro
     uuid route_id FK
     integer sales
+    timestamp_with_time_zone scheduled_at
     integer sent
     timestamp_with_time_zone started_at
     lap_status status
@@ -135,6 +147,7 @@ erDiagram
     uuid id PK
     text name
     uuid organisation_id FK
+    bigint profit_micro
     text url
   }
   list_members {

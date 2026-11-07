@@ -15,6 +15,10 @@ export interface ListOption {
   numbersCount: number;
   /** Members that can still be messaged. */
   available: number;
+  /** Members messaged since the last flush. */
+  sent: number;
+  /** Members flagged bad. */
+  bad: number;
 }
 
 export interface SenderIdView {
@@ -29,6 +33,10 @@ export interface SidGroupView {
   country: string;
   senderIds: SenderIdView[];
   activeCount: number;
+  /** Messages accepted with a sender id of the group, across campaigns. */
+  sent: number;
+  /** Messages of the group that were clicked. */
+  clicks: number;
 }
 
 export interface AdTextView {
@@ -40,17 +48,20 @@ export interface AdTextView {
   position: number;
 }
 
+/** An offer (SMS Edge's word for a tracked link) attached to the campaign. */
 export interface CampaignLinkView {
   id: string;
   name: string;
   url: string;
   active: boolean;
+  profitMicro: number;
 }
 
 export interface LinkOption {
   id: string;
   name: string;
   url: string;
+  profitMicro: number;
 }
 
 export interface RouteView {
@@ -83,6 +94,19 @@ export interface LapView {
   startedAt: string | null;
   finishedAt: string | null;
   createdAt: string;
+  /** The route's price per SMS for the lap's country; null when unpriced. */
+  priceMicro: number | null;
+  /** Micro-EUR added by budget top-ups. */
+  budgetMicro: number;
+  /** Link-preview bot hits, never counted as clicks. */
+  previews: number;
+  comment: string | null;
+  /** The On switch. */
+  active: boolean;
+  /** A rescheduled lap waits until this time. */
+  scheduledAt: string | null;
+  /** True for the scale-out laps AutoSender created. */
+  autosender: boolean;
 }
 
 export interface CampaignView {
@@ -93,6 +117,12 @@ export interface CampaignView {
   status: CampaignStatus;
   contactReuse: ContactReuse;
   testSize: number;
+  autosender: boolean;
+  autosenderMeasureMinutes: number;
+  autosenderScaleFactor: number;
+  autosenderCtrFloorPercent: number;
+  /** Why AutoSender stopped on its own, null while it runs or never ran. */
+  autosenderStopReason: string | null;
   scheduledAt: string | null;
   createdAt: string;
   updatedAt: string;
@@ -128,6 +158,27 @@ export interface AuditView {
   actorUserId: string | null;
   details: Record<string, unknown> | null;
   createdAt: string;
+}
+
+/** One row of Logs › Messages. */
+export interface CampaignMessageView {
+  id: string;
+  at: string;
+  lapId: string;
+  routeName: string;
+  senderId: string;
+  recipient: string;
+  text: string;
+  status: string;
+  errorCode: string | null;
+  clicked: boolean;
+}
+
+export interface CampaignMessagesView {
+  rows: CampaignMessageView[];
+  total: number;
+  page: number;
+  pageSize: number;
 }
 
 export interface CampaignSummaryView {
@@ -215,4 +266,34 @@ export interface CampaignResultsView {
   networks: { source: "route"; rows: NetworkRowView[] };
   clicksPerHour: ClicksPerHourView[];
   clicksPerLink: ClicksPerLinkView[];
+}
+
+export type PerformancePeriodView = "daily" | "weekly" | "monthly";
+
+/** A platform route's anonymous ranks for the country (never another tenant's numbers). */
+export interface PlatformRankView {
+  routeId: string;
+  name: string;
+  priceMicro: number | null;
+  ctrRank: number | null;
+  cpcRank: number | null;
+  overallRank: number | null;
+}
+
+/** The organisation's own numbers on a route for the country. */
+export interface AccountStatView {
+  routeId: string;
+  name: string;
+  priceMicro: number | null;
+  costMicro: number;
+  sent: number;
+  clicks: number;
+  ctr: number;
+  cpcMicro: number | null;
+}
+
+export interface RoutePerformanceView {
+  country: string;
+  platform: Record<PerformancePeriodView, PlatformRankView[]>;
+  account: Record<PerformancePeriodView, AccountStatView[]>;
 }

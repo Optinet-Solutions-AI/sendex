@@ -2,16 +2,19 @@ import type {
   AuditRow,
   CampaignDetail,
   CampaignListSummary,
+  CampaignMessagesPage,
   CampaignResults,
   CampaignSummary,
   LapSummary,
   LinkRow,
   RouteOption,
+  RoutePerformance,
   SendEstimate,
   SidGroupWithIds,
 } from "@sendex/db";
 import type {
   AuditView,
+  CampaignMessagesView,
   CampaignResultsView,
   CampaignSummaryView,
   CampaignView,
@@ -20,6 +23,7 @@ import type {
   LinkOption,
   ListOption,
   ResultRatesView,
+  RoutePerformanceView,
   RouteView,
   SidGroupView,
 } from "../components/campaigns/types";
@@ -37,21 +41,28 @@ export function toListOption(list: CampaignListSummary): ListOption {
     country: list.country,
     numbersCount: list.numbersCount,
     available: list.available,
+    sent: list.sent,
+    bad: list.bad,
   };
 }
 
-export function toSidGroupView(group: SidGroupWithIds): SidGroupView {
+export function toSidGroupView(
+  group: SidGroupWithIds,
+  stats?: { sent: number; clicks: number },
+): SidGroupView {
   return {
     id: group.id,
     name: group.name,
     country: group.country,
     senderIds: group.senderIds.map((s) => ({ id: s.id, value: s.value, active: s.active })),
     activeCount: group.activeCount,
+    sent: stats?.sent ?? 0,
+    clicks: stats?.clicks ?? 0,
   };
 }
 
 export function toLinkOption(link: LinkRow): LinkOption {
-  return { id: link.id, name: link.name, url: link.url };
+  return { id: link.id, name: link.name, url: link.url, profitMicro: Number(link.profitMicro) };
 }
 
 export function toRouteView(route: RouteOption): RouteView {
@@ -86,10 +97,20 @@ export function toLapView(lap: LapSummary): LapView {
     startedAt: iso(lap.startedAt),
     finishedAt: iso(lap.finishedAt),
     createdAt: lap.createdAt.toISOString(),
+    priceMicro: lap.priceMicro === null ? null : Number(lap.priceMicro),
+    budgetMicro: Number(lap.budgetMicro),
+    previews: lap.previews,
+    comment: lap.comment,
+    active: lap.active,
+    scheduledAt: iso(lap.scheduledAt),
+    autosender: lap.autosender,
   };
 }
 
-export function toCampaignView(detail: CampaignDetail): CampaignView {
+export function toCampaignView(
+  detail: CampaignDetail,
+  sidStats?: { sent: number; clicks: number },
+): CampaignView {
   return {
     id: detail.id,
     name: detail.name,
@@ -98,11 +119,16 @@ export function toCampaignView(detail: CampaignDetail): CampaignView {
     status: detail.status,
     contactReuse: detail.contactReuse,
     testSize: detail.testSize,
+    autosender: detail.autosender,
+    autosenderMeasureMinutes: detail.autosenderMeasureMinutes,
+    autosenderScaleFactor: detail.autosenderScaleFactor,
+    autosenderCtrFloorPercent: detail.autosenderCtrFloorPercent,
+    autosenderStopReason: detail.autosenderStopReason,
     scheduledAt: iso(detail.scheduledAt),
     createdAt: detail.createdAt.toISOString(),
     updatedAt: detail.updatedAt.toISOString(),
     lists: detail.lists.map(toListOption),
-    sidGroup: detail.sidGroup ? toSidGroupView(detail.sidGroup) : null,
+    sidGroup: detail.sidGroup ? toSidGroupView(detail.sidGroup, sidStats) : null,
     adTexts: detail.adTexts.map((t) => ({
       id: t.id,
       text: t.text,
@@ -111,7 +137,13 @@ export function toCampaignView(detail: CampaignDetail): CampaignView {
       active: t.active,
       position: t.position,
     })),
-    links: detail.links.map((l) => ({ id: l.id, name: l.name, url: l.url, active: l.active })),
+    links: detail.links.map((l) => ({
+      id: l.id,
+      name: l.name,
+      url: l.url,
+      active: l.active,
+      profitMicro: Number(l.profitMicro),
+    })),
     laps: detail.laps.map(toLapView),
   };
 }
@@ -211,4 +243,53 @@ export function toResultsView(results: CampaignResults): CampaignResultsView {
     })),
     clicksPerLink: results.clicksPerLink.map((l) => ({ ...l })),
   };
+}
+
+export function toMessagesView(page: CampaignMessagesPage): CampaignMessagesView {
+  return {
+    rows: page.rows.map((m) => ({
+      id: m.id,
+      at: (m.sentAt ?? m.createdAt).toISOString(),
+      lapId: m.lapId,
+      routeName: m.routeName,
+      senderId: m.senderId,
+      recipient: m.recipient,
+      text: m.text,
+      status: m.status,
+      errorCode: m.errorCode,
+      clicked: m.clicked,
+    })),
+    total: page.total,
+    page: page.page,
+    pageSize: page.pageSize,
+  };
+}
+
+const nullableMicro = (v: bigint | null): number | null => (v === null ? null : Number(v));
+
+export function toRoutePerformanceView(perf: RoutePerformance): RoutePerformanceView {
+  const periods = ["daily", "weekly", "monthly"] as const;
+  const platform = {} as RoutePerformanceView["platform"];
+  const account = {} as RoutePerformanceView["account"];
+  for (const period of periods) {
+    platform[period] = perf.platform[period].map((r) => ({
+      routeId: r.routeId,
+      name: r.name,
+      priceMicro: nullableMicro(r.priceMicro),
+      ctrRank: r.ctrRank,
+      cpcRank: r.cpcRank,
+      overallRank: r.overallRank,
+    }));
+    account[period] = perf.account[period].map((r) => ({
+      routeId: r.routeId,
+      name: r.name,
+      priceMicro: nullableMicro(r.priceMicro),
+      costMicro: Number(r.costMicro),
+      sent: r.sent,
+      clicks: r.clicks,
+      ctr: r.ctr,
+      cpcMicro: nullableMicro(r.cpcMicro),
+    }));
+  }
+  return { country: perf.country, platform, account };
 }

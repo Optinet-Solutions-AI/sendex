@@ -33,22 +33,43 @@ to send to.
 
 ## The lap table
 
-One row per lap, that is per list and route of one send. The columns are the SMS Edge ones:
+One row per lap, that is per list and route of one send. Above the table sits the laps
+header: the campaign's country with its local time, a "n laps" pill, the budget top-ups
+(**Custom** and **+ €5 €10 €20 €50 €100 €200**), **Finish List**, and the **Sort by rank** and
+**Show comments** switches. The columns are the SMS Edge ones, plus Delivered and Failed:
 
 | Column | Meaning |
 | --- | --- |
 | **Lap ID** | The first block of the lap's id; hover for the full id. |
-| **Route** / **List** | Which route carried the lap and which list it drew from. |
-| **Status** | `queued` (waiting for the worker), `sending`, `done`, or `cancelled`. |
-| **Size** | How many contacts the lap was asked to send to (the test size, or the whole list). |
-| **Sent, Delivered, Failed, Clicks, CTR** | As in the header, for this lap only. |
-| **Cost**, **CPC**, **Leads**, **CPL**, **Sales**, **CPS** | As in the header, for this lap only. |
+| **Route** | Which route carried the lap and its price per SMS, "Route 405 (€0.0250)". |
+| **List** | The list it drew from; the link opens List Details in a new tab. |
+| **Sent, Delivered, Failed, Delivery** | As in the header, for this lap only. |
+| **Previews** | Link-preview bots (messaging apps fetching the page) that hit the lap's links. Never counted as clicks. |
+| **Clicks, CTR, Cost, CPC, Leads, CPL, Sales, CPS** | As in the header, for this lap only. |
 | **Rank** | 1 is the best route of the test round (highest CTR, then lowest cost per click, then most sent). Empty until the laps are done. |
-| **Period** | When the lap started and finished, in the campaign's timezone. |
-| **On** | The lap's switch, see below. |
+| **Sending Period** | When the lap started and finished, in the campaign's timezone. |
+| **On** | The lap's switch, see below. The switch in the heading flips every lap at once. |
+| **ⓘ** | Status, size, budget top-ups, a scheduled start and anything a daily cap refused. |
+| **⋮** | Reschedule, Flush lap, Add comment. |
 
 Click a column heading to sort by it; click again to flip the direction. The table opens
-sorted by **Rank**, so the best route is on top. Laps without a rank sort last.
+sorted by **Rank**, so the best route is on top; laps without a rank sort last. Switching
+**Sort by rank** off shows the laps in the order they were created.
+
+### Budget top-ups
+
+A top-up adds the amount to every lap that is switched on. Each lap then sends `amount ÷ its
+route price` more messages (€50 on a €0.025 route is 2,000 more SMS); a finished lap goes back
+in the queue to send them. Hover a button for the maths: "3 active sends × €50 = €150 · New SMS
+sent: ~6,000 · Will spend an additional €50 per each highlighted lap". The top-up is refused
+when your balance cannot cover amount × laps. Nothing is charged up front: messages debit the
+balance as they are sent, exactly like a test batch. **Custom** takes any amount.
+
+### Finish List
+
+Sends everything left on the campaign's lists through the routes of the laps that are on,
+as one lap per list and route. Use it once the test round has shown which route wins and the
+losing laps are switched off.
 
 ### Switching a lap off and on
 
@@ -61,8 +82,19 @@ The **On** switch at the end of each row excludes a lap from further sending:
   stopped, skipping contacts it has already messaged.
 - A `done` lap has nothing left to send, so its switch is disabled.
 
-Every flip is written to the **Logs** tab as `lap.toggle`, together with the cancellation the
-worker records. Only users who may send campaigns can use the switch.
+### The lap menu
+
+- **Reschedule** holds a queued lap until the time you pick (in the campaign's timezone); the
+  worker leaves it alone until then.
+- **Flush lap** resets the sending progress of the lap's list, so the same contacts can be
+  sent to again by any campaign. It asks first.
+- **Add comment** keeps a note on the lap; switch **Show comments** on to read them under the
+  rows.
+
+Every flip, top-up, reschedule, flush and comment is written to the **Logs** tab
+(`lap.toggle`, `lap.topup`, `lap.reschedule`, `lap.flush`, `lap.comment`), together with the
+cancellation the worker records. Only users who may send campaigns can use the switches and
+top-ups; flushing needs the list flush permission.
 
 ## Analytics
 

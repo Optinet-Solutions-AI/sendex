@@ -79,6 +79,51 @@ test.describe("campaign results", () => {
     await expect(page.getByTestId("logs-table")).toContainText("lap.toggle");
   });
 
+  test("the laps header tops up every active lap and a lap can carry a comment", async ({
+    page,
+  }) => {
+    await page.goto(`/campaigns/${seeded.campaignId}`);
+    const lap403 = page.locator(`[data-lap-id="${seeded.lap403Id}"]`);
+    await expect(page.getByTestId("laps-count")).toHaveText("2 laps");
+    await expect(page.getByTestId("laps-local-time")).toContainText("ES ");
+    await expect(lap403).toContainText("Route 403");
+
+    // €5 on both laps (a done lap is re-queued by a top-up): the confirmation spells out the maths.
+    await page.getByTestId("top-up-5").click();
+    await expect(page.getByRole("dialog")).toContainText("2 active sends × €5 = €10");
+    await page.getByRole("button", { name: "Top up", exact: true }).click();
+    await expect(page.getByRole("dialog")).toBeHidden();
+
+    // Add a comment through the lap menu and show it.
+    await lap403.getByTestId("lap-menu").click();
+    await page.getByRole("menuitem", { name: "Add comment" }).click();
+    await page.getByTestId("lap-comment-input").fill("best route so far");
+    await page.getByTestId("lap-comment-save").click();
+    await page.getByTestId("show-comments").click();
+    await expect(
+      page.getByTestId("lap-comment").filter({ hasText: "best route so far" }),
+    ).toBeVisible();
+
+    await page.getByRole("tab", { name: "Logs" }).click();
+    await expect(page.getByTestId("logs-table")).toContainText("lap.topup");
+    await expect(page.getByTestId("logs-table")).toContainText("lap.comment");
+  });
+
+  test("the Routes tab shows platform ranks and the account's own statistics", async ({ page }) => {
+    await page.goto(`/campaigns/${seeded.campaignId}`);
+    await page.getByRole("button", { name: "Routes", exact: true }).click();
+    const perf = page.getByTestId("routes-performance");
+    await expect(perf).toContainText("Spain Routes Performance");
+    await expect(perf).toContainText("Rank 1 = best performing route on the platform");
+    await expect(page.locator('[data-testid="platform-rank-row"][data-route="405"]')).toBeVisible();
+    // The seeded sends are dated September, outside every window: the account rows show zeros.
+    const own405 = page.locator('[data-testid="account-stat-row"][data-route="405"]');
+    await expect(own405).toContainText("Route 405");
+    await expect(own405.locator("td").nth(3)).toHaveText("0");
+    await page.getByRole("button", { name: "Monthly" }).last().click();
+    await expect(own405.locator("td").nth(6)).toHaveText("–");
+  });
+
   test("the Analytics tab reconciles networks, clicks per hour and clicks per link", async ({
     page,
   }) => {

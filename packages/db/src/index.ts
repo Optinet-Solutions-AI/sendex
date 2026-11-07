@@ -5,6 +5,7 @@ import * as schema from "./schema/index.js";
 export * from "./queries/alerts.js";
 export * from "./queries/api-tokens.js";
 export * from "./queries/audit.js";
+export * from "./queries/campaign-messages.js";
 export * from "./queries/campaigns.js";
 export * from "./queries/caps.js";
 export * from "./queries/click-stats.js";
@@ -39,8 +40,11 @@ export function db(): Database {
   shared ??= createDb();
   return shared;
 }
+export * from "./queries/autosender.js";
 export * from "./queries/campaign-control.js";
+export * from "./queries/laps.js";
 export * from "./queries/postback-keys.js";
 export * from "./queries/postbacks.js";
 export * from "./queries/receipts.js";
 export * from "./queries/results.js";
+export * from "./queries/route-performance.js";

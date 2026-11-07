@@ -5,12 +5,13 @@ import type { SearchParams } from "./lists-params";
 
 /**
  * Query-string state of the campaigns table (D3-06), shared by the page and the CSV export:
- * `/campaigns?search=roy&country=ES&status=sending&from=2026-09-01&to=2026-09-30
+ * `/campaigns?search=roy&country=ES&country=FR&status=sending&from=2026-09-01&to=2026-09-30
  *   &hasLeads=1&hasSales=1&noClicks=1&spendMin=10&spendMax=250&page=2`.
  */
 export interface CampaignsQuery {
   search: string;
-  country: string;
+  /** ISO-2 codes from one or more `country` params; empty means all countries. */
+  countries: string[];
   status: CampaignStatus | "";
   /** Inclusive ISO day or blank. */
   from: string;
@@ -50,17 +51,26 @@ function eur(value: string | string[] | undefined): string {
   return EUR.test(text) ? text : "";
 }
 
+/** Every `country` value (repeated params or comma-separated), upper-cased, valid and unique. */
+function countries(value: string | string[] | undefined): string[] {
+  const raw = Array.isArray(value) ? value : value ? [value] : [];
+  const codes = raw
+    .flatMap((v) => v.split(","))
+    .map((v) => v.trim().toUpperCase())
+    .filter((v) => /^[A-Z]{2}$/.test(v));
+  return [...new Set(codes)];
+}
+
 export function isCampaignStatus(value: string): value is CampaignStatus {
   return (STATUSES as readonly string[]).includes(value);
 }
 
 /** Parse the URL search params with safe defaults; anything malformed is dropped. */
 export function parseCampaignsQuery(params: SearchParams): CampaignsQuery {
-  const country = first(params.country).trim().toUpperCase();
   const status = first(params.status).trim();
   return {
     search: first(params.search).trim(),
-    country: /^[A-Z]{2}$/.test(country) ? country : "",
+    countries: countries(params.country),
     status: isCampaignStatus(status) ? status : "",
     from: parseIsoDay(params.from),
     to: parseIsoDay(params.to),
@@ -77,7 +87,7 @@ export function parseCampaignsQuery(params: SearchParams): CampaignsQuery {
 export function campaignsQueryString(query: Partial<CampaignsQuery>): string {
   const params = new URLSearchParams();
   if (query.search) params.set("search", query.search);
-  if (query.country) params.set("country", query.country);
+  for (const code of query.countries ?? []) params.append("country", code);
   if (query.status) params.set("status", query.status);
   if (query.from) params.set("from", query.from);
   if (query.to) params.set("to", query.to);
@@ -97,7 +107,7 @@ export function campaignsListInput(query: CampaignsQuery): ListCampaignsInput {
   return {
     page: query.page,
     ...(query.search ? { search: query.search } : {}),
-    ...(query.country ? { country: query.country } : {}),
+    ...(query.countries.length > 0 ? { countries: query.countries } : {}),
     ...(query.status ? { status: query.status } : {}),
     ...(bounds.from ? { from: bounds.from } : {}),
     ...(bounds.to ? { to: bounds.to } : {}),

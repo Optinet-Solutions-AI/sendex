@@ -22,7 +22,6 @@ const HEADER = [
 
 /**
  * Streams the lists table as CSV with the same search, country filter and sort as the page.
- * CTR, leads, sales and spend are empty until the campaign engine exists (D2-13).
  */
 export async function GET(request: NextRequest): Promise<Response> {
   let organisationId: string;
@@ -46,7 +45,8 @@ export async function GET(request: NextRequest): Promise<Response> {
         for (;;) {
           const { rows } = await listLists(db(), organisationId, {
             search: query.search,
-            country: query.country,
+            countries: query.countries,
+            archived: query.archived ? "only" : "exclude",
             sort: query.sort,
             dir: query.dir,
             page,
@@ -60,10 +60,10 @@ export async function GET(request: NextRequest): Promise<Response> {
                   row.numbersCount,
                   row.country,
                   row.sent,
-                  null,
-                  null,
-                  null,
-                  null,
+                  `${(row.ctr * 100).toFixed(2)}%`,
+                  row.leads,
+                  row.sales,
+                  (Number(row.spendMicro) / 1_000_000).toFixed(2),
                   row.lastSentAt,
                   row.lastUploadAt,
                   row.createdAt,

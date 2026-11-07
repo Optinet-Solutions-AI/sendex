@@ -767,7 +767,13 @@ export async function listsForCountry(
       bad: badSql(),
     })
     .from(lists)
-    .where(and(eq(lists.organisationId, organisationId), eq(lists.country, country.toUpperCase())))
+    .where(
+      and(
+        eq(lists.organisationId, organisationId),
+        eq(lists.country, country.toUpperCase()),
+        isNull(lists.archivedAt),
+      ),
+    )
     .orderBy(asc(lists.name));
 }
 

@@ -1,10 +1,19 @@
 import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { contacts, listMembers, lists, suppressions } from "../schema/index.js";
+import {
+  campaigns,
+  contacts,
+  laps,
+  listMembers,
+  lists,
+  routes,
+  suppressions,
+} from "../schema/index.js";
 import { createTestDb, seedOrganisation, type TestDb } from "../test/db.js";
 import {
   createList,
   deleteList,
+  deleteLists,
   flushAllLists,
   flushList,
   getList,
@@ -13,6 +22,7 @@ import {
   listListNames,
   listLists,
   listMembersPage,
+  setListArchived,
 } from "./lists.js";
 
 let t: TestDb;
@@ -285,9 +295,15 @@ describe("listLists", () => {
   it("searches by name (case-insensitive) and filters by country", async () => {
     const search = await listLists(t.db, orgC, { search: "roy boy", pageSize: 50 });
     expect(search.total).toBe(2);
-    const fr = await listLists(t.db, orgC, { country: "FR", pageSize: 50 });
+    const fr = await listLists(t.db, orgC, { countries: ["fr"], pageSize: 50 });
     expect(fr.rows.map((r) => r.name)).toEqual(["Roy Boy_FR_Batch1"]);
-    const none = await listLists(t.db, orgC, { search: "roy boy", country: "GB", pageSize: 50 });
+    const two = await listLists(t.db, orgC, { countries: ["FR", "GB"], pageSize: 50 });
+    expect(two.total).toBe(2);
+    const none = await listLists(t.db, orgC, {
+      search: "roy boy",
+      countries: ["GB"],
+      pageSize: 50,
+    });
     expect(none.total).toBe(0);
   });
 
@@ -317,6 +333,91 @@ describe("listLists", () => {
     expect(p2.rows[0]?.name).toBe("Roy Boy_FR_Batch1");
   });
 
+  it("carries CTR, leads, sales and spend from the laps that sent to the list, and sorts by them", async () => {
+    const [campaign] = await t.db
+      .insert(campaigns)
+      .values({ organisationId: orgC, name: "c", country: "ES", timezone: "Europe/Madrid" })
+      .returning({ id: campaigns.id });
+    const [route] = await t.db
+      .insert(routes)
+      .values({ provider: "fake", name: "405", country: "ES" })
+      .returning({ id: routes.id });
+    const es = (await listLists(t.db, orgC, { search: "_ES_", pageSize: 50 })).rows[0];
+    if (!campaign || !route || !es) throw new Error("seed failed");
+    await t.db.insert(laps).values([
+      {
+        organisationId: orgC,
+        campaignId: campaign.id,
+        listId: es.id,
+        routeId: route.id,
+        testSize: 200,
+        status: "done",
+        sent: 200,
+        clicks: 5,
+        leads: 2,
+        sales: 1,
+        costMicro: 5_000_000n,
+      },
+      {
+        organisationId: orgC,
+        campaignId: campaign.id,
+        listId: es.id,
+        routeId: route.id,
+        testSize: 200,
+        status: "done",
+        sent: 200,
+        clicks: 3,
+        leads: 0,
+        sales: 0,
+        costMicro: 5_000_000n,
+      },
+    ]);
+    const page = await listLists(t.db, orgC, { sort: "spend", dir: "desc", pageSize: 50 });
+    expect(page.rows[0]).toMatchObject({
+      name: "Roy Boy_ES_Batch1",
+      ctr: 0.02,
+      leads: 2,
+      sales: 1,
+      spendMicro: 10_000_000n,
+    });
+    expect(page.rows[1]).toMatchObject({ ctr: 0, leads: 0, sales: 0, spendMicro: 0n });
+    const byCtr = await listLists(t.db, orgC, { sort: "ctr", dir: "asc", pageSize: 50 });
+    expect(byCtr.rows[2]?.name).toBe("Roy Boy_ES_Batch1");
+  });
+
+  it("archived lists are hidden unless asked for, and leave the name picker", async () => {
+    const uk = (await listLists(t.db, orgC, { search: "Promo_UK", pageSize: 50 })).rows[0];
+    if (!uk) throw new Error("seed failed");
+    expect(await setListArchived(t.db, orgC, uk.id, true)).toBe(true);
+    expect((await listLists(t.db, orgC, { pageSize: 50 })).total).toBe(2);
+    const only = await listLists(t.db, orgC, { archived: "only", pageSize: 50 });
+    expect(only.rows.map((r) => r.name)).toEqual(["Promo_UK"]);
+    expect(only.rows[0]?.archivedAt).toBeInstanceOf(Date);
+    expect((await listLists(t.db, orgC, { archived: "all", pageSize: 50 })).total).toBe(3);
+    expect((await listListNames(t.db, orgC)).map((n) => n.name)).not.toContain("Promo_UK");
+    expect(await setListArchived(t.db, orgA, uk.id, true)).toBe(false);
+    await setListArchived(t.db, orgC, uk.id, false);
+    expect((await listLists(t.db, orgC, { pageSize: 50 })).total).toBe(3);
+  });
+
+  it("deleteLists removes several lists of the organisation only", async () => {
+    const extra = await importContacts(t.db, orgC, {
+      newList: { name: "Temp_1", country: "ES" },
+      rows: [{ e164: "+34699000001", country: "ES" }],
+      duplicates: "allow",
+      flushAfterImport: false,
+    });
+    const extra2 = await importContacts(t.db, orgC, {
+      newList: { name: "Temp_2", country: "ES" },
+      rows: [{ e164: "+34699000002", country: "ES" }],
+      duplicates: "allow",
+      flushAfterImport: false,
+    });
+    expect(await deleteLists(t.db, orgA, [extra.listId, extra2.listId])).toBe(0);
+    expect(await deleteLists(t.db, orgC, [extra.listId, extra2.listId])).toBe(2);
+    expect((await listLists(t.db, orgC, { search: "Temp_", pageSize: 50 })).total).toBe(0);
+  });
+
   it("lists names for a select, scoped to the organisation", async () => {
     const names = await listListNames(t.db, orgC);
     expect(names.map((n) => n.name).sort()).toEqual([
@@ -328,7 +429,7 @@ describe("listLists", () => {
   });
 
   it("pages the members of a list with their numbers", async () => {
-    const [list] = (await listLists(t.db, orgC, { country: "FR", pageSize: 1 })).rows;
+    const [list] = (await listLists(t.db, orgC, { countries: ["FR"], pageSize: 1 })).rows;
     if (!list) throw new Error("setup failed");
     const page = await listMembersPage(t.db, orgC, list.id, { page: 1, pageSize: 2 });
     expect(page.total).toBe(5);

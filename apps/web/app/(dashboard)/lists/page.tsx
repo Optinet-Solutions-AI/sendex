@@ -19,7 +19,8 @@ export default async function ListsPage({ searchParams }: { searchParams: Promis
   const query = parseListsQuery(await searchParams);
   const result = await listLists(db(), ctx.organisationId, {
     search: query.search,
-    country: query.country,
+    countries: query.countries,
+    archived: query.archived ? "only" : "exclude",
     sort: query.sort,
     dir: query.dir,
     page: query.page,
@@ -31,9 +32,14 @@ export default async function ListsPage({ searchParams }: { searchParams: Promis
     country: r.country,
     numbersCount: r.numbersCount,
     sent: r.sent,
+    ctr: r.ctr,
+    leads: r.leads,
+    sales: r.sales,
+    spendMicro: Number(r.spendMicro),
     lastSentAt: r.lastSentAt?.toISOString() ?? null,
     lastUploadAt: r.lastUploadAt?.toISOString() ?? null,
     createdAt: r.createdAt.toISOString(),
+    archivedAt: r.archivedAt?.toISOString() ?? null,
   }));
   return (
     <ListsTable
@@ -43,6 +49,7 @@ export default async function ListsPage({ searchParams }: { searchParams: Promis
       query={query}
       canUpload={can(ctx.role, "list.upload")}
       canFlush={can(ctx.role, "list.flush")}
+      canDelete={can(ctx.role, "list.delete")}
     />
   );
 }

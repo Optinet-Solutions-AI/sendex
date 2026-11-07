@@ -1,0 +1,1 @@
+ALTER TABLE "lists" ADD COLUMN "archived_at" timestamp with time zone;

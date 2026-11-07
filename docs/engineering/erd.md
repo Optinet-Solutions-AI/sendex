@@ -161,6 +161,7 @@ erDiagram
     timestamp_with_time_zone sent_at
   }
   lists {
+    timestamp_with_time_zone archived_at
     char(2) country
     timestamp_with_time_zone created_at
     uuid id PK

@@ -281,7 +281,7 @@ export function createPublicApi(deps: PublicApiDeps) {
     const query = c.req.valid("query");
     const options: ListListsOptions = { page: query.page, pageSize: LIST_PAGE_SIZE };
     if (query.search !== undefined) options.search = query.search;
-    if (query.country !== undefined) options.country = query.country;
+    if (query.country !== undefined) options.countries = [query.country];
     const result = await listLists(deps.db, c.var.apiToken.organisationId, options);
     return c.json(
       {

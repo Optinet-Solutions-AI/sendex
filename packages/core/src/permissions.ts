@@ -17,6 +17,7 @@ export const ACTIONS = [
   "list.upload",
   "list.flush",
   "list.view",
+  "list.delete",
   "settings.view",
   "settings.manage",
   "balance.deposit",
@@ -28,6 +29,7 @@ export type Action = (typeof ACTIONS)[number];
 
 /** Actions that only an owner may perform. */
 const OWNER_ONLY: ReadonlySet<Action> = new Set<Action>([
+  "list.delete",
   "settings.manage",
   "balance.deposit",
   "member.manage",

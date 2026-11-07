@@ -46,7 +46,15 @@ test.describe("lists", () => {
       await expect(page.getByRole("link", { name, exact: true })).toBeVisible();
     }
     const header = page.getByRole("table").first().locator("thead");
-    for (const column of ["Name", "Numbers", "Country", "Sent", "CTR", "Last upload", "Created"]) {
+    for (const column of [
+      "Name",
+      "Numbers",
+      "Countries",
+      "Sent",
+      "CTR",
+      "Last Upload",
+      "Created",
+    ]) {
       await expect(header.getByText(column, { exact: true })).toBeVisible();
     }
     await expect(page.getByRole("link", { name: "Upload List" })).toBeVisible();
@@ -133,5 +141,28 @@ test.describe("lists", () => {
     await expect(page.getByTestId("count-available")).toHaveText("17");
     await expect(page.getByTestId("count-sent")).toHaveText("0");
     await expect(page.getByText("+34622000001", { exact: true })).toBeVisible();
+
+    // Archive it from the row menu: it leaves the table, shows under "Show archived", comes back.
+    await page.goto(`/lists?search=${encodeURIComponent(listName)}`);
+    await page.getByRole("button", { name: `Actions for ${listName}` }).click();
+    await page.getByRole("menuitem", { name: "Archive" }).click();
+    await expect(page.getByTestId("toast")).toContainText(`Archived ${listName}`);
+    await expect(page.getByRole("row", { name: new RegExp(listName) })).toHaveCount(0);
+    await page.goto(`/lists?search=${encodeURIComponent(listName)}&archived=1`);
+    const archivedRow = page.getByRole("row", { name: new RegExp(listName) });
+    await expect(archivedRow).toBeVisible();
+    await expect(archivedRow).toContainText("Archived");
+    await page.getByRole("button", { name: `Actions for ${listName}` }).click();
+    await page.getByRole("menuitem", { name: "Unarchive" }).click();
+    await expect(page.getByTestId("toast")).toContainText(`Unarchived ${listName}`);
+
+    // Bulk select and delete: the row checkbox, the selection bar, confirm, gone.
+    await page.goto(`/lists?search=${encodeURIComponent(listName)}`);
+    await page.getByRole("checkbox", { name: `Select ${listName}` }).check();
+    await expect(page.getByTestId("selection-bar")).toContainText("1 list selected");
+    await page.getByRole("button", { name: "Delete selected" }).click();
+    await page.getByRole("dialog").getByRole("button", { name: "Delete" }).click();
+    await expect(page.getByTestId("toast")).toContainText("1 list deleted");
+    await expect(page.getByRole("row", { name: new RegExp(listName) })).toHaveCount(0);
   });
 });

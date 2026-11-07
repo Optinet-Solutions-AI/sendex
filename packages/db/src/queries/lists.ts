@@ -1,5 +1,5 @@
 import type { ListSortKey, SortDirection } from "@sendex/core";
-import { and, asc, desc, eq, ilike, inArray, isNull, type SQL, sql } from "drizzle-orm";
+import { and, asc, desc, eq, ilike, inArray, isNotNull, isNull, type SQL, sql } from "drizzle-orm";
 import type { PgColumn } from "drizzle-orm/pg-core";
 import { contacts, listMembers, lists, suppressions } from "../schema/lists.js";
 import type { Db } from "../types.js";
@@ -20,9 +20,14 @@ const sentCountSql =
     toNumber,
   );
 
+export type ArchivedFilter = "exclude" | "only" | "all";
+
 export interface ListListsOptions {
   search?: string;
-  country?: string;
+  /** ISO-2 codes; empty or absent means every country. */
+  countries?: readonly string[];
+  /** Archived lists are left out unless asked for. */
+  archived?: ArchivedFilter;
   sort?: ListSortKey;
   dir?: SortDirection;
   /** 1-based. */
@@ -37,10 +42,36 @@ export interface ListSummaryRow {
   numbersCount: number;
   /** Members with `sent_at` set. */
   sent: number;
+  /** Clicks per message the campaign engine sent to this list, 0 when nothing was sent. */
+  ctr: number;
+  leads: number;
+  sales: number;
+  /** Micro-EUR spent on this list across every lap. */
+  spendMicro: bigint;
   lastSentAt: Date | null;
   lastUploadAt: Date | null;
   createdAt: Date;
+  archivedAt: Date | null;
 }
+
+/** Lap counters per list: what the engine sent, who clicked, converted and what it cost. */
+const lapStatsSql = {
+  ctr: sql<number>`coalesce((select sum(l.clicks)::float / nullif(sum(l.sent), 0) from laps l where l.list_id = ${lists}."id"), 0)`.mapWith(
+    toNumber,
+  ),
+  leads:
+    sql<number>`(select coalesce(sum(l.leads), 0) from laps l where l.list_id = ${lists}."id")::int`.mapWith(
+      toNumber,
+    ),
+  sales:
+    sql<number>`(select coalesce(sum(l.sales), 0) from laps l where l.list_id = ${lists}."id")::int`.mapWith(
+      toNumber,
+    ),
+  spendMicro:
+    sql<bigint>`(select coalesce(sum(l.cost_micro), 0) from laps l where l.list_id = ${lists}."id")::bigint`.mapWith(
+      (v: unknown) => BigInt(v as string | number | bigint),
+    ),
+};
 
 export interface ListListsResult {
   rows: ListSummaryRow[];
@@ -57,6 +88,14 @@ function sortColumn(key: ListSortKey): SQL | PgColumn {
       return lists.country;
     case "sent":
       return sentCountSql;
+    case "ctr":
+      return lapStatsSql.ctr;
+    case "leads":
+      return lapStatsSql.leads;
+    case "sales":
+      return lapStatsSql.sales;
+    case "spend":
+      return lapStatsSql.spendMicro;
     case "lastSentAt":
       return lists.lastSentAt;
     case "lastUploadAt":
@@ -77,7 +116,17 @@ export async function listLists(
   if (search) {
     conditions.push(ilike(lists.name, `%${search.replace(/[%_\\]/g, "\\$&")}%`));
   }
-  if (options.country) conditions.push(eq(lists.country, options.country.toUpperCase()));
+  if (options.countries && options.countries.length > 0) {
+    conditions.push(
+      inArray(
+        lists.country,
+        options.countries.map((c) => c.toUpperCase()),
+      ),
+    );
+  }
+  const archived = options.archived ?? "exclude";
+  if (archived === "exclude") conditions.push(isNull(lists.archivedAt));
+  if (archived === "only") conditions.push(isNotNull(lists.archivedAt));
   const where = and(...conditions);
 
   const sort = options.sort ?? "createdAt";
@@ -94,9 +143,14 @@ export async function listLists(
         country: lists.country,
         numbersCount: lists.numbersCount,
         sent: sentCountSql,
+        ctr: lapStatsSql.ctr,
+        leads: lapStatsSql.leads,
+        sales: lapStatsSql.sales,
+        spendMicro: lapStatsSql.spendMicro,
         lastSentAt: lists.lastSentAt,
         lastUploadAt: lists.lastUploadAt,
         createdAt: lists.createdAt,
+        archivedAt: lists.archivedAt,
       })
       .from(lists)
       .where(where)
@@ -117,13 +171,42 @@ export interface ListNameRow {
   country: string;
 }
 
-/** Every list of the organisation, lightest shape, for selects. */
+/** Every unarchived list of the organisation, lightest shape, for selects. */
 export async function listListNames(db: Db, organisationId: string): Promise<ListNameRow[]> {
   return db
     .select({ id: lists.id, name: lists.name, country: lists.country })
     .from(lists)
-    .where(eq(lists.organisationId, organisationId))
+    .where(and(eq(lists.organisationId, organisationId), isNull(lists.archivedAt)))
     .orderBy(asc(lists.name));
+}
+
+/** Archive (hide) or unarchive a list. Returns false when it is not the organisation's. */
+export async function setListArchived(
+  db: Db,
+  organisationId: string,
+  listId: string,
+  archived: boolean,
+): Promise<boolean> {
+  const updated = await db
+    .update(lists)
+    .set({ archivedAt: archived ? new Date() : null })
+    .where(and(eq(lists.id, listId), eq(lists.organisationId, organisationId)))
+    .returning({ id: lists.id });
+  return updated.length > 0;
+}
+
+/** Delete several lists of the organisation at once (members cascade, contacts stay). */
+export async function deleteLists(
+  db: Db,
+  organisationId: string,
+  listIds: readonly string[],
+): Promise<number> {
+  if (listIds.length === 0) return 0;
+  const deleted = await db
+    .delete(lists)
+    .where(and(eq(lists.organisationId, organisationId), inArray(lists.id, [...listIds])))
+    .returning({ id: lists.id });
+  return deleted.length;
 }
 
 export interface ListCounts {

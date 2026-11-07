@@ -15,12 +15,14 @@ import {
 import {
   createList,
   db,
+  deleteLists,
   type FlushAllResult,
   flushAllLists,
   flushList,
   getList,
   importContacts,
   recordAudit,
+  setListArchived,
 } from "@sendex/db";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
@@ -181,5 +183,49 @@ export async function finishUpload(
     revalidatePath("/lists");
     revalidatePath(`/lists/${finish.listId}`);
     return { listId: finish.listId };
+  });
+}
+
+/** Archive hides a list from the table and the campaign pickers; unarchive brings it back. */
+export async function archiveListAction(
+  listId: string,
+  archived: boolean,
+): Promise<ActionResult<{ archived: boolean }>> {
+  return run(async () => {
+    const ctx = await requireAction("list.upload");
+    const id = z.uuid().parse(listId);
+    const list = await getList(db(), ctx.organisationId, id);
+    if (!list) throw new Error("List not found");
+    await setListArchived(db(), ctx.organisationId, id, archived);
+    await recordAudit(db(), ctx.organisationId, {
+      actorUserId: ctx.userId,
+      action: archived ? "list.archive" : "list.unarchive",
+      targetType: "list",
+      targetId: id,
+      details: { name: list.name },
+    });
+    revalidatePath("/lists");
+    revalidatePath(`/lists/${id}`);
+    return { archived };
+  });
+}
+
+/** Delete one or more lists for good (owner only); contacts stay in the organisation. */
+export async function deleteListsAction(
+  listIds: readonly string[],
+): Promise<ActionResult<{ deleted: number }>> {
+  return run(async () => {
+    const ctx = await requireAction("list.delete");
+    const ids = z.array(z.uuid()).min(1).max(500).parse(listIds);
+    const deleted = await deleteLists(db(), ctx.organisationId, ids);
+    await recordAudit(db(), ctx.organisationId, {
+      actorUserId: ctx.userId,
+      action: "list.delete",
+      targetType: "list",
+      targetId: ids[0] ?? "",
+      details: { listIds: ids, deleted },
+    });
+    revalidatePath("/lists");
+    return { deleted };
   });
 }

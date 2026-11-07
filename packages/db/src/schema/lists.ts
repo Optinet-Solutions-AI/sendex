@@ -53,6 +53,8 @@ export const lists = pgTable("lists", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   lastUploadAt: timestamp("last_upload_at", { withTimezone: true }),
   lastSentAt: timestamp("last_sent_at", { withTimezone: true }),
+  /** Archived lists are hidden from the table and the campaign pickers; members stay. */
+  archivedAt: timestamp("archived_at", { withTimezone: true }),
 });
 
 /**

@@ -1,37 +1,52 @@
-import { can, countryByCode, flagEmoji } from "@sendex/core";
-import { db, getList, listMembersPage } from "@sendex/db";
+import { can, countryName, flagEmoji } from "@sendex/core";
 import {
-  Badge,
-  KpiStrip,
-  PageHeader,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@sendex/ui";
+  type AnalyticsDimension,
+  db,
+  getList,
+  listAnalytics,
+  listCampaignsForList,
+  listKpis,
+  listListImports,
+  listLookupBreakdown,
+  listMembersPage,
+  type MemberStatusFilter,
+  maskRecipient,
+} from "@sendex/db";
+import { KpiStrip, PageHeader } from "@sendex/ui";
+import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { AnalyticsTab } from "../../../../components/lists/analytics-tab";
+import { CampaignsTab } from "../../../../components/lists/campaigns-tab";
+import { ContactsTab } from "../../../../components/lists/contacts-tab";
+import { DataFilesTab } from "../../../../components/lists/data-files-tab";
+import { ListActions } from "../../../../components/lists/list-actions";
+import { ListTabs } from "../../../../components/lists/list-tabs";
+import { LookupTab } from "../../../../components/lists/lookup-tab";
+import { isListTab } from "../../../../components/lists/tabs";
 import { AuthError, requireAction } from "../../../../lib/auth";
-import { formatDateTime, formatNumber } from "../../../../lib/format";
+import { formatNumber } from "../../../../lib/format";
 import { AuthErrorView } from "../../require-org";
-import { FlushButton } from "./flush-button";
 
 export const dynamic = "force-dynamic";
 
-const MEMBERS_PAGE_SIZE = 50;
+const CONTACTS_PAGE_SIZE = 25;
+
+function first(value: string | string[] | undefined): string {
+  return (Array.isArray(value) ? value[0] : value) ?? "";
+}
 
 /**
- * List detail: counts, dates, flush and a page of members. Full numbers are shown here on
- * purpose: this is the contacts area. They are never written to logs.
+ * List details of the spec: breadcrumb and back arrow, Refresh and + New Campaign, the KPI
+ * tiles on every tab, and the Contacts, Analytics, Data Files, Campaigns and Lookup tabs.
+ * Numbers are masked in the Contacts tab and never written to logs.
  */
 export default async function ListDetailPage({
   params,
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ page?: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   let ctx: Awaited<ReturnType<typeof requireAction>>;
   try {
@@ -42,134 +57,175 @@ export default async function ListDetailPage({
   }
   const { id } = await params;
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
-  const list = await getList(db(), ctx.organisationId, id);
+  const query = await searchParams;
+  const tabParam = first(query.tab);
+  const tab = isListTab(tabParam) ? tabParam : "contacts";
+  const database = db();
+  const [list, kpis] = await Promise.all([
+    getList(database, ctx.organisationId, id),
+    listKpis(database, ctx.organisationId, id),
+  ]);
   if (!list) notFound();
 
-  const pageRaw = Number.parseInt((await searchParams).page ?? "1", 10);
-  const page = Number.isFinite(pageRaw) && pageRaw >= 1 ? pageRaw : 1;
-  const members = await listMembersPage(db(), ctx.organisationId, id, {
-    page,
-    pageSize: MEMBERS_PAGE_SIZE,
-  });
-  const pages = Math.max(1, Math.ceil(members.total / MEMBERS_PAGE_SIZE));
-  const country = countryByCode(list.country);
+  let panel: React.ReactNode = null;
+  if (tab === "contacts") {
+    const pageRaw = Number.parseInt(first(query.page), 10);
+    const page = Number.isFinite(pageRaw) && pageRaw >= 1 ? pageRaw : 1;
+    const search = first(query.q).trim();
+    const statusRaw = first(query.status);
+    const status: MemberStatusFilter | undefined =
+      statusRaw === "good" || statusRaw === "bad" || statusRaw === "sent" ? statusRaw : undefined;
+    const members = await listMembersPage(database, ctx.organisationId, id, {
+      page,
+      pageSize: CONTACTS_PAGE_SIZE,
+      ...(search ? { search } : {}),
+      ...(status ? { status } : {}),
+    });
+    panel = (
+      <ContactsTab
+        listId={id}
+        rows={members.rows.map((m) => ({
+          id: m.id,
+          number: maskRecipient(m.e164),
+          country: m.country,
+          bad: m.bad,
+          badReason: m.badReason,
+          sent: m.sentAt !== null,
+          createdAt: m.createdAt.toISOString(),
+        }))}
+        total={members.total}
+        page={page}
+        pageSize={CONTACTS_PAGE_SIZE}
+        search={search}
+        status={status ?? ""}
+      />
+    );
+  } else if (tab === "analytics") {
+    const dims = first(query.dims)
+      .split(",")
+      .filter((d): d is AnalyticsDimension => d === "country" || d === "device");
+    const started = Date.now();
+    const rows = await listAnalytics(database, ctx.organisationId, id, dims);
+    panel = (
+      <AnalyticsTab
+        listId={id}
+        dimensions={dims}
+        queryMs={Date.now() - started}
+        rows={rows.map((r) => ({
+          ...r,
+          costMicro: Number(r.costMicro),
+          revenueMicro: Number(r.revenueMicro),
+        }))}
+      />
+    );
+  } else if (tab === "files") {
+    const jobs = await listListImports(database, ctx.organisationId, {
+      listId: id,
+      page: 1,
+      pageSize: 20,
+    });
+    panel = (
+      <DataFilesTab
+        list={{ id: list.id, name: list.name, country: list.country }}
+        canUpload={can(ctx.role, "list.upload")}
+        jobs={jobs.rows.map((r) => ({
+          id: r.id,
+          fileName: r.fileName,
+          source: r.source,
+          status: r.status,
+          rowsInFile: r.rowsInFile,
+          valid: r.valid,
+          added: r.added,
+          addedGood: r.addedGood,
+          addedBad: r.addedBad,
+          rejected: r.rejected,
+          skipped: r.skipped,
+          duplicates: r.duplicates,
+          dedup: r.dedup,
+          summary: r.summary,
+          listId: r.listId,
+          listName: r.listName,
+          createdAt: r.createdAt.toISOString(),
+        }))}
+      />
+    );
+  } else if (tab === "campaigns") {
+    const rows = await listCampaignsForList(database, ctx.organisationId, id);
+    panel = (
+      <CampaignsTab
+        rows={rows.map((r) => ({
+          id: r.id,
+          name: r.name,
+          status: r.status as ListCampaignStatus,
+          laps: r.laps,
+          sent: r.sent,
+          clicks: r.clicks,
+          ctr: r.ctr,
+          costMicro: Number(r.costMicro),
+          firstLapAt: r.firstLapAt?.toISOString() ?? null,
+          lastLapAt: r.lastLapAt?.toISOString() ?? null,
+        }))}
+      />
+    );
+  } else {
+    const rows = await listLookupBreakdown(database, ctx.organisationId, id);
+    panel = <LookupTab rows={rows} />;
+  }
 
   return (
-    <section>
+    <section className="space-y-4">
       <PageHeader
         breadcrumb={[
           { label: "Contacts" },
           { label: "Lists", href: "/lists" },
           { label: list.name },
         ]}
-        title={list.name}
+        title={
+          <span className="inline-flex items-center gap-2">
+            <Link href="/lists" aria-label="Back to lists" className="text-muted hover:text-ink">
+              <ArrowLeft className="h-5 w-5" aria-hidden="true" />
+            </Link>
+            {list.name}
+          </span>
+        }
         meta={
           <>
-            {flagEmoji(list.country)} {country?.name ?? list.country}
+            {flagEmoji(list.country)} {countryName(list.country)}
+            {list.archivedAt ? " · Archived" : ""}
           </>
         }
         actions={
-          can(ctx.role, "list.flush") ? <FlushButton listId={list.id} listName={list.name} /> : null
+          <ListActions
+            listId={list.id}
+            listName={list.name}
+            canFlush={can(ctx.role, "list.flush")}
+            canCreateCampaign={can(ctx.role, "campaign.create") && list.archivedAt === null}
+          />
         }
       />
 
       <KpiStrip
+        label="List figures"
         items={[
-          { label: "Numbers", value: formatNumber(list.counts.members), testId: "count-members" },
-          {
-            label: "Available",
-            value: formatNumber(list.counts.available),
-            testId: "count-available",
-          },
-          { label: "Sent", value: formatNumber(list.counts.sent), testId: "count-sent" },
+          { label: "Total numbers", value: formatNumber(kpis.total), testId: "count-members" },
+          { label: "Good", value: formatNumber(kpis.good), testId: "count-good", tone: "good" },
           {
             label: "Bad",
-            value: formatNumber(list.counts.bad),
+            value: formatNumber(kpis.bad),
             testId: "count-bad",
-            tone: list.counts.bad > 0 ? "bad" : "default",
+            tone: kpis.bad > 0 ? "bad" : "default",
           },
+          { label: "Cached", value: formatNumber(kpis.cached), testId: "count-cached" },
+          { label: "Sent", value: formatNumber(kpis.sent), testId: "count-sent" },
+          { label: "Clicks", value: formatNumber(kpis.clicks), testId: "count-clicks" },
+          { label: "CTR", value: `${(kpis.ctr * 100).toFixed(0)}%`, testId: "count-ctr" },
         ]}
       />
 
-      <dl className="mt-4 grid gap-x-6 gap-y-1 text-sm md:grid-cols-3">
-        <div>
-          <dt className="text-neutral-500">Created</dt>
-          <dd>{formatDateTime(list.createdAt)}</dd>
-        </div>
-        <div>
-          <dt className="text-neutral-500">Last upload</dt>
-          <dd>{formatDateTime(list.lastUploadAt)}</dd>
-        </div>
-        <div>
-          <dt className="text-neutral-500">Last sent</dt>
-          <dd>{formatDateTime(list.lastSentAt)}</dd>
-        </div>
-      </dl>
-
-      <h2 className="mt-8 text-lg font-semibold">Members</h2>
-      <div className="mt-2">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Number</TableHead>
-              <TableHead>Name</TableHead>
-              <TableHead>Email</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Sent</TableHead>
-              <TableHead>Flushed</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {members.rows.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={6} className="h-20 text-center text-neutral-500">
-                  No members yet.
-                </TableCell>
-              </TableRow>
-            ) : (
-              members.rows.map((m) => (
-                <TableRow key={m.id}>
-                  <TableCell className="font-mono text-xs">{m.e164}</TableCell>
-                  <TableCell>
-                    {[m.firstName, m.lastName].filter(Boolean).join(" ") || "—"}
-                  </TableCell>
-                  <TableCell>{m.email ?? "—"}</TableCell>
-                  <TableCell>
-                    {m.bad ? (
-                      <Badge variant="destructive" title={m.badReason ?? undefined}>
-                        Bad
-                      </Badge>
-                    ) : m.sentAt ? (
-                      <Badge variant="secondary">Sent</Badge>
-                    ) : (
-                      <Badge variant="success">Available</Badge>
-                    )}
-                  </TableCell>
-                  <TableCell>{formatDateTime(m.sentAt)}</TableCell>
-                  <TableCell>{formatDateTime(m.flushedAt)}</TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </div>
-      <div className="mt-3 flex items-center justify-between text-sm text-neutral-600">
-        <span>
-          {formatNumber(members.total)} members · page {page} of {pages}
-        </span>
-        <div className="flex gap-2">
-          {page > 1 ? (
-            <Link href={`/lists/${id}?page=${page - 1}`} className="underline">
-              Previous
-            </Link>
-          ) : null}
-          {page < pages ? (
-            <Link href={`/lists/${id}?page=${page + 1}`} className="underline">
-              Next
-            </Link>
-          ) : null}
-        </div>
-      </div>
+      <ListTabs active={tab} />
+      <div role="tabpanel">{panel}</div>
     </section>
   );
 }
+
+type ListCampaignStatus = "draft" | "scheduled" | "sending" | "paused" | "stopped" | "completed";

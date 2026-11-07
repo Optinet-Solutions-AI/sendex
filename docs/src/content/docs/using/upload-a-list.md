@@ -56,3 +56,22 @@ name, pick one or more countries in the **Countries** multi-select, and sort by 
   Clear selection · Delete selected". Deleting a list removes its memberships for good;
   the contacts themselves stay in your organisation. Only an owner can delete lists.
 - **Export CSV** downloads the table with the current filters.
+
+## List details
+
+Click a list name for its page: the KPI tiles (Total numbers, Good, Bad, Cached, Sent,
+Clicks, CTR) and five tabs.
+
+- **Contacts**: the numbers, masked to their last four digits, with Country, Status (Good or
+  Bad), Cached, Meta and Created; search by number, filter by status, 25 a page.
+- **Analytics**: the list grouped by Device Type (the device that clicked) and Country, with
+  Audience, Sent, Clicks, CTR, Leads, Sales, Cost and Revenue. Add and remove dimension chips;
+  their order sets the grouping.
+- **Data Files**: drop a file to add numbers to this list, and the Recent Uploads with their
+  import summaries.
+- **Campaigns**: the campaigns that sent to this list.
+- **Lookup**: the country breakdown (total, good, bad, blacklisted, clickers, sent, clicks).
+  HLR and MNP columns fill in once a lookup provider is connected.
+
+**Refresh** reloads the figures; **+ New Campaign** starts a draft campaign in the list's
+country with the list already attached.

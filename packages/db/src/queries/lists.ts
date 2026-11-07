@@ -502,6 +502,9 @@ export async function flushAllLists(db: Db, organisationId: string): Promise<Flu
 export interface ListMemberRow {
   id: string;
   e164: string;
+  country: string;
+  /** When the contact was first created in the organisation. */
+  createdAt: Date;
   firstName: string | null;
   lastName: string | null;
   email: string | null;
@@ -511,10 +514,15 @@ export interface ListMemberRow {
   badReason: string | null;
 }
 
+export type MemberStatusFilter = "good" | "bad" | "sent";
+
 export interface MembersPageOptions {
   /** 1-based. */
   page: number;
   pageSize: number;
+  /** Digits of the number to look for (spaces and punctuation ignored). */
+  search?: string;
+  status?: MemberStatusFilter;
 }
 
 export interface MembersPage {
@@ -529,7 +537,16 @@ export async function listMembersPage(
   listId: string,
   options: MembersPageOptions,
 ): Promise<MembersPage> {
-  const where = and(eq(listMembers.listId, listId), eq(listMembers.organisationId, organisationId));
+  const conditions: SQL[] = [
+    eq(listMembers.listId, listId),
+    eq(listMembers.organisationId, organisationId),
+  ];
+  const digits = options.search?.replace(/\D/g, "") ?? "";
+  if (digits) conditions.push(ilike(contacts.e164, `%${digits}%`));
+  if (options.status === "bad") conditions.push(eq(listMembers.bad, true));
+  if (options.status === "good") conditions.push(eq(listMembers.bad, false));
+  if (options.status === "sent") conditions.push(isNotNull(listMembers.sentAt));
+  const where = and(...conditions);
   const page = Math.max(1, options.page);
   const pageSize = Math.max(1, options.pageSize);
   const [rows, [count]] = await Promise.all([
@@ -537,6 +554,8 @@ export async function listMembersPage(
       .select({
         id: listMembers.id,
         e164: contacts.e164,
+        country: contacts.country,
+        createdAt: contacts.createdAt,
         firstName: contacts.firstName,
         lastName: contacts.lastName,
         email: contacts.email,
@@ -554,6 +573,7 @@ export async function listMembersPage(
     db
       .select({ total: sql<number>`count(*)`.mapWith(toNumber) })
       .from(listMembers)
+      .innerJoin(contacts, eq(contacts.id, listMembers.contactId))
       .where(where),
   ]);
   return { rows, total: count?.total ?? 0 };

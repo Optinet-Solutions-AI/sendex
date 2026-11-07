@@ -24,13 +24,16 @@ const E2E_E164_PREFIX = "+34622000";
 
 test.describe.configure({ mode: "serial" });
 
-test.beforeAll(async () => {
-  await cleanupE2eLists(E2E_PREFIX, E2E_E164_PREFIX);
-});
+/** The fixture's two landlines are kept as Bad contacts, so they are cleaned up as well. */
+const E2E_LANDLINE_PREFIXES = ["+3491234567", "+3493234567"] as const;
 
-test.afterAll(async () => {
+async function cleanup() {
   await cleanupE2eLists(E2E_PREFIX, E2E_E164_PREFIX);
-});
+  for (const prefix of E2E_LANDLINE_PREFIXES) await cleanupE2eLists(E2E_PREFIX, prefix);
+}
+
+test.beforeAll(cleanup);
+test.afterAll(cleanup);
 
 async function pickOption(page: Page, triggerLabel: string, optionName: string | RegExp) {
   await page.getByRole("combobox", { name: triggerLabel }).click();
@@ -154,10 +157,34 @@ test.describe("lists", () => {
     await row.getByRole("link", { name: listName, exact: true }).click();
     await expect(page.getByRole("heading", { level: 1, name: listName })).toBeVisible();
     await expect(page.getByTestId("count-members")).toHaveText("19");
-    await expect(page.getByTestId("count-available")).toHaveText("17");
+    await expect(page.getByTestId("count-good")).toHaveText("17");
     await expect(page.getByTestId("count-sent")).toHaveText("0");
     await expect(page.getByTestId("count-bad")).toHaveText("2");
-    await expect(page.getByText("+34622000001", { exact: true })).toBeVisible();
+    // Numbers are masked in the Contacts tab; Bad rows carry the badge.
+    await expect(page.getByText("+3462200****", { exact: true }).first()).toBeVisible();
+    await expect(page.getByText("+34622000001", { exact: true })).toHaveCount(0);
+    await page.getByLabel("Status").selectOption("bad");
+    await page.getByRole("button", { name: "Apply" }).click();
+    await expect(page.getByTestId("contact-row")).toHaveCount(2);
+    await expect(page.getByTestId("contact-row").first()).toContainText("Bad");
+    // The other tabs: Lookup totals, Campaigns empty state, Data Files with the upload.
+    // The tabs are client-side; right after a navigation they may not be hydrated yet.
+    const openTab = async (name: string, param: string) => {
+      await expect(async () => {
+        await page.getByRole("tab", { name }).click();
+        await expect(page).toHaveURL(new RegExp(`tab=${param}`), { timeout: 2_000 });
+      }).toPass();
+    };
+    await openTab("Lookup", "lookup");
+    await expect(
+      page.locator('[data-testid="lookup-row"][data-country="All Countries"]'),
+    ).toContainText("19");
+    await openTab("Campaigns", "campaigns");
+    await expect(page.getByText("No campaigns yet")).toBeVisible();
+    await openTab("Data Files", "files");
+    await expect(page.getByTestId("upload-card").first()).toContainText("19 added to list");
+    await openTab("Analytics", "analytics");
+    await expect(page.getByTestId("list-analytics-table")).toContainText("Whole list");
 
     // Archive it from the row menu: it leaves the table, shows under "Show archived", comes back.
     await page.goto(`/lists?search=${encodeURIComponent(listName)}`);

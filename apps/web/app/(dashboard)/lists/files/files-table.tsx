@@ -366,21 +366,7 @@ export function FilesTable({
                     {expanded ? (
                       <tr className="border-t border-rule bg-page" data-testid="file-summary">
                         <td colSpan={9} className="px-4 py-3">
-                          <p className="mb-3 text-sm text-ink">
-                            {formatNumber(job.rowsInFile)} rows → {formatNumber(job.added)} added (
-                            {formatNumber(job.addedGood)} good, {formatNumber(job.addedBad)} bad) ·{" "}
-                            {formatNumber(job.rejected)} rejected · {formatNumber(job.skipped)}{" "}
-                            skipped
-                            {job.dedup ? (
-                              <Badge variant="amber" className="ml-2">
-                                Dedup: ON
-                              </Badge>
-                            ) : null}
-                          </p>
-                          <div className="grid gap-3 md:grid-cols-2">
-                            <ImportResult job={job} />
-                            <Duplicates job={job} />
-                          </div>
+                          <ImportSummaryPanel job={job} />
                         </td>
                       </tr>
                     ) : null}
@@ -419,5 +405,27 @@ export function FilesTable({
         }}
       />
     </section>
+  );
+}
+
+/** "4,346 rows → 4,342 added (4,047 good, 295 bad) · 1 rejected · 3 skipped" plus the two boxes. */
+export function ImportSummaryPanel({ job }: { job: ImportJobRow }) {
+  return (
+    <div>
+      <p className="mb-3 text-sm text-ink">
+        {formatNumber(job.rowsInFile)} rows → {formatNumber(job.added)} added (
+        {formatNumber(job.addedGood)} good, {formatNumber(job.addedBad)} bad) ·{" "}
+        {formatNumber(job.rejected)} rejected · {formatNumber(job.skipped)} skipped
+        {job.dedup ? (
+          <Badge variant="amber" className="ml-2">
+            Dedup: ON
+          </Badge>
+        ) : null}
+      </p>
+      <div className="grid gap-3 md:grid-cols-2">
+        <ImportResult job={job} />
+        <Duplicates job={job} />
+      </div>
+    </div>
   );
 }

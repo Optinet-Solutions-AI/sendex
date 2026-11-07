@@ -5,7 +5,7 @@ import {
   sumResultCounters,
 } from "@sendex/core";
 import { and, asc, eq, sql } from "drizzle-orm";
-import { campaigns, laps, links } from "../schema/campaigns.js";
+import { campaigns, laps, links, segments } from "../schema/campaigns.js";
 import { lists } from "../schema/lists.js";
 import { routes } from "../schema/routes.js";
 import { clicks, messages } from "../schema/tracking.js";
@@ -105,10 +105,17 @@ const FAILED = sql`${messages.status} in ('failed', 'expired')`;
 
 async function lapResults(db: Db, campaignId: string): Promise<LapResult[]> {
   const rows = await db
-    .select({ lap: laps, routeName: routes.name, listName: lists.name, priceMicro: lapPriceSql() })
+    .select({
+      lap: laps,
+      routeName: routes.name,
+      listName: lists.name,
+      segmentName: segments.name,
+      priceMicro: lapPriceSql(),
+    })
     .from(laps)
     .innerJoin(routes, eq(routes.id, laps.routeId))
     .innerJoin(lists, eq(lists.id, laps.listId))
+    .leftJoin(segments, eq(segments.id, laps.segmentId))
     .where(eq(laps.campaignId, campaignId))
     .orderBy(
       sql`${laps.rank} asc nulls last`,
@@ -121,6 +128,7 @@ async function lapResults(db: Db, campaignId: string): Promise<LapResult[]> {
     ...r.lap,
     routeName: r.routeName,
     listName: r.listName,
+    segmentName: r.segmentName ?? null,
     priceMicro: r.priceMicro,
     on: r.lap.status !== "cancelled",
     ...resultRates(r.lap),
@@ -315,10 +323,17 @@ export async function setLapOn(
   input: SetLapOnInput,
 ): Promise<LapSummary> {
   const [current] = await db
-    .select({ lap: laps, routeName: routes.name, listName: lists.name, priceMicro: lapPriceSql() })
+    .select({
+      lap: laps,
+      routeName: routes.name,
+      listName: lists.name,
+      segmentName: segments.name,
+      priceMicro: lapPriceSql(),
+    })
     .from(laps)
     .innerJoin(routes, eq(routes.id, laps.routeId))
     .innerJoin(lists, eq(lists.id, laps.listId))
+    .leftJoin(segments, eq(segments.id, laps.segmentId))
     .where(and(eq(laps.organisationId, organisationId), eq(laps.id, input.lapId)))
     .limit(1);
   if (!current) throw new Error("Lap not found");
@@ -354,6 +369,7 @@ export async function setLapOn(
     ...updated,
     routeName: current.routeName,
     listName: current.listName,
+    segmentName: current.segmentName ?? null,
     priceMicro: current.priceMicro,
   };
 }

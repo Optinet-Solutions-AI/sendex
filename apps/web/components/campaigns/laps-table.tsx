@@ -292,7 +292,9 @@ export function LapsTable({
   const rows = sortKey ? sortLaps(laps.map(toRow), sortKey, dir) : laps.map(toRow);
   const activeRows = rows.filter((r) => r.on && r.status !== "done");
   const allOn = rows.filter((r) => r.status !== "done").every((r) => r.on);
-  const remaining = campaign.lists.reduce((sum, l) => sum + l.available, 0);
+  const remaining =
+    campaign.lists.reduce((sum, l) => sum + l.available, 0) +
+    campaign.segments.reduce((sum, seg) => sum + seg.available, 0);
   const plan = (amountEur: number) =>
     topUpPlan({
       amountMicro: Math.round(amountEur * 1_000_000),
@@ -656,6 +658,14 @@ function LapTr({
               <ExternalLink className="h-3 w-3 shrink-0" aria-hidden="true" />
             </a>
           </Tooltip>
+          {lap.segmentName ? (
+            <span
+              className="ml-1 rounded-full bg-navy-soft px-1.5 py-0.5 text-[10px] text-navy"
+              title={`Only contacts matching the segment ${lap.segmentName}`}
+            >
+              {lap.segmentName}
+            </span>
+          ) : null}
           {lap.refused > 0 ? (
             <span
               data-testid="lap-refused"

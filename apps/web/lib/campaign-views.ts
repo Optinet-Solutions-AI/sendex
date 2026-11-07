@@ -82,6 +82,7 @@ export function toLapView(lap: LapSummary): LapView {
     routeName: lap.routeName,
     listId: lap.listId,
     listName: lap.listName,
+    segmentName: lap.segmentName,
     testSize: lap.testSize,
     status: lap.status,
     sent: lap.sent,
@@ -128,6 +129,14 @@ export function toCampaignView(
     createdAt: detail.createdAt.toISOString(),
     updatedAt: detail.updatedAt.toISOString(),
     lists: detail.lists.map(toListOption),
+    segments: detail.segments.map((seg) => ({
+      id: seg.id,
+      name: seg.name,
+      summary: seg.summary,
+      size: seg.size,
+      good: seg.good,
+      available: seg.available,
+    })),
     sidGroup: detail.sidGroup ? toSidGroupView(detail.sidGroup, sidStats) : null,
     adTexts: detail.adTexts.map((t) => ({
       id: t.id,

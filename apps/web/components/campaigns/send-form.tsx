@@ -27,6 +27,7 @@ import type {
   ListOption,
   RoutePerformanceView,
   RouteView,
+  SegmentOption,
   SidGroupView,
 } from "./types";
 import { ErrorText, inputClass } from "./ui";
@@ -35,6 +36,8 @@ export interface SendFormProps {
   campaign: CampaignView;
   sidGroups: SidGroupView[];
   lists: ListOption[];
+  /** The organisation's segments (not templates, not global excludes) for the Segments section. */
+  segmentOptions: SegmentOption[];
   links: LinkOption[];
   routes: RouteView[];
   /** Platform ranks and the organisation's own statistics per route, for the Routes tab. */
@@ -77,6 +80,7 @@ export function SendForm({
   campaign,
   sidGroups,
   lists,
+  segmentOptions,
   links,
   routes,
   performance,
@@ -234,10 +238,19 @@ export function SendForm({
                 onClick={() => setTab("lists")}
                 aria-label="Lists"
               >
-                <span className={campaign.lists.length === 0 ? "text-muted" : "truncate"}>
-                  {campaign.lists.length === 0
+                <span
+                  className={
+                    campaign.lists.length + campaign.segments.length === 0
+                      ? "text-muted"
+                      : "truncate"
+                  }
+                >
+                  {campaign.lists.length + campaign.segments.length === 0
                     ? "Select lists or segments…"
-                    : campaign.lists.map((l) => l.name).join(", ")}
+                    : [
+                        ...campaign.segments.map((seg) => `${seg.name} (segment)`),
+                        ...campaign.lists.map((l) => l.name),
+                      ].join(", ")}
                 </span>
                 <ChevronRight className="h-4 w-4 shrink-0 text-muted" aria-hidden="true" />
               </button>
@@ -342,6 +355,7 @@ export function SendForm({
                 <ListsPanel
                   campaign={campaign}
                   lists={lists}
+                  segmentOptions={segmentOptions}
                   canFlush={canFlush}
                   onChanged={onChanged}
                 />

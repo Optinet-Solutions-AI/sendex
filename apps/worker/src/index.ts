@@ -146,6 +146,22 @@ const linksDeps =
 // Public postback endpoint: one sliding window per organisation (RATE_LIMITS.postback) when
 // Redis is up; without Redis the endpoint still works, just unthrottled.
 const postbackLimiter = redis ? createRateLimiter(redis, { prefix: "sendex:rl" }) : null;
+// The Unsubscribe API shares the postback limiter (same shape: per organisation, per minute).
+const unsubscribeDeps = {
+  db: db(),
+  ...(postbackLimiter
+    ? {
+        rateLimit: async (organisationId: string) =>
+          (
+            await postbackLimiter.limit({
+              key: `unsubscribe:${organisationId}`,
+              max: RATE_LIMITS.postback.max,
+              windowMs: RATE_LIMITS.postback.windowMs,
+            })
+          ).allowed,
+      }
+    : {}),
+};
 const postbacksDeps =
   store && queues
     ? {
@@ -202,6 +218,7 @@ const app = createApp({
     : {}),
   ...(linksDeps ? { links: linksDeps } : {}),
   ...(postbacksDeps ? { postbacks: postbacksDeps } : {}),
+  ...(store ? { unsubscribe: unsubscribeDeps } : {}),
   ...(publicApiDeps ? { publicApi: publicApiDeps } : {}),
   ...(telecom23WebhookDeps ? { telecom23Webhook: telecom23WebhookDeps } : {}),
 });

@@ -1,5 +1,5 @@
 import type { ListSortKey, SortDirection } from "@sendex/core";
-import { and, asc, desc, eq, ilike, inArray, isNull, type SQL, sql } from "drizzle-orm";
+import { and, asc, desc, eq, ilike, inArray, isNotNull, isNull, type SQL, sql } from "drizzle-orm";
 import type { PgColumn } from "drizzle-orm/pg-core";
 import { contacts, listMembers, lists, suppressions } from "../schema/lists.js";
 import type { Db } from "../types.js";
@@ -20,9 +20,14 @@ const sentCountSql =
     toNumber,
   );
 
+export type ArchivedFilter = "exclude" | "only" | "all";
+
 export interface ListListsOptions {
   search?: string;
-  country?: string;
+  /** ISO-2 codes; empty or absent means every country. */
+  countries?: readonly string[];
+  /** Archived lists are left out unless asked for. */
+  archived?: ArchivedFilter;
   sort?: ListSortKey;
   dir?: SortDirection;
   /** 1-based. */
@@ -37,10 +42,36 @@ export interface ListSummaryRow {
   numbersCount: number;
   /** Members with `sent_at` set. */
   sent: number;
+  /** Clicks per message the campaign engine sent to this list, 0 when nothing was sent. */
+  ctr: number;
+  leads: number;
+  sales: number;
+  /** Micro-EUR spent on this list across every lap. */
+  spendMicro: bigint;
   lastSentAt: Date | null;
   lastUploadAt: Date | null;
   createdAt: Date;
+  archivedAt: Date | null;
 }
+
+/** Lap counters per list: what the engine sent, who clicked, converted and what it cost. */
+const lapStatsSql = {
+  ctr: sql<number>`coalesce((select sum(l.clicks)::float / nullif(sum(l.sent), 0) from laps l where l.list_id = ${lists}."id"), 0)`.mapWith(
+    toNumber,
+  ),
+  leads:
+    sql<number>`(select coalesce(sum(l.leads), 0) from laps l where l.list_id = ${lists}."id")::int`.mapWith(
+      toNumber,
+    ),
+  sales:
+    sql<number>`(select coalesce(sum(l.sales), 0) from laps l where l.list_id = ${lists}."id")::int`.mapWith(
+      toNumber,
+    ),
+  spendMicro:
+    sql<bigint>`(select coalesce(sum(l.cost_micro), 0) from laps l where l.list_id = ${lists}."id")::bigint`.mapWith(
+      (v: unknown) => BigInt(v as string | number | bigint),
+    ),
+};
 
 export interface ListListsResult {
   rows: ListSummaryRow[];
@@ -57,6 +88,14 @@ function sortColumn(key: ListSortKey): SQL | PgColumn {
       return lists.country;
     case "sent":
       return sentCountSql;
+    case "ctr":
+      return lapStatsSql.ctr;
+    case "leads":
+      return lapStatsSql.leads;
+    case "sales":
+      return lapStatsSql.sales;
+    case "spend":
+      return lapStatsSql.spendMicro;
     case "lastSentAt":
       return lists.lastSentAt;
     case "lastUploadAt":
@@ -77,7 +116,17 @@ export async function listLists(
   if (search) {
     conditions.push(ilike(lists.name, `%${search.replace(/[%_\\]/g, "\\$&")}%`));
   }
-  if (options.country) conditions.push(eq(lists.country, options.country.toUpperCase()));
+  if (options.countries && options.countries.length > 0) {
+    conditions.push(
+      inArray(
+        lists.country,
+        options.countries.map((c) => c.toUpperCase()),
+      ),
+    );
+  }
+  const archived = options.archived ?? "exclude";
+  if (archived === "exclude") conditions.push(isNull(lists.archivedAt));
+  if (archived === "only") conditions.push(isNotNull(lists.archivedAt));
   const where = and(...conditions);
 
   const sort = options.sort ?? "createdAt";
@@ -94,9 +143,14 @@ export async function listLists(
         country: lists.country,
         numbersCount: lists.numbersCount,
         sent: sentCountSql,
+        ctr: lapStatsSql.ctr,
+        leads: lapStatsSql.leads,
+        sales: lapStatsSql.sales,
+        spendMicro: lapStatsSql.spendMicro,
         lastSentAt: lists.lastSentAt,
         lastUploadAt: lists.lastUploadAt,
         createdAt: lists.createdAt,
+        archivedAt: lists.archivedAt,
       })
       .from(lists)
       .where(where)
@@ -117,13 +171,42 @@ export interface ListNameRow {
   country: string;
 }
 
-/** Every list of the organisation, lightest shape, for selects. */
+/** Every unarchived list of the organisation, lightest shape, for selects. */
 export async function listListNames(db: Db, organisationId: string): Promise<ListNameRow[]> {
   return db
     .select({ id: lists.id, name: lists.name, country: lists.country })
     .from(lists)
-    .where(eq(lists.organisationId, organisationId))
+    .where(and(eq(lists.organisationId, organisationId), isNull(lists.archivedAt)))
     .orderBy(asc(lists.name));
+}
+
+/** Archive (hide) or unarchive a list. Returns false when it is not the organisation's. */
+export async function setListArchived(
+  db: Db,
+  organisationId: string,
+  listId: string,
+  archived: boolean,
+): Promise<boolean> {
+  const updated = await db
+    .update(lists)
+    .set({ archivedAt: archived ? new Date() : null })
+    .where(and(eq(lists.id, listId), eq(lists.organisationId, organisationId)))
+    .returning({ id: lists.id });
+  return updated.length > 0;
+}
+
+/** Delete several lists of the organisation at once (members cascade, contacts stay). */
+export async function deleteLists(
+  db: Db,
+  organisationId: string,
+  listIds: readonly string[],
+): Promise<number> {
+  if (listIds.length === 0) return 0;
+  const deleted = await db
+    .delete(lists)
+    .where(and(eq(lists.organisationId, organisationId), inArray(lists.id, [...listIds])))
+    .returning({ id: lists.id });
+  return deleted.length;
 }
 
 export interface ListCounts {
@@ -229,6 +312,9 @@ export async function deleteList(db: Db, organisationId: string, listId: string)
 export interface ImportRow {
   e164: string;
   country: string;
+  /** Kept but flagged Bad (landline, suspicious pattern): never sent to, counted as bad. */
+  bad?: boolean | undefined;
+  badReason?: string | undefined;
   firstName?: string | undefined;
   lastName?: string | undefined;
   email?: string | undefined;
@@ -257,6 +343,8 @@ export interface ImportContactsResult {
   imported: number;
   /** Rows not added: known contacts under `skip_existing`, or already members of the list. */
   skippedExisting: number;
+  /** Up to 50 of the skipped numbers, for the import summary. */
+  skippedSamples: string[];
 }
 
 function chunk<T>(items: readonly T[], size: number): T[][] {
@@ -293,6 +381,10 @@ export async function importContacts(
 ): Promise<ImportContactsResult> {
   const listId = await resolveTargetList(db, organisationId, input);
   let imported = 0;
+  const skippedSamples: string[] = [];
+  const noteSkipped = (e164: string) => {
+    if (skippedSamples.length < 50) skippedSamples.push(e164);
+  };
 
   for (const batch of chunk(input.rows, MEMBER_CHUNK)) {
     if (batch.length === 0) continue;
@@ -311,7 +403,9 @@ export async function importContacts(
           )
         : new Set<string>();
     const toImport = batch.filter((r) => !existing.has(r.e164));
+    for (const r of batch) if (existing.has(r.e164)) noteSkipped(r.e164);
     if (toImport.length === 0) continue;
+    const flagsByNumber = new Map(toImport.map((r) => [r.e164, r]));
 
     const upserted = await db
       .insert(contacts)
@@ -343,14 +437,27 @@ export async function importContacts(
           custom5: sql`coalesce(excluded.custom5, ${contacts.custom5})`,
         },
       })
-      .returning({ id: contacts.id });
+      .returning({ id: contacts.id, e164: contacts.e164 });
 
     const inserted = await db
       .insert(listMembers)
-      .values(upserted.map((c) => ({ organisationId, listId, contactId: c.id })))
+      .values(
+        upserted.map((c) => {
+          const row = flagsByNumber.get(c.e164);
+          return {
+            organisationId,
+            listId,
+            contactId: c.id,
+            bad: row?.bad === true,
+            badReason: row?.bad === true ? (row.badReason ?? null) : null,
+          };
+        }),
+      )
       .onConflictDoNothing({ target: [listMembers.listId, listMembers.contactId] })
-      .returning({ id: listMembers.id });
+      .returning({ id: listMembers.id, contactId: listMembers.contactId });
     imported += inserted.length;
+    const insertedContacts = new Set(inserted.map((m) => m.contactId));
+    for (const c of upserted) if (!insertedContacts.has(c.id)) noteSkipped(c.e164);
   }
 
   await db
@@ -363,7 +470,7 @@ export async function importContacts(
 
   if (input.flushAfterImport) await flushList(db, organisationId, listId);
 
-  return { listId, imported, skippedExisting: input.rows.length - imported };
+  return { listId, imported, skippedExisting: input.rows.length - imported, skippedSamples };
 }
 
 /** Reset the sent flags of every member of the list, keeping bad flags. Returns members touched. */
@@ -395,6 +502,9 @@ export async function flushAllLists(db: Db, organisationId: string): Promise<Flu
 export interface ListMemberRow {
   id: string;
   e164: string;
+  country: string;
+  /** When the contact was first created in the organisation. */
+  createdAt: Date;
   firstName: string | null;
   lastName: string | null;
   email: string | null;
@@ -404,10 +514,15 @@ export interface ListMemberRow {
   badReason: string | null;
 }
 
+export type MemberStatusFilter = "good" | "bad" | "sent";
+
 export interface MembersPageOptions {
   /** 1-based. */
   page: number;
   pageSize: number;
+  /** Digits of the number to look for (spaces and punctuation ignored). */
+  search?: string;
+  status?: MemberStatusFilter;
 }
 
 export interface MembersPage {
@@ -422,7 +537,16 @@ export async function listMembersPage(
   listId: string,
   options: MembersPageOptions,
 ): Promise<MembersPage> {
-  const where = and(eq(listMembers.listId, listId), eq(listMembers.organisationId, organisationId));
+  const conditions: SQL[] = [
+    eq(listMembers.listId, listId),
+    eq(listMembers.organisationId, organisationId),
+  ];
+  const digits = options.search?.replace(/\D/g, "") ?? "";
+  if (digits) conditions.push(ilike(contacts.e164, `%${digits}%`));
+  if (options.status === "bad") conditions.push(eq(listMembers.bad, true));
+  if (options.status === "good") conditions.push(eq(listMembers.bad, false));
+  if (options.status === "sent") conditions.push(isNotNull(listMembers.sentAt));
+  const where = and(...conditions);
   const page = Math.max(1, options.page);
   const pageSize = Math.max(1, options.pageSize);
   const [rows, [count]] = await Promise.all([
@@ -430,6 +554,8 @@ export async function listMembersPage(
       .select({
         id: listMembers.id,
         e164: contacts.e164,
+        country: contacts.country,
+        createdAt: contacts.createdAt,
         firstName: contacts.firstName,
         lastName: contacts.lastName,
         email: contacts.email,
@@ -447,6 +573,7 @@ export async function listMembersPage(
     db
       .select({ total: sql<number>`count(*)`.mapWith(toNumber) })
       .from(listMembers)
+      .innerJoin(contacts, eq(contacts.id, listMembers.contactId))
       .where(where),
   ]);
   return { rows, total: count?.total ?? 0 };

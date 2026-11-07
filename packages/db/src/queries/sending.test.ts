@@ -21,6 +21,7 @@ import {
 } from "../schema/index.js";
 import { createTestDb, seedOrganisation, type TestDb } from "../test/db.js";
 import { getBalanceMicro } from "./ledger.js";
+import { createSegment, deleteSegment } from "./segments.js";
 import { createSendingStore, type SendingStore } from "./sending.js";
 
 let t: TestDb;
@@ -662,5 +663,72 @@ describe("claimQueuedLaps and lap lifecycle", () => {
     expect(foreign.list).toBeNull();
     // Platform routes (organisation_id null) are visible to every organisation.
     expect(foreign.route?.id).toBe(routeId);
+  });
+});
+
+describe("segments at send time", () => {
+  it("a lap's segment narrows the list and a global exclude keeps contacts off every lap", async () => {
+    // A list of its own: earlier tests claim the shared list's members in no fixed order.
+    const segList = must(
+      (
+        await t.db
+          .insert(lists)
+          .values({ organisationId: org, name: "Segment list", country: "ES" })
+          .returning({ id: lists.id })
+      )[0],
+      "list",
+    ).id;
+    for (const [name, e164] of [
+      ["seg-keep", "+34611100001"],
+      ["seg-drop", "+34611100002"],
+    ] as const) {
+      const contact = must(
+        (
+          await t.db
+            .insert(contacts)
+            .values({ organisationId: org, e164, country: "ES", firstName: name })
+            .returning({ id: contacts.id })
+        )[0],
+        "contact",
+      );
+      await t.db
+        .insert(listMembers)
+        .values({ organisationId: org, listId: segList, contactId: contact.id });
+    }
+    const scope = { ...eligibility(), listId: segList };
+    const names = (list: Array<{ firstName: string | null }>) =>
+      list.map((r) => r.firstName ?? "").sort();
+
+    const onlyKeep = await createSegment(t.db, org, {
+      name: "Keep only",
+      definition: {
+        id: "g",
+        op: "and",
+        rules: [{ id: "r", field: "first_name", operator: "equals", value: "seg-keep" }],
+      },
+      isTemplate: false,
+      globalExclude: false,
+    });
+    const narrowed = await store.selectEligibleMembers({ ...scope, segmentId: onlyKeep.id }, 100);
+    expect(names(narrowed)).toEqual(["seg-keep"]);
+    expect(await store.countEligibleMembers({ ...scope, segmentId: onlyKeep.id })).toBe(1);
+
+    const exclude = await createSegment(t.db, org, {
+      name: "Never seg-drop",
+      definition: {
+        id: "g",
+        op: "and",
+        rules: [{ id: "r", field: "first_name", operator: "equals", value: "seg-drop" }],
+      },
+      isTemplate: false,
+      globalExclude: true,
+    });
+    expect(names(await store.selectEligibleMembers(scope, 100))).toEqual(["seg-keep"]);
+    const skips = await store.countSkipReasons(scope);
+    expect(skips.suppressed).toBe(1);
+
+    await deleteSegment(t.db, org, exclude.id);
+    await deleteSegment(t.db, org, onlyKeep.id);
+    expect(names(await store.selectEligibleMembers(scope, 100))).toEqual(["seg-drop", "seg-keep"]);
   });
 });

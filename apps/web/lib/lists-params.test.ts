@@ -5,7 +5,8 @@ describe("parseListsQuery", () => {
   it("defaults to newest first, page 1, no filters", () => {
     expect(parseListsQuery({})).toEqual({
       search: "",
-      country: "",
+      countries: [],
+      archived: false,
       sort: "createdAt",
       dir: "desc",
       page: 1,
@@ -21,7 +22,18 @@ describe("parseListsQuery", () => {
         dir: "asc",
         page: "3",
       }),
-    ).toEqual({ search: "roy", country: "ES", sort: "numbersCount", dir: "asc", page: 3 });
+    ).toEqual({
+      search: "roy",
+      countries: ["ES"],
+      archived: false,
+      sort: "numbersCount",
+      dir: "asc",
+      page: 3,
+    });
+    expect(parseListsQuery({ country: ["es", "FR", "zzz"], archived: "1" })).toMatchObject({
+      countries: ["ES", "FR"],
+      archived: true,
+    });
   });
 
   it("ignores unknown sort keys, bad directions and bad pages", () => {
@@ -41,7 +53,7 @@ describe("listsQueryString", () => {
 
   it("includes what differs from the defaults", () => {
     expect(
-      listsQueryString({ search: "roy boy", country: "ES", sort: "name", dir: "asc", page: 2 }),
+      listsQueryString({ search: "roy boy", countries: ["ES"], sort: "name", dir: "asc", page: 2 }),
     ).toBe("?search=roy+boy&country=ES&sort=name&dir=asc&page=2");
   });
 });

@@ -49,7 +49,9 @@ export function CampaignHeader({
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [pending, start] = useTransition();
   const totals = results ?? campaignTotals(campaign.laps);
-  const contacts = campaign.lists.reduce((sum, l) => sum + l.available, 0);
+  const contacts =
+    campaign.lists.reduce((sum, l) => sum + l.available, 0) +
+    campaign.segments.reduce((sum, seg) => sum + seg.available, 0);
   const planned = campaign.laps.reduce((sum, l) => sum + l.testSize, 0);
   const target = planned > 0 ? planned : contacts;
   const progress = target > 0 ? Math.min(100, Math.round((totals.sent / target) * 100)) : 0;

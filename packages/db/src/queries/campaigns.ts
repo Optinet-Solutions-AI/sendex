@@ -12,10 +12,12 @@ import {
   adTexts,
   campaignLinks,
   campaignLists,
+  campaignSegments,
   campaignSidGroup,
   campaigns,
   laps,
   links,
+  segments,
   senderIds,
   sidGroups,
 } from "../schema/campaigns.js";
@@ -23,6 +25,7 @@ import { lists } from "../schema/lists.js";
 import { routes } from "../schema/routes.js";
 import type { Db } from "../types.js";
 import { recordAudit } from "./audit.js";
+import { segmentListAvailability } from "./segments.js";
 
 export type CampaignRow = typeof campaigns.$inferSelect;
 export type CampaignStatus = CampaignRow["status"];
@@ -298,15 +301,29 @@ export interface CampaignLinkSummary {
   profitMicro: bigint;
 }
 
+export interface CampaignSegmentSummary {
+  id: string;
+  name: string;
+  summary: string;
+  /** The last Refresh Stats, null until run. */
+  size: number | null;
+  good: number | null;
+  /** Matching contacts of the campaign country's lists that can still be sent to. */
+  available: number;
+}
+
 export interface LapSummary extends LapRow {
   routeName: string;
   listName: string;
+  /** The segment the lap was planned from, when it was. */
+  segmentName: string | null;
   /** The route's current price for the lap's list country, null when unpriced. */
   priceMicro: bigint | null;
 }
 
 export interface CampaignDetail extends CampaignRow {
   lists: CampaignListSummary[];
+  segments: CampaignSegmentSummary[];
   sidGroup: SidGroupWithIds | null;
   adTexts: AdTextRow[];
   links: CampaignLinkSummary[];
@@ -370,23 +387,53 @@ async function campaignLinkSummaries(db: Db, campaignId: string): Promise<Campai
     .orderBy(asc(links.name));
 }
 
+/** The campaign's segments with how many contacts each could still reach in its country. */
+async function campaignSegmentsWithAvailable(
+  db: Db,
+  organisationId: string,
+  campaignId: string,
+  country: string,
+): Promise<CampaignSegmentSummary[]> {
+  const rows = await db
+    .select({
+      id: segments.id,
+      name: segments.name,
+      summary: segments.summary,
+      size: segments.size,
+      good: segments.good,
+    })
+    .from(campaignSegments)
+    .innerJoin(segments, eq(segments.id, campaignSegments.segmentId))
+    .where(eq(campaignSegments.campaignId, campaignId))
+    .orderBy(asc(segments.name));
+  const out: CampaignSegmentSummary[] = [];
+  for (const row of rows) {
+    const perList = await segmentListAvailability(db, organisationId, row.id, country);
+    out.push({ ...row, available: perList.reduce((sum, l) => sum + l.available, 0) });
+  }
+  return out;
+}
+
 async function campaignLaps(db: Db, campaignId: string): Promise<LapSummary[]> {
   const rows = await db
     .select({
       lap: laps,
       routeName: routes.name,
       listName: lists.name,
+      segmentName: segments.name,
       priceMicro: lapPriceSql(),
     })
     .from(laps)
     .innerJoin(routes, eq(routes.id, laps.routeId))
     .innerJoin(lists, eq(lists.id, laps.listId))
+    .leftJoin(segments, eq(segments.id, laps.segmentId))
     .where(eq(laps.campaignId, campaignId))
     .orderBy(asc(laps.createdAt), asc(lists.name), asc(routes.name), asc(laps.id));
   return rows.map((r) => ({
     ...r.lap,
     routeName: r.routeName,
     listName: r.listName,
+    segmentName: r.segmentName ?? null,
     priceMicro: r.priceMicro,
   }));
 }
@@ -412,8 +459,9 @@ export async function getCampaign(
     .where(and(eq(campaigns.organisationId, organisationId), eq(campaigns.id, id)))
     .limit(1);
   if (!campaign) return null;
-  const [listRows, sidGroup, textRows, linkRows, lapRows] = await Promise.all([
+  const [listRows, segmentRows, sidGroup, textRows, linkRows, lapRows] = await Promise.all([
     campaignListsWithAvailable(db, id),
+    campaignSegmentsWithAvailable(db, organisationId, id, campaign.country),
     campaignSidGroupWithIds(db, id),
     db.select().from(adTexts).where(eq(adTexts.campaignId, id)).orderBy(asc(adTexts.position)),
     campaignLinkSummaries(db, id),
@@ -422,6 +470,7 @@ export async function getCampaign(
   return {
     ...campaign,
     lists: listRows,
+    segments: segmentRows,
     sidGroup,
     adTexts: textRows,
     links: linkRows,
@@ -456,6 +505,15 @@ export async function duplicateCampaign(
       await tx
         .insert(campaignLists)
         .values(source.lists.map((l) => ({ campaignId: copy.id, listId: l.id, organisationId })));
+    }
+    if (source.segments.length > 0) {
+      await tx.insert(campaignSegments).values(
+        source.segments.map((seg) => ({
+          campaignId: copy.id,
+          segmentId: seg.id,
+          organisationId,
+        })),
+      );
     }
     if (source.sidGroup) {
       await tx
@@ -767,8 +825,46 @@ export async function listsForCountry(
       bad: badSql(),
     })
     .from(lists)
-    .where(and(eq(lists.organisationId, organisationId), eq(lists.country, country.toUpperCase())))
+    .where(
+      and(
+        eq(lists.organisationId, organisationId),
+        eq(lists.country, country.toUpperCase()),
+        isNull(lists.archivedAt),
+      ),
+    )
     .orderBy(asc(lists.name));
+}
+
+/** Replace the campaign's segments (only the organisation's non-template segments are kept). */
+export async function setCampaignSegments(
+  db: Db,
+  organisationId: string,
+  campaignId: string,
+  segmentIds: readonly string[],
+): Promise<void> {
+  await ownedCampaign(db, organisationId, campaignId);
+  const owned =
+    segmentIds.length === 0
+      ? []
+      : await db
+          .select({ id: segments.id })
+          .from(segments)
+          .where(
+            and(
+              eq(segments.organisationId, organisationId),
+              eq(segments.isTemplate, false),
+              inArray(segments.id, [...segmentIds]),
+            ),
+          );
+  await db.transaction(async (tx) => {
+    await tx.delete(campaignSegments).where(eq(campaignSegments.campaignId, campaignId));
+    if (owned.length > 0) {
+      await tx
+        .insert(campaignSegments)
+        .values(owned.map((seg) => ({ campaignId, segmentId: seg.id, organisationId })));
+    }
+  });
+  await touch(db, campaignId);
 }
 
 /** Replace the campaign's lists with `listIds` (only lists of the organisation are kept). */
@@ -931,6 +1027,7 @@ export interface SendEstimate {
   smsCount: number;
   costMicro: bigint;
   lists: CampaignListSummary[];
+  segments: CampaignSegmentSummary[];
   routes: RouteOption[];
   laps: PlannedLap[];
 }
@@ -954,9 +1051,18 @@ export async function estimateSend(
     }
   }
 
+  // A segment audience is one lap per list its contacts live in, filtered by the segment.
+  const planLists: Array<{ listId: string; available: number; segmentId?: string }> =
+    campaign.lists.map((l) => ({ listId: l.id, available: l.available }));
+  for (const seg of campaign.segments) {
+    const perList = await segmentListAvailability(db, organisationId, seg.id, campaign.country);
+    for (const entry of perList) {
+      planLists.push({ listId: entry.listId, available: entry.available, segmentId: seg.id });
+    }
+  }
   const planned = planLaps({
     testSize: campaign.testSize,
-    lists: campaign.lists.map((l) => ({ listId: l.id, available: l.available })),
+    lists: planLists,
     routes: chosen.map((r) => ({ routeId: r.id, priceMicro: Number(r.priceMicro) })),
     sendAll: options.sendAll,
   });
@@ -966,7 +1072,9 @@ export async function estimateSend(
   );
 
   return {
-    contacts: campaign.lists.reduce((sum, l) => sum + l.available, 0),
+    contacts:
+      campaign.lists.reduce((sum, l) => sum + l.available, 0) +
+      campaign.segments.reduce((sum, seg) => sum + seg.available, 0),
     sids: campaign.sidGroup?.activeCount ?? 0,
     texts: campaign.adTexts.filter((t) => t.active).length,
     links: campaign.links.filter((l) => l.active).length,
@@ -975,6 +1083,7 @@ export async function estimateSend(
     smsCount: planned.reduce((sum, lap) => sum + lap.count, 0),
     costMicro: BigInt(Math.round(costEur * 1_000_000)),
     lists: campaign.lists,
+    segments: campaign.segments,
     routes: chosen,
     laps: planned,
   };
@@ -998,7 +1107,9 @@ export async function createLaps(
   input: CreateLapsInput,
 ): Promise<LapRow[]> {
   const estimate = await estimateSend(db, organisationId, campaignId, input);
-  if (estimate.lists.length === 0) throw new Error("Pick at least one list");
+  if (estimate.lists.length === 0 && estimate.segments.length === 0) {
+    throw new Error("Pick at least one list or segment");
+  }
   if (estimate.routes.length === 0) throw new Error("Pick at least one route");
   if (estimate.texts === 0) throw new Error("Add at least one active ad text");
   if (estimate.sids === 0) throw new Error("Pick a sender id group with an active sender id");
@@ -1019,6 +1130,7 @@ export async function createLaps(
           routeId: lap.routeId,
           testSize: lap.count,
           status: "queued" as const,
+          segmentId: lap.segmentId ?? null,
         })),
       )
       .returning();
@@ -1035,6 +1147,7 @@ export async function createLaps(
         lapIds: rows.map((r) => r.id),
         routeIds: estimate.routes.map((r) => r.id),
         listIds: estimate.lists.map((l) => l.id),
+        segmentIds: estimate.segments.map((seg) => seg.id),
         sendAll: input.sendAll,
         testSize: estimate.testSize,
         smsCount: estimate.smsCount,

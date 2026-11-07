@@ -33,6 +33,7 @@ import {
   rescheduleLap,
   setAllLapsOn,
   setCampaignLists,
+  setCampaignSegments,
   setCampaignSidGroup,
   setLapComment,
   setLapOn,
@@ -210,6 +211,18 @@ export async function setCampaignSidGroupAction(input: unknown): Promise<ActionR
 // ---------------------------------------------------------------------------
 
 const setListsInput = campaignRef.extend({ listIds: z.array(uuid) });
+
+const setSegmentsInput = campaignRef.extend({ segmentIds: z.array(uuid).max(50) });
+
+/** The Segments section of the Lists tab: replace the campaign's segment audiences. */
+export async function setCampaignSegmentsAction(input: unknown): Promise<ActionResult<null>> {
+  return run("campaign.create", async (ctx) => {
+    const data = setSegmentsInput.parse(input);
+    await setCampaignSegments(db(), ctx.organisationId, data.campaignId, data.segmentIds);
+    revalidateCampaign(data.campaignId);
+    return null;
+  });
+}
 
 export async function setCampaignListsAction(input: unknown): Promise<ActionResult<null>> {
   return run("campaign.create", async (ctx) => {
@@ -394,7 +407,9 @@ export async function sendCampaignAction(input: unknown): Promise<ActionResult<L
       actorUserId: ctx.userId,
     });
     revalidateCampaign(data.campaignId);
-    return rows.map((lap) => toLapView({ ...lap, routeName: "", listName: "", priceMicro: null }));
+    return rows.map((lap) =>
+      toLapView({ ...lap, routeName: "", listName: "", segmentName: null, priceMicro: null }),
+    );
   });
 }
 

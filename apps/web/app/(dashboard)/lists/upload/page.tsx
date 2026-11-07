@@ -19,13 +19,9 @@ export default async function UploadListPage() {
   return (
     <section className="max-w-5xl">
       <PageHeader
-        breadcrumb={[
-          { label: "Contacts" },
-          { label: "Lists", href: "/lists" },
-          { label: "Upload" },
-        ]}
-        title="Upload List"
-        subtitle="CSV or TXT up to 10 MB, or paste numbers. One list per country; numbers are checked against the list's country."
+        breadcrumb={[{ label: "Contacts" }, { label: "Upload Contacts" }]}
+        title="Upload Contacts"
+        subtitle="CSV, TXT, XLS or XLSX up to 10 MB each, or paste numbers. One list per country; numbers are checked against the list's country."
       />
       <div className="mt-2">
         <UploadForm lists={lists} />

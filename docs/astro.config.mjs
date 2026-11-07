@@ -22,6 +22,8 @@ export default defineConfig({
           label: "Using Sendex",
           items: [
             { label: "Upload a list", slug: "using/upload-a-list" },
+            { label: "Segments", slug: "using/segments" },
+            { label: "Unsubscribe", slug: "using/unsubscribe" },
             { label: "Create a campaign", slug: "using/create-a-campaign" },
             { label: "Send and scale", slug: "using/send-and-scale" },
             { label: "Schedule and stop", slug: "using/schedule-and-stop" },

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { ACTIONS, type Action, can, isAction, isRole, ROLES, type Role } from "./permissions.js";
 
 const OWNER_ONLY: Action[] = [
+  "list.delete",
   "settings.manage",
   "balance.deposit",
   "member.manage",
@@ -22,6 +23,7 @@ describe("can", () => {
       "list.upload",
       "list.flush",
       "list.view",
+      "list.delete",
       "settings.view",
       "settings.manage",
       "balance.deposit",
@@ -60,6 +62,7 @@ describe("can", () => {
         "list.upload": true,
         "list.flush": true,
         "list.view": true,
+        "list.delete": true,
         "settings.view": true,
         "settings.manage": true,
         "balance.deposit": true,
@@ -75,6 +78,7 @@ describe("can", () => {
         "list.upload": true,
         "list.flush": true,
         "list.view": true,
+        "list.delete": false,
         "settings.view": true,
         "settings.manage": false,
         "balance.deposit": false,
@@ -90,6 +94,7 @@ describe("can", () => {
         "list.upload": false,
         "list.flush": false,
         "list.view": true,
+        "list.delete": false,
         "settings.view": true,
         "settings.manage": false,
         "balance.deposit": false,

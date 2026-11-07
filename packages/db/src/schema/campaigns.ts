@@ -5,6 +5,7 @@ import {
   char,
   index,
   integer,
+  jsonb,
   pgEnum,
   pgTable,
   primaryKey,
@@ -225,9 +226,54 @@ export const laps = pgTable(
     scheduledAt: timestamp("scheduled_at", { withTimezone: true }),
     /** True for the scale-out laps AutoSender creates; the test round stays false. */
     autosender: boolean("autosender").notNull().default(false),
+    /** Set when the lap sends only to the list's contacts that match a segment. */
+    segmentId: uuid("segment_id").references(() => segments.id, { onDelete: "set null" }),
     startedAt: timestamp("started_at", { withTimezone: true }),
     finishedAt: timestamp("finished_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [index("laps_campaign_idx").on(t.campaignId, t.status)],
+);
+
+/**
+ * A segment (D4-04): a saved rule tree over contacts and their history, evaluated live.
+ * `definition` is the `SegmentGroup` of `@sendex/core`; `summary` its plain-English form;
+ * `size` and `good` are the last Refresh Stats. Global excludes are subtracted at send time.
+ */
+export const segments = pgTable(
+  "segments",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    organisationId: uuid("organisation_id")
+      .notNull()
+      .references(() => organisations.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    definition: jsonb("definition").$type<Record<string, unknown>>().notNull(),
+    summary: text("summary").notNull().default(""),
+    isTemplate: boolean("is_template").notNull().default(false),
+    globalExclude: boolean("global_exclude").notNull().default(false),
+    size: integer("size"),
+    good: integer("good"),
+    statsAt: timestamp("stats_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("segments_org_idx").on(t.organisationId, t.createdAt)],
+);
+
+/** Segments a campaign sends to, next to its lists. */
+export const campaignSegments = pgTable(
+  "campaign_segments",
+  {
+    campaignId: uuid("campaign_id")
+      .notNull()
+      .references(() => campaigns.id, { onDelete: "cascade" }),
+    segmentId: uuid("segment_id")
+      .notNull()
+      .references(() => segments.id, { onDelete: "cascade" }),
+    organisationId: uuid("organisation_id")
+      .notNull()
+      .references(() => organisations.id, { onDelete: "cascade" }),
+  },
+  (t) => [primaryKey({ columns: [t.campaignId, t.segmentId] })],
 );

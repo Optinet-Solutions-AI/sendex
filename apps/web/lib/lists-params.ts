@@ -1,15 +1,21 @@
 import { isListSortKey, type ListSortKey, type SortDirection } from "@sendex/core";
 
-/** Query-string state of the lists table: `/lists?search=roy&country=ES&sort=name&dir=asc&page=2`. */
+/**
+ * Query-string state of the lists table:
+ * `/lists?search=roy&country=ES&country=FR&archived=1&sort=name&dir=asc&page=2`.
+ */
 export interface ListsQuery {
   search: string;
-  country: string;
+  /** ISO-2 codes from one or more `country` params; empty means all countries. */
+  countries: string[];
+  /** Show archived lists instead of live ones. */
+  archived: boolean;
   sort: ListSortKey;
   dir: SortDirection;
   page: number;
 }
 
-export const LISTS_PAGE_SIZE = 50;
+export const LISTS_PAGE_SIZE = 25;
 
 export type SearchParams = Record<string, string | string[] | undefined>;
 
@@ -25,9 +31,16 @@ export function parseListsQuery(params: SearchParams): ListsQuery {
   const dir: SortDirection = dirRaw === "asc" || dirRaw === "desc" ? dirRaw : "desc";
   const pageRaw = Number.parseInt(first(params.page), 10);
   const page = Number.isFinite(pageRaw) && pageRaw >= 1 ? pageRaw : 1;
+  const raw = params.country;
+  const codes = (Array.isArray(raw) ? raw : raw ? [raw] : [])
+    .flatMap((v) => v.split(","))
+    .map((v) => v.trim().toUpperCase())
+    .filter((v) => /^[A-Z]{2}$/.test(v));
+  const archivedRaw = first(params.archived).trim().toLowerCase();
   return {
     search: first(params.search).trim(),
-    country: first(params.country).trim().toUpperCase(),
+    countries: [...new Set(codes)],
+    archived: archivedRaw === "1" || archivedRaw === "true" || archivedRaw === "on",
     sort,
     dir,
     page,
@@ -38,7 +51,8 @@ export function parseListsQuery(params: SearchParams): ListsQuery {
 export function listsQueryString(query: Partial<ListsQuery>): string {
   const params = new URLSearchParams();
   if (query.search) params.set("search", query.search);
-  if (query.country) params.set("country", query.country);
+  for (const code of query.countries ?? []) params.append("country", code);
+  if (query.archived) params.set("archived", "1");
   if (query.sort && query.sort !== "createdAt") params.set("sort", query.sort);
   if (query.dir && query.dir !== "desc") params.set("dir", query.dir);
   if (query.page && query.page > 1) params.set("page", String(query.page));

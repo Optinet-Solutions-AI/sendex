@@ -43,8 +43,12 @@ export function db(): Database {
 export * from "./queries/autosender.js";
 export * from "./queries/campaign-control.js";
 export * from "./queries/laps.js";
+export * from "./queries/list-details.js";
+export * from "./queries/list-imports.js";
 export * from "./queries/postback-keys.js";
 export * from "./queries/postbacks.js";
 export * from "./queries/receipts.js";
 export * from "./queries/results.js";
 export * from "./queries/route-performance.js";
+export * from "./queries/segments.js";
+export * from "./queries/suppressions.js";

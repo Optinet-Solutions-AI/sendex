@@ -23,6 +23,7 @@ import {
   listsForCountry,
   routesForCountry,
   setCampaignLists,
+  setCampaignSegments,
   setCampaignSidGroup,
   toggleAdText,
   toggleCampaignLink,
@@ -30,6 +31,7 @@ import {
   updateAdText,
   updateSendSettings,
 } from "./campaigns.js";
+import { createSegment } from "./segments.js";
 
 let t: TestDb;
 let orgA: string;
@@ -442,5 +444,56 @@ describe("duplicateCampaign and deleteCampaign", () => {
     expect(await getCampaign(t.db, orgA, copy.id)).toBeNull();
     expect(await deleteCampaign(t.db, orgB, campaign.id)).toBe(false);
     await expect(duplicateCampaign(t.db, orgB, campaign.id)).rejects.toThrow(/not found/);
+  });
+});
+
+describe("segment audiences", () => {
+  it("plans one lap per list the matching contacts live in, limited to the segment", async () => {
+    const campaign = await createCampaign(t.db, orgA, {
+      name: "Segment send",
+      country: "ES",
+      timezone: "Europe/Madrid",
+    });
+    const group = await createSidGroup(t.db, orgA, { name: "Seg SIDs", country: "ES" });
+    await addSenderIds(t.db, orgA, group.id, ["SEG111"]);
+    await setCampaignSidGroup(t.db, orgA, campaign.id, group.id);
+    await addAdTexts(t.db, orgA, campaign.id, "Hola {{domain}}");
+    const segment = await createSegment(t.db, orgA, {
+      name: "Spain",
+      definition: {
+        id: "g",
+        op: "and",
+        rules: [{ id: "r", field: "country", operator: "equals", value: "ES" }],
+      },
+      isTemplate: false,
+      globalExclude: false,
+    });
+    await setCampaignSegments(t.db, orgA, campaign.id, [segment.id]);
+
+    const detail = await getCampaign(t.db, orgA, campaign.id);
+    expect(detail?.segments.map((s) => [s.name, s.available])).toEqual([["Spain", 5]]);
+
+    const estimate = await estimateSend(t.db, orgA, campaign.id, {
+      routeIds: [route405],
+      sendAll: false,
+    });
+    expect(estimate.contacts).toBe(5);
+    expect(estimate.laps).toEqual([
+      // The default test size (200) is capped by the five contacts the segment can reach.
+      { listId: listEs, routeId: route405, count: 5, costMicro: 125_000, segmentId: segment.id },
+    ]);
+
+    const created = await createLaps(t.db, orgA, campaign.id, {
+      routeIds: [route405],
+      sendAll: false,
+    });
+    expect(created).toHaveLength(1);
+    expect(created[0]?.segmentId).toBe(segment.id);
+    const withLaps = await getCampaign(t.db, orgA, campaign.id);
+    expect(withLaps?.laps[0]?.segmentName).toBe("Spain");
+
+    const copy = await duplicateCampaign(t.db, orgA, campaign.id, null);
+    const copied = await getCampaign(t.db, orgA, copy.id);
+    expect(copied?.segments.map((s) => s.id)).toEqual([segment.id]);
   });
 });

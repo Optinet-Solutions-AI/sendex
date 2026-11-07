@@ -318,6 +318,10 @@ export interface ImportRow {
   firstName?: string | undefined;
   lastName?: string | undefined;
   email?: string | undefined;
+  dateOfBirth?: string | undefined;
+  gender?: string | undefined;
+  state?: string | undefined;
+  address?: string | undefined;
   custom1?: string | undefined;
   custom2?: string | undefined;
   custom3?: string | undefined;
@@ -417,6 +421,10 @@ export async function importContacts(
           firstName: r.firstName ?? null,
           lastName: r.lastName ?? null,
           email: r.email ?? null,
+          dateOfBirth: r.dateOfBirth ?? null,
+          gender: r.gender ?? null,
+          state: r.state ?? null,
+          address: r.address ?? null,
           custom1: r.custom1 ?? null,
           custom2: r.custom2 ?? null,
           custom3: r.custom3 ?? null,
@@ -430,6 +438,10 @@ export async function importContacts(
           firstName: sql`coalesce(excluded.first_name, ${contacts.firstName})`,
           lastName: sql`coalesce(excluded.last_name, ${contacts.lastName})`,
           email: sql`coalesce(excluded.email, ${contacts.email})`,
+          dateOfBirth: sql`coalesce(excluded.date_of_birth, ${contacts.dateOfBirth})`,
+          gender: sql`coalesce(excluded.gender, ${contacts.gender})`,
+          state: sql`coalesce(excluded.state, ${contacts.state})`,
+          address: sql`coalesce(excluded.address, ${contacts.address})`,
           custom1: sql`coalesce(excluded.custom1, ${contacts.custom1})`,
           custom2: sql`coalesce(excluded.custom2, ${contacts.custom2})`,
           custom3: sql`coalesce(excluded.custom3, ${contacts.custom3})`,

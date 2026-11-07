@@ -93,6 +93,7 @@ erDiagram
     text user_agent
   }
   contacts {
+    text address
     char(2) country
     timestamp_with_time_zone created_at
     text custom1
@@ -100,12 +101,15 @@ erDiagram
     text custom3
     text custom4
     text custom5
+    text date_of_birth
     text e164 UK "unique with organisation_id"
     text email
     text first_name
+    text gender
     uuid id PK
     text last_name
     uuid organisation_id FK, UK "unique with e164"
+    text state
   }
   enrichment_rules {
     boolean active

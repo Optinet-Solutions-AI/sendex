@@ -33,6 +33,11 @@ export const contacts = pgTable(
     firstName: text("first_name"),
     lastName: text("last_name"),
     email: text("email"),
+    /** Profile fields of the SMS Edge import grid, kept as uploaded. */
+    dateOfBirth: text("date_of_birth"),
+    gender: text("gender"),
+    state: text("state"),
+    address: text("address"),
     custom1: text("custom1"),
     custom2: text("custom2"),
     custom3: text("custom3"),

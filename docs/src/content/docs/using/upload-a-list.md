@@ -11,22 +11,41 @@ A list is a set of phone numbers for one country. Campaigns pick one or more lis
 - **A file or pasted numbers.** CSV, TXT, XLS or XLSX (up to 10 MB each, several at once), or
   numbers pasted one per line. One row per contact. The phone column is required; any other
   columns (name, city, custom fields) are optional.
-- **Column mapping.** Sendex guesses which column holds the phone number and lets you confirm or change it before anything is imported.
+- **Field types.** Sendex guesses which column holds the phone number (and the country, name,
+  email and other fields) and lets you confirm or change each one before anything is imported.
+  A **Country** column lets national numbers (`07400 123456`) be read for their own country.
 - **Logical check.** Each number is parsed for the list country. Rows that do not parse or
   are premium or toll-free are **rejected**; landlines and suspicious digit patterns
   (repeated digits, straight runs, long zero tails) are **added as Bad**: they stay in the
   list so you can see them, but are never sent to. Duplicates within the file and numbers
   already in your contacts (with "Skip numbers already in my contacts") are **skipped**.
+  Switching the check off keeps landlines as Good members.
 
 ## Steps
 
-1. Open **Lists** and choose **Upload list**. (coming on Day 1)
-2. Pick the **country** the list belongs to.
-3. Give the list a **name** such as `IT sports leads March`.
-4. Choose the **CSV file**. Any delimiter among comma, semicolon and tab is detected.
-5. Map the columns: confirm the **phone** column and optionally map extra columns you want to keep for personalisation.
-6. Review the **logical check**: total rows, valid numbers, invalid numbers, duplicates removed. Download the rejected rows if you want to fix and re-upload them.
-7. Confirm the import. The list appears with its final count and is ready to use in a campaign.
+1. Open **Lists** and click **Upload List**. **Upload Contacts** shows a switch: **Upload
+   Files** (drop CSV, TXT, XLS or XLSX files on the dashed box, or click **browse**; several
+   at once) or **Paste CSV** (numbers one per line, extra columns after commas, then
+   **Upload**).
+2. The **Import** page opens, titled after the file, with its rows and size. On the left:
+   - **List**: **+ New List** or one of your lists. A new list takes the **New List Name**,
+     proposed from the file name (`test-20261107-batch2.csv` becomes `Test 20261107 batch2`).
+   - **Fixed Country** (required for a new list): the list's country. **Auto-detect from
+     file** takes the most common country of the file's **Country** column; without one, pick
+     the country yourself. An existing list keeps its own country.
+   - **Logical Check**, **Duplicates** (**Allow duplicates** by default, or **Skip numbers
+     already in my contacts**) and **Flush after import**.
+   - **File Details**: filename, rows, size, whether the **Number Column** is set, and **First
+     row is a header** (guessed for you).
+3. On the right, **Field Types** shows the columns as A, B, C with the first rows. Pick a type
+   for each column: **Phone Number**, **Country**, **Email**, **Name**, **Last Name**, **Date of
+   Birth**, **Gender**, **State**, **Address**, **Custom 1 to 5** or **-- Ignore --**. The
+   sparkle marks a type Sendex detected. Each type can be used once, and exactly one column
+   must be the phone number.
+4. Click **Import** (it stays grey until the phone column and the country are set). Large
+   files go in chunks of 5,000 rows with a progress bar; **Cancel** goes back to the start.
+5. The summary shows rows read, added (good and bad), rejected and skipped. The file also
+   appears on the **Files** page.
 
 ## Files
 

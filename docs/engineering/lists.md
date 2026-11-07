@@ -67,10 +67,17 @@ summary screen
 - `detectColumns(headerRow, sampleRows, defaultCountry?)`: the phone column is the one where
   most values parse (`normalisePhone`) or look like a phone; the first row is a header unless
   its phone cell is itself a number; other columns are typed from header hints
-  (`first_name`, `last_name`, `email`) or by value (`email`), then `custom1..custom5`, then `ignore`.
-- `applyMapping(cells, mapping)`: a parsed row to an `UploadRow` (`phone` plus optional fields).
+  (`first_name`, `last_name`, `email`, `country`, `date_of_birth`, `gender`, `state`, `address`)
+  or by value (`email`, `country`), then `custom1..custom5`, then `ignore`. The UI default for
+  `duplicates` is `allow`, as in SMS Edge.
+- `applyMapping(cells, mapping)`: a parsed row to an `UploadRow` (`phone` plus optional fields;
+  `country` is the raw cell).
+- `parseCountryCell`, `detectListCountry(rows, mapping)`: "Auto-detect from file" takes the most
+  common readable value of the country column as the new list's country.
+- `defaultListName(fileName)`: the proposed New List Name.
 - `cleanUploadRows(rows, { defaultCountry, removeLandlines })`: `cleanBatch` with the contact
-  fields carried along: `normalisePhone` → `logicalCheck` → in-chunk dedupe. Returns the kept
+  fields carried along: `normalisePhone` (against the row's own country cell when it reads,
+  else `defaultCountry`) → `logicalCheck` → in-chunk dedupe. Returns the kept
   rows and an `UploadSummary` with `dropped` counted by `DropReason`.
 - `countriesList`: the eighteen supported countries (`LIST_COUNTRY_CODES`) with name and flag.
   The UK is `GB` in the database and "United Kingdom" on screen; the seed names lists `_UK_`.

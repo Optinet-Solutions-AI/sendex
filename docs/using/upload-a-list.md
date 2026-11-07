@@ -5,33 +5,40 @@ separate list per country, as in SMS Edge. You need the `campaign_manager` or `o
 
 ## Steps
 
-1. Open **Lists** in the left menu and click **Upload List**.
-2. Give the page your numbers, either way:
-   - **Drop a file** on the dashed box, or click **Choose file**. CSV and TXT files up to
-     10 MB are accepted; the delimiter (comma, semicolon, tab) is detected automatically.
-   - **Paste** numbers into the box, one per line, and click **Use pasted data**.
-3. Check the **Columns** preview. The first ten rows are shown. Above each column a picker says
-   what the column is: **Phone**, **First name**, **Last name**, **Email**, **Custom 1 to 5**
-   or **Ignore**. The phone column is detected automatically (the column where most values
-   look like phone numbers) and the others are guessed from the header row. Exactly one
-   column must be **Phone**. Tick **First row is a header** if the first line holds column
-   names rather than data; the page guesses this too.
-4. Fill in the **Settings** (below).
-5. Click **Import**. Large files are sent in chunks of 5,000 rows with a progress bar; a
-   100,000-row file takes a minute or so.
-6. Read the **summary**: rows read, imported, skipped, duplicates and dropped numbers by
-   reason. Click **View list** to open the list or **Back to lists** to return to the table.
+1. Open **Lists** and click **Upload List**. **Upload Contacts** shows a switch: **Upload
+   Files** (drop CSV, TXT, XLS or XLSX files on the dashed box, or click **browse**; several
+   at once) or **Paste CSV** (numbers one per line, extra columns after commas, then
+   **Upload**).
+2. The **Import** page opens, titled after the file, with its rows and size. On the left:
+   - **List**: **+ New List** or one of your lists. A new list takes the **New List Name**,
+     proposed from the file name (`test-20261107-batch2.csv` becomes `Test 20261107 batch2`).
+   - **Fixed Country** (required for a new list): the list's country. **Auto-detect from
+     file** takes the most common country of the file's **Country** column; without one, pick
+     the country yourself. An existing list keeps its own country.
+   - **Logical Check**, **Duplicates** (**Allow duplicates** by default, or **Skip numbers
+     already in my contacts**) and **Flush after import**.
+   - **File Details**: filename, rows, size, whether the **Number Column** is set, and **First
+     row is a header** (guessed for you).
+3. On the right, **Field Types** shows the columns as A, B, C with the first rows. Pick a type
+   for each column: **Phone Number**, **Country**, **Email**, **Name**, **Last Name**, **Date of
+   Birth**, **Gender**, **State**, **Address**, **Custom 1 to 5** or **-- Ignore --**. The
+   sparkle marks a type Sendex detected. Each type can be used once, and exactly one column
+   must be the phone number.
+4. Click **Import** (it stays grey until the phone column and the country are set). Large
+   files go in chunks of 5,000 rows with a progress bar; **Cancel** goes back to the start.
+5. The summary shows rows read, added (good and bad), rejected and skipped. The file also
+   appears on the **Files** page.
 
 ## Settings
 
 | Setting | Meaning |
 | --- | --- |
-| **New list** / **Existing list** | Create a list with the name and country you give, or add the numbers to a list you already have. An existing list keeps its country. |
-| **List name** | Up to 100 characters. The convention is `Client_COUNTRY_date_batch`, e.g. `Roy Boy_ES_14092026_Batch2`. |
-| **Country** | The country the numbers belong to. Numbers without a country code (`612 345 678`) are read as numbers of this country; numbers with one (`+34…`, `0034…`) keep theirs. |
-| **Logical check** (on by default) | Drops numbers that cannot receive marketing SMS: landlines, premium-rate, shared-cost and toll-free numbers. Mobiles and numbers that may be mobiles are kept. Switch it off only when you know the list holds mobiles that the check misreads. Invalid and unparseable numbers are always dropped. |
-| **Duplicates** | **Skip numbers already in my contacts** (default): a number the organisation has already uploaded, in any list, is not added again. **Allow**: the number is added to this list as well. A number is never added to the same list twice. |
-| **Flush after import** | Once the rows are in, resets the *sent* flag of every number in the list so all of them are available to the next campaign, including numbers that were sent before. |
+| **List** | **+ New List** creates a list with the name and country you give; picking a list adds the numbers to it, and it keeps its country. |
+| **New List Name** | Up to 100 characters, proposed from the file name. The convention is `Client_COUNTRY_date_batch`, e.g. `Roy Boy_ES_14092026_Batch2`. |
+| **Fixed Country** | The list's country. Numbers without a country code (`612 345 678`) are read for the row's **Country** cell when there is one, else for this country; numbers with one (`+34…`, `0034…`) keep theirs. **Auto-detect from file** uses the most common value of the Country column and needs one. |
+| **Logical Check** (on by default) | Premium-rate, shared-cost and toll-free numbers are rejected; landlines and suspicious digit patterns are kept but marked Bad and never sent to. Invalid and unparseable numbers are always rejected. |
+| **Duplicates** | **Allow duplicates** (default): a number the organisation already has is added to this list as well. **Skip numbers already in my contacts**: a number already uploaded, in any list, is not added again. A number is never added to the same list twice. |
+| **Flush after import** | Numbers you have sent to before stay blocked even in a new list; this resets the *sent* flag of every number in the list so all of them are available to the next campaign. |
 
 ## What the summary means
 

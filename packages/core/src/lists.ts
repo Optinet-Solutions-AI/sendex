@@ -133,32 +133,43 @@ export const UploadSettingsSchema = z.object({
 export type UploadSettings = z.infer<typeof UploadSettingsSchema>;
 export type UploadSettingsInput = z.input<typeof UploadSettingsSchema>;
 
+/** Field types of the import grid, in SMS Edge's order ("-- Ignore --" first). */
 export const COLUMN_TYPES = [
+  "ignore",
   "phone",
+  "country",
+  "email",
   "first_name",
   "last_name",
-  "email",
+  "date_of_birth",
+  "gender",
+  "state",
+  "address",
   "custom1",
   "custom2",
   "custom3",
   "custom4",
   "custom5",
-  "ignore",
 ] as const;
 export type ColumnType = (typeof COLUMN_TYPES)[number];
 export const ColumnTypeSchema = z.enum(COLUMN_TYPES);
 
 export const COLUMN_TYPE_LABELS: Record<ColumnType, string> = {
-  phone: "Phone",
-  first_name: "First name",
-  last_name: "Last name",
+  ignore: "-- Ignore --",
+  phone: "Phone Number",
+  country: "Country",
   email: "Email",
+  first_name: "Name",
+  last_name: "Last Name",
+  date_of_birth: "Date of Birth",
+  gender: "Gender",
+  state: "State",
+  address: "Address",
   custom1: "Custom 1",
   custom2: "Custom 2",
   custom3: "Custom 3",
   custom4: "Custom 4",
   custom5: "Custom 5",
-  ignore: "Ignore",
 };
 
 /** Column index -> type. Exactly one phone column; no other field used twice. */
@@ -180,9 +191,15 @@ export type ColumnMapping = z.infer<typeof ColumnMappingSchema>;
 /** One row as sent to the import action: the raw phone plus optional contact fields. */
 export const UploadRowSchema = z.object({
   phone: z.string().min(1).max(64),
+  /** Raw country cell; when it reads as a country, national numbers are parsed against it. */
+  country: z.string().max(100).optional(),
   firstName: z.string().max(200).optional(),
   lastName: z.string().max(200).optional(),
   email: z.string().max(320).optional(),
+  dateOfBirth: z.string().max(50).optional(),
+  gender: z.string().max(50).optional(),
+  state: z.string().max(200).optional(),
+  address: z.string().max(500).optional(),
   custom1: z.string().max(500).optional(),
   custom2: z.string().max(500).optional(),
   custom3: z.string().max(500).optional(),
@@ -195,9 +212,14 @@ export type UploadRow = z.infer<typeof UploadRowSchema>;
 export const UPLOAD_CHUNK_SIZE = 5_000;
 
 const FIELD_FOR_TYPE: Record<Exclude<ColumnType, "phone" | "ignore">, keyof UploadRow> = {
+  country: "country",
   first_name: "firstName",
   last_name: "lastName",
   email: "email",
+  date_of_birth: "dateOfBirth",
+  gender: "gender",
+  state: "state",
+  address: "address",
   custom1: "custom1",
   custom2: "custom2",
   custom3: "custom3",
@@ -218,6 +240,61 @@ export function applyMapping(cells: readonly string[], mapping: ColumnMapping): 
     if (value.length > 0) row[FIELD_FOR_TYPE[type]] = value;
   });
   return row;
+}
+
+const COUNTRY_BY_NAME = new Map<string, ListCountry>([
+  ...LIST_COUNTRY_CODES.map((code) => [COUNTRY_NAMES[code].toLowerCase(), code] as const),
+  ["uk", "GB"],
+  ["great britain", "GB"],
+  ["england", "GB"],
+  ["usa", "US"],
+  ["españa", "ES"],
+  ["espana", "ES"],
+]);
+
+/** Read a country cell: an ISO-2 code, "UK" or a country name, in any case. */
+export function parseCountryCell(value: string): ListCountry | undefined {
+  const trimmed = value.trim();
+  if (trimmed.length === 0) return undefined;
+  const code = trimmed.toUpperCase();
+  if ((LIST_COUNTRY_CODES as readonly string[]).includes(code)) return code as ListCountry;
+  return COUNTRY_BY_NAME.get(trimmed.toLowerCase());
+}
+
+/**
+ * "Auto-detect from file": the list country is the most common readable value of the
+ * country column. Undefined when there is no country column or nothing in it reads.
+ */
+export function detectListCountry(
+  rows: ReadonlyArray<readonly string[]>,
+  mapping: readonly ColumnType[],
+): ListCountry | undefined {
+  const index = mapping.indexOf("country");
+  if (index < 0) return undefined;
+  const counts = new Map<ListCountry, number>();
+  for (const row of rows) {
+    const country = parseCountryCell(row[index] ?? "");
+    if (country) counts.set(country, (counts.get(country) ?? 0) + 1);
+  }
+  let best: ListCountry | undefined;
+  let bestCount = 0;
+  for (const [country, count] of counts) {
+    if (count > bestCount) {
+      best = country;
+      bestCount = count;
+    }
+  }
+  return best;
+}
+
+/** The New List Name SMS Edge proposes: the file name without extension, separators as spaces. */
+export function defaultListName(fileName: string): string {
+  const base = fileName
+    .replace(/\.[^.]+$/, "")
+    .replace(/[-_]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  return base.length > 0 ? base.charAt(0).toUpperCase() + base.slice(1) : "";
 }
 
 export interface DetectedColumn {
@@ -254,6 +331,11 @@ const HEADER_HINTS: ReadonlyArray<[RegExp, ColumnType]> = [
   [/(first|given|nombre|prenom|prénom|vorname|imie|imię)/i, "first_name"],
   [/(last|sur|family|apellido|nom$|nachname|nazwisko)/i, "last_name"],
   [/(mail)/i, "email"],
+  [/^(country|pais|país|pays|land|geo|iso)$/i, "country"],
+  [/(birth|dob|^bday|nacimiento)/i, "date_of_birth"],
+  [/^(gender|sex|sexo|genero|género)$/i, "gender"],
+  [/^(state|province|provincia|region|región|county)$/i, "state"],
+  [/(address|street|direccion|dirección|adresse)/i, "address"],
 ];
 
 function typeFromHeader(header: string): ColumnType | undefined {
@@ -311,8 +393,13 @@ export function detectColumns(
     }
     let type: ColumnType | undefined = hasHeader ? typeFromHeader(header) : undefined;
     if (type === undefined || type === "phone" || used.has(type)) {
+      const values = column(i, dataRows);
       type =
-        share(column(i, dataRows), (v) => EMAIL_SHAPE.test(v.trim())) >= 0.5 ? "email" : undefined;
+        share(values, (v) => EMAIL_SHAPE.test(v.trim())) >= 0.5
+          ? "email"
+          : share(values, (v) => parseCountryCell(v) !== undefined) >= 0.5
+            ? "country"
+            : undefined;
       if (type !== undefined && used.has(type)) type = undefined;
     }
     if (type === undefined) {
@@ -512,8 +599,9 @@ export function cleanUploadRows(
     if (samples[key].length < SAMPLE_LIMIT) samples[key].push(value);
   };
 
-  for (const { phone, ...fields } of rows) {
-    const normalised = normalisePhone(phone, opts.defaultCountry);
+  for (const { phone, country: countryCell, ...fields } of rows) {
+    const rowCountry = countryCell ? parseCountryCell(countryCell) : undefined;
+    const normalised = normalisePhone(phone, rowCountry ?? opts.defaultCountry);
     if (!normalised.ok) {
       dropped.push({ raw: phone, reason: normalised.reason });
       sample("rejected", phone);

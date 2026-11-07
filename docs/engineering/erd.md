@@ -73,6 +73,7 @@ erDiagram
     text name
     uuid organisation_id FK
     timestamp_with_time_zone scheduled_at
+    campaign_source source
     campaign_status status
     integer test_size
     text timezone

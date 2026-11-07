@@ -2,6 +2,7 @@
 export * from "./badge.js";
 export * from "./button.js";
 export * from "./card.js";
+export * from "./charts.js";
 export * from "./checkbox.js";
 export * from "./cn.js";
 export * from "./count-pill.js";

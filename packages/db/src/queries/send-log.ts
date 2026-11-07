@@ -83,7 +83,7 @@ function perMessage(organisationId: string, filter: SendLogFilter): SQL {
       coalesce(li.country, c.country) as country,
       l.list_id,
       m.route_id,
-      exists (select 1 from clicks ck where ck.message_id = m.id) as clicked,
+      exists (select 1 from clicks ck where ck.message_id = m.id and ck.device is distinct from 'bot') as clicked,
       (select count(*) from postbacks p where p.message_id = m.id and p.type = 'lead') as leads,
       (select count(*) from postbacks p where p.message_id = m.id and p.type = 'sale') as sales,
       (select coalesce(-sum(le.amount_micro), 0) from ledger_entries le

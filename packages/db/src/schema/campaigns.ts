@@ -35,6 +35,8 @@ export const contactReuseEnum = pgEnum("contact_reuse", ["account_wide", "per_ca
 
 export const lapStatusEnum = pgEnum("lap_status", ["queued", "sending", "done", "cancelled"]);
 
+export const campaignSourceEnum = pgEnum("campaign_source", ["dashboard", "api"]);
+
 export const campaigns = pgTable("campaigns", {
   id: uuid("id").primaryKey().defaultRandom(),
   organisationId: uuid("organisation_id")
@@ -58,6 +60,8 @@ export const campaigns = pgTable("campaigns", {
   autosenderStoppedAt: timestamp("autosender_stopped_at", { withTimezone: true }),
   autosenderStopReason: text("autosender_stop_reason"),
   scheduledAt: timestamp("scheduled_at", { withTimezone: true }),
+  /** Where the campaign was created: the dashboard or the public API (D4-05 API Usage tab). */
+  source: campaignSourceEnum("source").notNull().default("dashboard"),
   createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),

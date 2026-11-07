@@ -28,3 +28,28 @@ export function formatNumber(value: number): string {
 export function eurDecimal(micro: bigint): string {
   return formatEur(micro).replace("€", "").replace(/,/g, "");
 }
+
+/** "13 hours ago", "3 days ago", "just now"; "—" when there is no date. */
+export function timeAgo(value: Date | string | null | undefined, now: Date = new Date()): string {
+  if (!value) return "—";
+  const date = typeof value === "string" ? new Date(value) : value;
+  if (Number.isNaN(date.getTime())) return "—";
+  const seconds = Math.max(0, Math.round((now.getTime() - date.getTime()) / 1000));
+  const units: Array<[number, string]> = [
+    [60, "second"],
+    [60, "minute"],
+    [24, "hour"],
+    [30, "day"],
+    [12, "month"],
+  ];
+  let amount = seconds;
+  let unit = "second";
+  for (const [size, name] of units) {
+    unit = name;
+    if (amount < size) break;
+    amount = Math.floor(amount / size);
+    unit = "year";
+  }
+  if (unit === "second" && amount < 45) return "just now";
+  return `${amount} ${unit}${amount === 1 ? "" : "s"} ago`;
+}

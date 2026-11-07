@@ -240,6 +240,8 @@ export async function listCampaigns(
 
 export interface CreateCampaignInput extends NewCampaign {
   createdBy?: string | null;
+  /** Defaults to the dashboard; the public API passes "api". */
+  source?: "dashboard" | "api";
 }
 
 export async function createCampaign(
@@ -255,6 +257,7 @@ export async function createCampaign(
       country: input.country,
       timezone: input.timezone,
       createdBy: input.createdBy ?? null,
+      source: input.source ?? "dashboard",
     })
     .returning();
   if (!row) throw new Error("createCampaign: no row returned");

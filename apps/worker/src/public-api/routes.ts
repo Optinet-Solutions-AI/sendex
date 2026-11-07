@@ -340,7 +340,11 @@ export function createPublicApi(deps: PublicApiDeps) {
     if (denied) return c.json(denied, 403);
     const token = c.var.apiToken;
     const input = c.req.valid("json");
-    const row = await createCampaign(deps.db, token.organisationId, { ...input, createdBy: null });
+    const row = await createCampaign(deps.db, token.organisationId, {
+      ...input,
+      createdBy: null,
+      source: "api",
+    });
     await recordAudit(deps.db, token.organisationId, {
       actorUserId: null,
       action: "campaign.create",

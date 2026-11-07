@@ -1,4 +1,5 @@
 export * from "./api-tokens.js";
+export * from "./autosender.js";
 export * from "./billing.js";
 export * from "./campaign-control.js";
 export * from "./campaigns.js";

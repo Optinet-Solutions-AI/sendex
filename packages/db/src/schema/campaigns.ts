@@ -49,6 +49,13 @@ export const campaigns = pgTable("campaigns", {
   testSize: integer("test_size").notNull().default(200),
   /** Run AutoSender (D4-02): test batch first, then scale out the best message and route. */
   autosender: boolean("autosender").notNull().default(false),
+  /** AutoSender knobs (D4-02): measure window, scale-out multiple and the CTR floor. */
+  autosenderMeasureMinutes: integer("autosender_measure_minutes").notNull().default(60),
+  autosenderScaleFactor: integer("autosender_scale_factor").notNull().default(5),
+  autosenderCtrFloorPercent: integer("autosender_ctr_floor_percent").notNull().default(80),
+  /** Set when AutoSender stopped on its own (CTR floor, lists finished, no clicks). */
+  autosenderStoppedAt: timestamp("autosender_stopped_at", { withTimezone: true }),
+  autosenderStopReason: text("autosender_stop_reason"),
   scheduledAt: timestamp("scheduled_at", { withTimezone: true }),
   createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
@@ -216,6 +223,8 @@ export const laps = pgTable(
     active: boolean("active").notNull().default(true),
     /** A rescheduled lap is not claimed before this time. */
     scheduledAt: timestamp("scheduled_at", { withTimezone: true }),
+    /** True for the scale-out laps AutoSender creates; the test round stays false. */
+    autosender: boolean("autosender").notNull().default(false),
     startedAt: timestamp("started_at", { withTimezone: true }),
     finishedAt: timestamp("finished_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

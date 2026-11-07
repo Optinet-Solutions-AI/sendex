@@ -105,6 +105,8 @@ export interface LapView {
   active: boolean;
   /** A rescheduled lap waits until this time. */
   scheduledAt: string | null;
+  /** True for the scale-out laps AutoSender created. */
+  autosender: boolean;
 }
 
 export interface CampaignView {
@@ -116,6 +118,11 @@ export interface CampaignView {
   contactReuse: ContactReuse;
   testSize: number;
   autosender: boolean;
+  autosenderMeasureMinutes: number;
+  autosenderScaleFactor: number;
+  autosenderCtrFloorPercent: number;
+  /** Why AutoSender stopped on its own, null while it runs or never ran. */
+  autosenderStopReason: string | null;
   scheduledAt: string | null;
   createdAt: string;
   updatedAt: string;

@@ -40,6 +40,7 @@ export function db(): Database {
   shared ??= createDb();
   return shared;
 }
+export * from "./queries/autosender.js";
 export * from "./queries/campaign-control.js";
 export * from "./queries/laps.js";
 export * from "./queries/postback-keys.js";

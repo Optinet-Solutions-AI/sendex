@@ -208,6 +208,10 @@ export const sendSettingsSchema = z
     scheduledAt: z.iso.datetime({ offset: true }).optional(),
     /** Run AutoSender: a test batch first, then scale out the best message and route. Left alone when absent. */
     autosender: z.boolean().optional(),
+    /** AutoSender knobs; left alone when absent. */
+    autosenderMeasureMinutes: z.coerce.number().int().min(0).max(10_080).optional(),
+    autosenderScaleFactor: z.coerce.number().int().min(1).max(100).optional(),
+    autosenderCtrFloorPercent: z.coerce.number().int().min(0).max(100).optional(),
   })
   .refine((v) => v.sendNow || v.scheduledAt !== undefined, {
     message: "Pick a start time or send now",

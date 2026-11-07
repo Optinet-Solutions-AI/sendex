@@ -1,6 +1,12 @@
 import os from "node:os";
 import { serve } from "@hono/node-server";
-import { createCapsStore, createSendingStore, db, type SendingStore } from "@sendex/db";
+import {
+  createAutosenderStore,
+  createCapsStore,
+  createSendingStore,
+  db,
+  type SendingStore,
+} from "@sendex/db";
 import { createRateLimiter, RATE_LIMITS } from "@sendex/redis-utils";
 import { sql } from "drizzle-orm";
 import { Redis } from "ioredis";
@@ -67,6 +73,7 @@ if (redis) {
           sendQueue: queues.send,
           send: { linksBaseUrl, pauseRetryMs: settings.pauseRetryMs },
           caps: createCapsStore(db()),
+          autosender: createAutosenderStore(db()),
           alerts: { store: createAlertChecksStore(db()), throttle: createRedisThrottle(redis) },
           expiry: { windowMs: dlrExpiryMs, everyMs: dlrExpiryPollMs },
           receiptPoll: { afterMs: receiptPollAfterMs, everyMs: receiptPollEveryMs },

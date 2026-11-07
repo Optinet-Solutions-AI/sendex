@@ -55,6 +55,11 @@ erDiagram
   }
   campaigns {
     boolean autosender
+    integer autosender_ctr_floor_percent
+    integer autosender_measure_minutes
+    integer autosender_scale_factor
+    text autosender_stop_reason
+    timestamp_with_time_zone autosender_stopped_at
     contact_reuse contact_reuse
     char(2) country
     timestamp_with_time_zone created_at
@@ -98,6 +103,7 @@ erDiagram
   }
   laps {
     boolean active
+    boolean autosender
     bigint budget_micro
     uuid campaign_id FK
     integer clicks

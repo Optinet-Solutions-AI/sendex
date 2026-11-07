@@ -27,9 +27,40 @@ export const CONTACT_REUSE_OPTIONS: ReadonlyArray<{
   },
 ];
 
+/** The three AutoSender knobs, each a column on the campaign. */
+const AUTOSENDER_KNOBS: ReadonlyArray<{
+  key: "measure" | "scale" | "floor";
+  label: string;
+  hint: string;
+  range: { min: number; max: number; label: string };
+  field: "autosenderMeasureMinutes" | "autosenderScaleFactor" | "autosenderCtrFloorPercent";
+}> = [
+  {
+    key: "measure",
+    label: "Measure (minutes)",
+    hint: "Wait this long after the test round starts before judging it.",
+    range: { min: 0, max: 10_080, label: "Measure" },
+    field: "autosenderMeasureMinutes",
+  },
+  {
+    key: "scale",
+    label: "Scale factor (×)",
+    hint: "Each scale-out lap sends this many times the test size.",
+    range: { min: 1, max: 100, label: "Scale factor" },
+    field: "autosenderScaleFactor",
+  },
+  {
+    key: "floor",
+    label: "CTR floor (%)",
+    hint: "Stop once a scale-out lap's CTR falls below this share of the test CTR.",
+    range: { min: 0, max: 100, label: "CTR floor" },
+    field: "autosenderCtrFloorPercent",
+  },
+];
+
 /**
  * Advanced Settings of the spec: the segments note, Send All, Test Size, the contact reuse
- * cards (locked after the first send) and Run AutoSender.
+ * cards (locked after the first send) and Run AutoSender with its three knobs.
  */
 export function AdvancedSettings({
   campaign,
@@ -48,7 +79,20 @@ export function AdvancedSettings({
   const [pending, start] = useTransition();
   const locked = campaign.laps.length > 0;
 
-  function save(next: { testSize?: number; contactReuse?: ContactReuse; autosender?: boolean }) {
+  const [knobs, setKnobs] = useState({
+    measure: String(campaign.autosenderMeasureMinutes),
+    scale: String(campaign.autosenderScaleFactor),
+    floor: String(campaign.autosenderCtrFloorPercent),
+  });
+
+  function save(next: {
+    testSize?: number;
+    contactReuse?: ContactReuse;
+    autosender?: boolean;
+    autosenderMeasureMinutes?: number;
+    autosenderScaleFactor?: number;
+    autosenderCtrFloorPercent?: number;
+  }) {
     setError(null);
     start(async () => {
       const result = await updateSendSettingsAction({
@@ -58,10 +102,34 @@ export function AdvancedSettings({
         sendNow: campaign.scheduledAt === null,
         ...(campaign.scheduledAt ? { scheduledAt: campaign.scheduledAt } : {}),
         ...(next.autosender === undefined ? {} : { autosender: next.autosender }),
+        ...(next.autosenderMeasureMinutes === undefined
+          ? {}
+          : { autosenderMeasureMinutes: next.autosenderMeasureMinutes }),
+        ...(next.autosenderScaleFactor === undefined
+          ? {}
+          : { autosenderScaleFactor: next.autosenderScaleFactor }),
+        ...(next.autosenderCtrFloorPercent === undefined
+          ? {}
+          : { autosenderCtrFloorPercent: next.autosenderCtrFloorPercent }),
       });
       if (!result.ok) setError(result.error);
       else onChanged();
     });
+  }
+
+  /** One AutoSender knob: validated on blur or Enter, saved only when it changed. */
+  function commitKnob(
+    key: "measure" | "scale" | "floor",
+    current: number,
+    range: { min: number; max: number; label: string },
+    field: "autosenderMeasureMinutes" | "autosenderScaleFactor" | "autosenderCtrFloorPercent",
+  ) {
+    const value = Number.parseInt(knobs[key], 10);
+    if (!Number.isInteger(value) || value < range.min || value > range.max) {
+      setError(`${range.label} must be a whole number from ${range.min} to ${range.max}`);
+      return;
+    }
+    if (value !== current) save({ [field]: value });
   }
 
   function commitTestSize() {
@@ -181,6 +249,50 @@ export function AdvancedSettings({
           </span>
         </span>
       </div>
+      {campaign.autosender ? (
+        <div
+          className="space-y-2 rounded-md border border-rule bg-surface p-3"
+          data-testid="autosender-settings"
+        >
+          {campaign.autosenderStopReason ? (
+            <p className="text-xs text-amber" data-testid="autosender-stopped">
+              AutoSender stopped: {campaign.autosenderStopReason}. Switch it off and on to run it
+              again.
+            </p>
+          ) : null}
+          <div className="grid gap-3 sm:grid-cols-3">
+            {AUTOSENDER_KNOBS.map((k) => (
+              <div key={k.key}>
+                <label
+                  htmlFor={`${id}-${k.key}`}
+                  className="block text-xs font-medium uppercase text-muted"
+                >
+                  {k.label}
+                </label>
+                <input
+                  id={`${id}-${k.key}`}
+                  type="number"
+                  min={k.range.min}
+                  max={k.range.max}
+                  className={`${inputClass} mt-1`}
+                  value={knobs[k.key]}
+                  onChange={(e) => setKnobs({ ...knobs, [k.key]: e.target.value })}
+                  onBlur={() => commitKnob(k.key, campaign[k.field], k.range, k.field)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      commitKnob(k.key, campaign[k.field], k.range, k.field);
+                    }
+                  }}
+                  disabled={pending}
+                  data-testid={`autosender-${k.key}`}
+                />
+                <p className="mt-1 text-xs text-muted">{k.hint}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : null}
       <ErrorText error={error} />
     </div>
   );

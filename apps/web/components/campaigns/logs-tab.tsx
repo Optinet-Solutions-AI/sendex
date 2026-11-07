@@ -31,6 +31,8 @@ const ACTION_LABELS: Record<string, string> = {
   "lap.comment": "Lap comment",
   "lap.reschedule": "Lap rescheduled",
   "lap.flush": "Lap flushed",
+  "autosender.scale": "AutoSender scaled out",
+  "autosender.stop": "AutoSender stopped",
 };
 
 function actionLabel(action: string): string {

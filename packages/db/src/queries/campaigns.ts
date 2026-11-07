@@ -853,7 +853,15 @@ export async function routesForCountry(
 
 /** The persisted part of the send form; `sendAll` is passed per send instead. */
 export type SendSettingsInput = Pick<SendSettings, "testSize" | "contactReuse" | "sendNow"> &
-  Partial<Pick<SendSettings, "autosender">> & {
+  Partial<
+    Pick<
+      SendSettings,
+      | "autosender"
+      | "autosenderMeasureMinutes"
+      | "autosenderScaleFactor"
+      | "autosenderCtrFloorPercent"
+    >
+  > & {
     scheduledAt?: string;
   };
 
@@ -869,6 +877,19 @@ export async function updateSendSettings(
       testSize: settings.testSize,
       contactReuse: settings.contactReuse,
       ...(settings.autosender === undefined ? {} : { autosender: settings.autosender }),
+      // Switching AutoSender on (again) clears an earlier automatic stop.
+      ...(settings.autosender === true
+        ? { autosenderStoppedAt: null, autosenderStopReason: null }
+        : {}),
+      ...(settings.autosenderMeasureMinutes === undefined
+        ? {}
+        : { autosenderMeasureMinutes: settings.autosenderMeasureMinutes }),
+      ...(settings.autosenderScaleFactor === undefined
+        ? {}
+        : { autosenderScaleFactor: settings.autosenderScaleFactor }),
+      ...(settings.autosenderCtrFloorPercent === undefined
+        ? {}
+        : { autosenderCtrFloorPercent: settings.autosenderCtrFloorPercent }),
       scheduledAt:
         !settings.sendNow && settings.scheduledAt ? new Date(settings.scheduledAt) : null,
       updatedAt: new Date(),

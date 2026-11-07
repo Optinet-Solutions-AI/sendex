@@ -630,6 +630,14 @@ function LapTr({
         </td>
         <td className={`${TD} font-medium`}>
           Route {lap.routeName}
+          {lap.autosender ? (
+            <span
+              className="ml-1 rounded-full bg-navy-soft px-1.5 py-0.5 font-mono text-[10px] uppercase text-navy"
+              title="Queued by AutoSender"
+            >
+              Auto
+            </span>
+          ) : null}
           {lap.priceMicro !== null ? (
             <span className="ml-1 font-mono text-xs text-muted">
               ({formatPricePerSms(lap.priceMicro)})

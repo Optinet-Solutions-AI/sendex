@@ -71,6 +71,13 @@
       "when": 1794045437920,
       "tag": "0009_laps_budget",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1794046794199,
+      "tag": "0010_autosender",
+      "breakpoints": true
     }
   ]
 }

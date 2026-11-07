@@ -101,6 +101,7 @@ export function toLapView(lap: LapSummary): LapView {
     comment: lap.comment,
     active: lap.active,
     scheduledAt: iso(lap.scheduledAt),
+    autosender: lap.autosender,
   };
 }
 
@@ -117,6 +118,10 @@ export function toCampaignView(
     contactReuse: detail.contactReuse,
     testSize: detail.testSize,
     autosender: detail.autosender,
+    autosenderMeasureMinutes: detail.autosenderMeasureMinutes,
+    autosenderScaleFactor: detail.autosenderScaleFactor,
+    autosenderCtrFloorPercent: detail.autosenderCtrFloorPercent,
+    autosenderStopReason: detail.autosenderStopReason,
     scheduledAt: iso(detail.scheduledAt),
     createdAt: detail.createdAt.toISOString(),
     updatedAt: detail.updatedAt.toISOString(),

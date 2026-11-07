@@ -353,6 +353,15 @@ export async function updateSendSettingsAction(input: unknown): Promise<ActionRe
       sendNow: data.sendNow,
       ...(data.scheduledAt !== undefined ? { scheduledAt: data.scheduledAt } : {}),
       ...(data.autosender !== undefined ? { autosender: data.autosender } : {}),
+      ...(data.autosenderMeasureMinutes !== undefined
+        ? { autosenderMeasureMinutes: data.autosenderMeasureMinutes }
+        : {}),
+      ...(data.autosenderScaleFactor !== undefined
+        ? { autosenderScaleFactor: data.autosenderScaleFactor }
+        : {}),
+      ...(data.autosenderCtrFloorPercent !== undefined
+        ? { autosenderCtrFloorPercent: data.autosenderCtrFloorPercent }
+        : {}),
     });
     revalidateCampaign(data.campaignId);
     return null;

@@ -24,3 +24,26 @@ Each route is a carrier connection with its own price per SMS for the country, i
 - Every message debits your balance at the route's price times the number of parts, at the moment it is queued. The debit and the send are recorded together, so a message that is never submitted is never charged.
 - Failed messages are refunded when the carrier reports the failure as not billable.
 - If the balance would go below zero, the batch does not start; top up first.
+
+## AutoSender
+
+Switch **Run AutoSender** on under **Advanced Settings** before the first send and Sendex
+runs the test-and-scale loop for you:
+
+1. Your send is the **test round**: one lap of the test size per route you ticked.
+2. AutoSender waits until every test lap is done **and** the **measure window** has passed
+   (60 minutes from the start of the round by default), so clicks have time to arrive.
+3. The best lap wins: highest CTR, then lowest cost per click. If no test lap got a click,
+   AutoSender stops and tells you why.
+4. It queues one **scale-out lap** per list on the winning route, each of **scale factor ×
+   test size** messages (5 × by default), capped by what is left on the list. Scale-out laps
+   are flagged in the lap table and in the Logs tab as `autosender.scale`.
+5. After each scale-out lap finishes it checks the lap's CTR against the **CTR floor** (80 %
+   of the test CTR by default). While the CTR holds and contacts remain, it queues the next
+   lap; when the CTR drops below the floor or the lists are finished, it stops
+   (`autosender.stop`, with the reason shown under Advanced Settings).
+
+The three knobs (measure window, scale factor, CTR floor) are per campaign and editable while
+AutoSender is on. Pausing or stopping the campaign pauses AutoSender with it; switching
+AutoSender off and on again after it stopped starts a fresh judgement of the laps so far.
+Every lap it creates is charged like any other: per message, as it sends.

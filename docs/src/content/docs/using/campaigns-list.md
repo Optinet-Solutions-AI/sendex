@@ -25,7 +25,8 @@ page, with the totals of its laps.
 
 ## Filters
 
-The row above the table narrows the list. Press **Filter** to apply, **Clear** to reset.
+Type in **Search** and press Enter to search by name. **Filters** opens the filter row below it;
+press **Apply** there to apply, **Clear** to reset.
 
 - **Search**: part of the name, case-insensitive.
 - **Countries** (a searchable multi-select: tick as many as you like; All countries clears it) and **Status**.
@@ -40,7 +41,7 @@ The filters live in the page address, so a filtered view can be bookmarked or sh
 
 ## Export CSV
 
-**Export CSV** downloads every campaign that matches the current filters, not just the page on
+**Export CSV** (next to Filters, always visible) downloads every campaign that matches the current filters, not just the page on
 screen, with the same columns as the table (cost in EUR with two decimals, the period as two
 ISO timestamps). The file is named `campaigns-<date>.csv`.
 

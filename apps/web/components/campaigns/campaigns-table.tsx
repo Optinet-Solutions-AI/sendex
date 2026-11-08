@@ -72,8 +72,8 @@ const Dash = () => <span className="text-muted">-</span>;
 const COUNTRIES = countryOptions.map((c) => ({ code: c.code, name: c.name, flag: c.flag }));
 
 /**
- * The campaigns list of the spec: search and a count pill, a Filters toggle that reveals the
- * filter row, the table (ID, Campaign, Status, Country, Laps, Sent, Clicks, CTR, Cost,
+ * The campaigns list of the spec: search (applies on Enter), a Filters toggle that reveals the
+ * filter row (Apply / Clear), Export CSV and a count pill, the table (ID, Campaign, Status, Country, Laps, Sent, Clicks, CTR, Cost,
  * Leads, Sales, Period, Actions), icon row actions with tooltips, "Page 1 of 8 (187 total)".
  */
 export function CampaignsTable({
@@ -140,9 +140,6 @@ export function CampaignsTable({
             aria-label="Search"
             className={cn(inputClass, "w-64")}
           />
-          <Button type="submit" variant="outline">
-            Filter
-          </Button>
           <Button
             type="button"
             variant="outline"
@@ -150,6 +147,11 @@ export function CampaignsTable({
             onClick={() => setShowFilters((v) => !v)}
           >
             <SlidersHorizontal className="h-4 w-4" aria-hidden="true" /> Filters
+          </Button>
+          <Button variant="outline" asChild>
+            <a href={exportHref} data-testid="export-csv">
+              <Download className="h-4 w-4" aria-hidden="true" /> Export CSV
+            </a>
           </Button>
           <CountPill count={total} noun="campaign" className="ml-auto" testId="campaign-count" />
         </div>
@@ -201,14 +203,10 @@ export function CampaignsTable({
               className={cn(inputClass, "w-24")}
             />
           </label>
+          <Button type="submit">Apply</Button>
           <Link href="/campaigns" className="text-sm text-muted underline-offset-2 hover:underline">
             Clear
           </Link>
-          <Button variant="outline" asChild className="ml-auto">
-            <a href={exportHref} data-testid="export-csv">
-              <Download className="h-4 w-4" aria-hidden="true" /> Export
-            </a>
-          </Button>
         </div>
       </form>
       <ErrorText error={error} />

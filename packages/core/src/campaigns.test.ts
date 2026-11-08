@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
+  adTextProblem,
   adTextSchema,
+  analyseAdText,
   countryOptions,
   flagEmoji,
   hasDomainPlaceholder,
@@ -152,6 +154,43 @@ describe("timezones and countries", () => {
   });
 });
 
+describe("ad text checks", () => {
+  const rules = { requireDomain: true, longMessage: false, linkLength: 50 };
+
+  it("counts {{domain}} at the length of the real short link", () => {
+    // 99 letters, a space and a 50-character link: 150 characters, one part.
+    const text = `${"a".repeat(99)} {{domain}}`;
+    expect(analyseAdText(text, 50).chars).toBe(150);
+    expect(analyseAdText(text, 50).parts).toBe(1);
+    // The same text with a 70-character link needs two parts.
+    expect(analyseAdText(text, 70).parts).toBe(2);
+  });
+
+  it("counts a randomizer at its longest option and the phone at full length", () => {
+    expect(analyseAdText("{a|bbbb|cc}", 50).chars).toBe(4);
+    expect(analyseAdText("{{phone}}", 50).chars).toBe(16);
+  });
+
+  it("accepts a one-part text with the link", () => {
+    expect(adTextProblem("Win now {{domain}}", rules)).toBeNull();
+  });
+
+  it("refuses a text that is two parts once the link is filled in, unless Long message is on", () => {
+    const text = `${"a".repeat(120)} {{domain}}`;
+    expect(adTextProblem(text, rules)).toMatch(/Long message/);
+    expect(adTextProblem(text, { ...rules, longMessage: true })).toBeNull();
+  });
+
+  it("refuses a text without {{domain}} unless the check is off", () => {
+    expect(adTextProblem("Win now", rules)).toMatch(/\{\{domain\}\}/);
+    expect(adTextProblem("Win now", { ...rules, requireDomain: false })).toBeNull();
+  });
+
+  it("refuses {{opt_out}} until the opt-out wording is decided", () => {
+    expect(adTextProblem("Win {{domain}} {{ opt_out }}", rules)).toMatch(/opt_out/);
+  });
+});
+
 describe("placeholders", () => {
   it("defines the text and link placeholders", () => {
     expect(TEXT_PLACEHOLDERS.map((p) => p.key)).toEqual([
@@ -159,7 +198,6 @@ describe("placeholders", () => {
       "first_name",
       "last_name",
       "phone",
-      "opt_out",
       "random",
     ]);
     expect(LINK_PLACEHOLDERS).toContain("dynamic");

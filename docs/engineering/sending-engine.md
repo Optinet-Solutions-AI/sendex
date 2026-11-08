@@ -136,8 +136,17 @@ from the number of messages already created). Placeholders in the text:
 | Placeholder | Value |
 | --- | --- |
 | `{{first_name}}` | `contacts.first_name`, empty when unknown |
+| `{{last_name}}` | `contacts.last_name`, empty when unknown |
 | `{{phone}}` | the E.164 number |
 | `{{domain}}` | `${LINKS_BASE_URL}/<shortCode>`; empty when the campaign has no active link |
+| `{a\|b\|c}` | one option picked at random per message (resolved on the template before the placeholders, so a contact name is never read as a randomizer) |
+
+`{{opt_out}}` is refused when a text is saved until the opt-out wording is decided. The parts
+estimate used for the balance and spend-cap checks counts each randomizer at its longest
+option. The web app counts and checks parts the same way (`analyseAdText` and `adTextProblem`
+in `packages/core`), with `{{domain}}` at `shortLinkLength(LINKS_BASE_URL)`; without
+`LINKS_BASE_URL` it assumes a 50-character link. Set `LINKS_BASE_URL` on Vercel to the same
+value as the worker's.
 
 The short code is 8 characters from an unambiguous alphabet (`SHORT_CODE_ALPHABET` in
 `packages/core`), generated per message and stored in `messages.short_code`. The message also

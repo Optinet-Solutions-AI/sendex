@@ -48,6 +48,8 @@ export interface SendFormProps {
   canFlush: boolean;
   /** The organisation balance in micro-EUR, for the balance check in the send bar. */
   balanceMicro: number;
+  /** Characters `{{domain}}` becomes when sent, for the ad text counter. */
+  linkLength: number;
 }
 
 /** A form row of the spec: label on the left, control on the right; clicking it opens its tab. */
@@ -87,6 +89,7 @@ export function SendForm({
   canSend,
   canFlush,
   balanceMicro,
+  linkLength,
 }: SendFormProps) {
   const router = useRouter();
   const id = useId();
@@ -361,7 +364,9 @@ export function SendForm({
                 />
               ),
               offers: <OffersPanel campaign={campaign} links={links} onChanged={onChanged} />,
-              texts: <AdTextsPanel campaign={campaign} onChanged={onChanged} />,
+              texts: (
+                <AdTextsPanel campaign={campaign} linkLength={linkLength} onChanged={onChanged} />
+              ),
               sids: <SidPanel campaign={campaign} groups={sidGroups} onChanged={onChanged} />,
               routes: (
                 <RoutesPanel

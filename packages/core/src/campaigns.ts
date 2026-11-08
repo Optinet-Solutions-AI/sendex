@@ -3,6 +3,8 @@
  * Pure: validated at every boundary (server actions, queries) and reused by the UI.
  */
 import { z } from "zod";
+import { pickRandomWords } from "./render.js";
+import { analyseSmsText, type SmsTextAnalysis } from "./sms-encoding.js";
 
 // ---------------------------------------------------------------------------
 // Countries and timezones
@@ -235,7 +237,6 @@ export const TEXT_PLACEHOLDERS: readonly TextPlaceholder[] = [
   { key: "first_name", token: "{{first_name}}", description: "Contact first name" },
   { key: "last_name", token: "{{last_name}}", description: "Contact last name" },
   { key: "phone", token: "{{phone}}", description: "Contact phone number" },
-  { key: "opt_out", token: "{{opt_out}}", description: "Opt-out instruction for the route" },
   {
     key: "random",
     token: "{word1|word2|word3}",
@@ -266,6 +267,45 @@ export const LINK_PLACEHOLDERS: readonly string[] = [
 
 export function hasDomainPlaceholder(text: string): boolean {
   return /\{\{\s*domain\s*\}\}/i.test(text);
+}
+
+/** Longest options win, so a text is never counted shorter than it can be sent. */
+const longestOption = (options: readonly string[]): string =>
+  options.reduce((a, b) => (b.length > a.length ? b : a), "");
+
+/**
+ * SMS length and parts of an ad text as it will be sent: `{{domain}}` at the length of the
+ * real short link, `{{phone}}` at the longest E.164 number (16 characters), each randomizer at
+ * its longest option. Names stay as typed, since their length is not known before sending.
+ */
+export function analyseAdText(text: string, linkLength: number): SmsTextAnalysis {
+  const sendable = pickRandomWords(text, longestOption)
+    .replace(/\{\{\s*domain\s*\}\}/gi, "x".repeat(linkLength))
+    .replace(/\{\{\s*phone\s*\}\}/gi, `+${"0".repeat(15)}`);
+  return analyseSmsText(sendable);
+}
+
+export interface AdTextRules {
+  /** The "must contain {{domain}}" check is on. */
+  requireDomain: boolean;
+  /** "Long message": the text may take more than one SMS part. */
+  longMessage: boolean;
+  /** Characters `{{domain}}` becomes when sent (see `shortLinkLength`). */
+  linkLength: number;
+}
+
+/** Why an ad text cannot be saved, or null when it can. Used by the editor and the server. */
+export function adTextProblem(text: string, rules: AdTextRules): string | null {
+  if (/\{\{\s*opt_out\s*\}\}/i.test(text)) {
+    return "{{opt_out}} is not available yet: write the opt-out wording into the text";
+  }
+  if (rules.requireDomain && !hasDomainPlaceholder(text)) {
+    return "Every text must contain {{domain}} (or switch the check off)";
+  }
+  if (!rules.longMessage && analyseAdText(text, rules.linkLength).parts > 1) {
+    return "Longer than one SMS once the link is filled in: shorten it or switch Long message on";
+  }
+  return null;
 }
 
 export type PreviewSample = Readonly<Partial<Record<string, string>>>;

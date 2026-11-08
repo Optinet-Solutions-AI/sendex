@@ -126,6 +126,7 @@ export interface EligibleMember {
   contactId: string;
   e164: string;
   firstName: string | null;
+  lastName: string | null;
 }
 
 export interface NewMessageInput {
@@ -403,6 +404,7 @@ function eligibleMembersQuery(
       contactId: contacts.id,
       e164: contacts.e164,
       firstName: contacts.firstName,
+      lastName: contacts.lastName,
     })
     .from(listMembers)
     .innerJoin(contacts, eq(contacts.id, listMembers.contactId))

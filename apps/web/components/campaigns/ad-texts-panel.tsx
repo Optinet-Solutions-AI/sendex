@@ -1,6 +1,6 @@
 "use client";
 
-import { renderPreview } from "@sendex/core";
+import { analyseAdText, renderPreview } from "@sendex/core";
 import { Button, EmptyState, IconButton, Toggle } from "@sendex/ui";
 import { MessageSquareText, Pencil, Plus } from "lucide-react";
 import { useState, useTransition } from "react";
@@ -9,7 +9,7 @@ import {
   toggleAdTextAction,
   updateAdTextAction,
 } from "../../app/(dashboard)/campaigns/actions";
-import { AdTextEditor } from "./ad-text-editor";
+import { AdTextEditor, type AdTextSave } from "./ad-text-editor";
 import type { AdTextView, CampaignView } from "./types";
 import { ErrorText, Modal } from "./ui";
 
@@ -18,15 +18,17 @@ const SAMPLE = {
   first_name: "Ana",
   last_name: "García",
   phone: "+34600123456",
-  opt_out: "STOP to 12345",
 } as const;
 
 /** The Ad Texts context tab: "AD TEXTS" with + Add Texts, the texts with their switch, and the dialogs. */
 export function AdTextsPanel({
   campaign,
+  linkLength,
   onChanged,
 }: {
   campaign: CampaignView;
+  /** Characters `{{domain}}` becomes when sent (see `shortLinkLength`). */
+  linkLength: number;
   onChanged: () => void;
 }) {
   const [adding, setAdding] = useState(false);
@@ -34,13 +36,14 @@ export function AdTextsPanel({
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
 
-  function add(input: { text: string; requireDomain: boolean }) {
+  function add(input: AdTextSave) {
     setError(null);
     start(async () => {
       const result = await addAdTextsAction({
         campaignId: campaign.id,
         input: input.text,
         requireDomain: input.requireDomain,
+        longMessage: input.longMessage,
       });
       if (!result.ok) {
         setError(result.error);
@@ -51,7 +54,7 @@ export function AdTextsPanel({
     });
   }
 
-  function save(adTextId: string, input: { text: string; requireDomain: boolean }) {
+  function save(adTextId: string, input: AdTextSave) {
     setError(null);
     start(async () => {
       const result = await updateAdTextAction({
@@ -59,6 +62,7 @@ export function AdTextsPanel({
         adTextId,
         text: input.text,
         requireDomain: input.requireDomain,
+        longMessage: input.longMessage,
       });
       if (!result.ok) {
         setError(result.error);
@@ -89,33 +93,36 @@ export function AdTextsPanel({
         <EmptyState icon={<MessageSquareText />} title="No ad texts yet." />
       ) : (
         <ul className="divide-y divide-rule rounded-md border border-rule bg-surface">
-          {campaign.adTexts.map((t, i) => (
-            <li key={t.id} className="flex items-start gap-3 px-3 py-2" data-testid="ad-text-row">
-              <span className="pt-0.5 font-mono text-xs text-muted">{i + 1}</span>
-              <div className="min-w-0 flex-1">
-                <div className={`text-sm ${t.active ? "text-ink" : "text-muted"}`}>
-                  {renderPreview(t.text, SAMPLE)}
+          {campaign.adTexts.map((t, i) => {
+            const sent = analyseAdText(t.text, linkLength);
+            return (
+              <li key={t.id} className="flex items-start gap-3 px-3 py-2" data-testid="ad-text-row">
+                <span className="pt-0.5 font-mono text-xs text-muted">{i + 1}</span>
+                <div className="min-w-0 flex-1">
+                  <div className={`text-sm ${t.active ? "text-ink" : "text-muted"}`}>
+                    {renderPreview(t.text, SAMPLE)}
+                  </div>
+                  <div className="mt-0.5 font-mono text-[11px] text-muted">
+                    {sent.encoding} · {sent.parts} {sent.parts === 1 ? "part" : "parts"}
+                  </div>
                 </div>
-                <div className="mt-0.5 font-mono text-[11px] text-muted">
-                  {t.encoding} · {t.parts} {t.parts === 1 ? "part" : "parts"}
-                </div>
-              </div>
-              <Toggle
-                label={`Text ${i + 1} ${t.active ? "on" : "off"}`}
-                labelHidden
-                checked={t.active}
-                onCheckedChange={(next) => toggle(t.id, next)}
-                disabled={pending}
-              />
-              <IconButton
-                label={`Edit text ${i + 1}`}
-                tooltip="Edit"
-                icon={<Pencil />}
-                disabled={pending}
-                onClick={() => setEditing(t)}
-              />
-            </li>
-          ))}
+                <Toggle
+                  label={`Text ${i + 1} ${t.active ? "on" : "off"}`}
+                  labelHidden
+                  checked={t.active}
+                  onCheckedChange={(next) => toggle(t.id, next)}
+                  disabled={pending}
+                />
+                <IconButton
+                  label={`Edit text ${i + 1}`}
+                  tooltip="Edit"
+                  icon={<Pencil />}
+                  disabled={pending}
+                  onClick={() => setEditing(t)}
+                />
+              </li>
+            );
+          })}
         </ul>
       )}
       <ErrorText error={error} />
@@ -125,6 +132,7 @@ export function AdTextsPanel({
           multi
           pending={pending}
           error={error}
+          linkLength={linkLength}
           onSave={add}
           onCancel={() => setAdding(false)}
         />
@@ -137,6 +145,7 @@ export function AdTextsPanel({
             multi={false}
             pending={pending}
             error={error}
+            linkLength={linkLength}
             onSave={(input) => save(editing.id, input)}
             onCancel={() => setEditing(null)}
           />

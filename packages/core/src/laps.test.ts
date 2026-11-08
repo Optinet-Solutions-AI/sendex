@@ -15,6 +15,16 @@ describe("planLaps", () => {
     expect(laps[0]).toEqual({ listId: "L1", routeId: "R1", count: 100, costMicro: 2_500_000 });
   });
 
+  it("prices every SMS part: two-part messages cost twice as much", () => {
+    const [lap] = planLaps({
+      testSize: 100,
+      lists: [{ listId: "L1", available: 10_000 }],
+      routes: [route("R1")],
+      partsPerMessage: 2,
+    });
+    expect(lap).toEqual({ listId: "L1", routeId: "R1", count: 100, costMicro: 5_000_000 });
+  });
+
   it("caps the lap at what the list has left: 50 left with test size 200 yields 50", () => {
     const laps = planLaps({
       testSize: 200,
@@ -218,6 +228,17 @@ describe("topUpPlan", () => {
       { id: "b", extra: 2_000 },
       { id: "c", extra: 2_000 },
     ]);
+  });
+
+  it("buys half as many two-part messages, so the lap does not spend more than the amount", () => {
+    const plan = topUpPlan({
+      amountMicro: 10_000_000,
+      laps: [{ id: "a", active: true, priceMicro: 25_000 }],
+      partsPerMessage: 2,
+    });
+    expect(plan.laps).toEqual([{ id: "a", extra: 200 }]);
+    expect(plan.newSms).toBe(200);
+    expect(plan.totalMicro).toBe(10_000_000);
   });
 
   it("spells the tooltip out: 3 active sends × €50 = €150 · New SMS sent: ~6,000", () => {

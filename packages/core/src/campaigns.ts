@@ -3,7 +3,7 @@
  * Pure: validated at every boundary (server actions, queries) and reused by the UI.
  */
 import { z } from "zod";
-import { pickRandomWords } from "./render.js";
+import { FALLBACK_LINK_LENGTH, pickRandomWords } from "./render.js";
 import { analyseSmsText, type SmsTextAnalysis } from "./sms-encoding.js";
 
 // ---------------------------------------------------------------------------
@@ -283,6 +283,33 @@ export function analyseAdText(text: string, linkLength: number): SmsTextAnalysis
     .replace(/\{\{\s*domain\s*\}\}/gi, "x".repeat(linkLength))
     .replace(/\{\{\s*phone\s*\}\}/gi, `+${"0".repeat(15)}`);
   return analyseSmsText(sendable);
+}
+
+/**
+ * SMS parts billed per message for a campaign's active texts: the longest one as sent. Texts
+ * rotate per message, so this never under-estimates; the send loop's balance check uses the
+ * same rule. One part when there are no texts.
+ */
+export function messageParts(texts: readonly string[], linkLength: number): number {
+  return texts.reduce((max, t) => Math.max(max, analyseAdText(t, linkLength).parts), 1);
+}
+
+/**
+ * `messageParts` for a campaign: its active texts, with `{{domain}}` empty when no link is
+ * switched on (as the send loop renders it).
+ */
+export function campaignMessageParts(
+  campaign: {
+    adTexts: ReadonlyArray<{ text: string; active: boolean }>;
+    links: ReadonlyArray<{ active: boolean }>;
+  },
+  linkLength: number = FALLBACK_LINK_LENGTH,
+): number {
+  const hasLink = campaign.links.some((l) => l.active);
+  return messageParts(
+    campaign.adTexts.filter((t) => t.active).map((t) => t.text),
+    hasLink ? linkLength : 0,
+  );
 }
 
 export interface AdTextRules {

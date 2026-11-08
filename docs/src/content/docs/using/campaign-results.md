@@ -58,9 +58,10 @@ sorted by **Rank**, so the best route is on top; laps without a rank sort last. 
 
 ### Budget top-ups
 
-A top-up adds the amount to every lap that is switched on. Each lap then sends `amount ÷ its
-route price` more messages (€50 on a €0.025 route is 2,000 more SMS); a finished lap goes back
-in the queue to send them. Hover a button for the maths: "3 active sends × €50 = €150 · New SMS
+A top-up adds the amount to every lap that is switched on. Each lap then sends `amount ÷ (its
+route price × SMS parts per message)` more messages (€50 on a €0.025 route is 2,000 more SMS,
+or 1,000 when the campaign's longest active text is two parts), so a lap never spends more than
+the amount; a finished lap goes back in the queue to send them. Hover a button for the maths: "3 active sends × €50 = €150 · New SMS
 sent: ~6,000 · Will spend an additional €50 per each highlighted lap". The top-up is refused
 when your balance cannot cover amount × laps. Nothing is charged up front: messages debit the
 balance as they are sent, exactly like a test batch. **Custom** takes any amount.

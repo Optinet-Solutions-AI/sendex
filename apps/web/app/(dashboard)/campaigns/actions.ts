@@ -399,6 +399,7 @@ export async function estimateSendAction(input: unknown): Promise<ActionResult<E
     const estimate = await estimateSend(db(), ctx.organisationId, data.campaignId, {
       routeIds: data.routeIds,
       sendAll: data.sendAll,
+      linkLength: shortLinkLength(process.env.LINKS_BASE_URL),
     });
     return toEstimateView(estimate);
   });
@@ -411,6 +412,7 @@ export async function sendCampaignAction(input: unknown): Promise<ActionResult<L
     const rows = await createLaps(db(), ctx.organisationId, data.campaignId, {
       routeIds: data.routeIds,
       sendAll: data.sendAll,
+      linkLength: shortLinkLength(process.env.LINKS_BASE_URL),
       actorUserId: ctx.userId,
     });
     revalidateCampaign(data.campaignId);
@@ -460,6 +462,7 @@ export async function topUpLapsAction(
     const result = await topUpLaps(db(), ctx.organisationId, {
       campaignId: data.campaignId,
       amountMicro: Math.round(data.amountEur * 1_000_000),
+      linkLength: shortLinkLength(process.env.LINKS_BASE_URL),
       actorUserId: ctx.userId,
     });
     revalidateCampaign(data.campaignId);

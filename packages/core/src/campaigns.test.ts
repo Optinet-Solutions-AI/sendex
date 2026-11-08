@@ -3,6 +3,7 @@ import {
   adTextProblem,
   adTextSchema,
   analyseAdText,
+  campaignMessageParts,
   countryOptions,
   flagEmoji,
   hasDomainPlaceholder,
@@ -10,6 +11,7 @@ import {
   lapCommentSchema,
   lapScheduleSchema,
   linkSchema,
+  messageParts,
   newCampaignSchema,
   parseSenderIds,
   renderPreview,
@@ -188,6 +190,29 @@ describe("ad text checks", () => {
 
   it("refuses {{opt_out}} until the opt-out wording is decided", () => {
     expect(adTextProblem("Win {{domain}} {{ opt_out }}", rules)).toMatch(/opt_out/);
+  });
+});
+
+describe("messageParts", () => {
+  it("is the parts of the longest text as sent, so an estimate is never below the charge", () => {
+    const long = `${"a".repeat(130)} {{domain}}`;
+    expect(messageParts(["Short {{domain}}", long], 50)).toBe(2);
+    expect(messageParts(["Short {{domain}}"], 50)).toBe(1);
+  });
+
+  it("is one part without texts", () => {
+    expect(messageParts([], 50)).toBe(1);
+  });
+
+  it("for a campaign, counts active texts only and {{domain}} empty without an active link", () => {
+    const long = `${"a".repeat(130)} {{domain}}`;
+    const texts = [
+      { text: "Short {{domain}}", active: true },
+      { text: "x".repeat(200), active: false },
+      { text: long, active: true },
+    ];
+    expect(campaignMessageParts({ adTexts: texts, links: [{ active: true }] }, 50)).toBe(2);
+    expect(campaignMessageParts({ adTexts: texts, links: [{ active: false }] }, 50)).toBe(1);
   });
 });
 

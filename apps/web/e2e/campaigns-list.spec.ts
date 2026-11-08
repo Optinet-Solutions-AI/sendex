@@ -36,8 +36,11 @@ test.describe("campaigns list", () => {
     await expect(page).toHaveURL(/\/campaigns\/[0-9a-f-]{36}$/);
 
     await page.goto("/campaigns");
+    // One Filters button only; Search applies on Enter and Export sits outside the filter row.
+    await expect(page.getByRole("button", { name: "Filter", exact: true })).toHaveCount(0);
+    await expect(page.getByTestId("export-csv")).toBeVisible();
     await page.getByLabel("Search").fill(PREFIX);
-    await page.getByRole("button", { name: "Filter", exact: true }).click();
+    await page.getByLabel("Search").press("Enter");
     await expect(page).toHaveURL(/search=/);
     await expect(page.getByTestId("campaign-row")).toHaveCount(2);
     // The filter row is behind the Filters toggle until a filter is set. Retry the click:
@@ -49,7 +52,7 @@ test.describe("campaigns list", () => {
     }).toPass();
 
     await page.getByLabel("Has sales").check();
-    await page.getByRole("button", { name: "Filter", exact: true }).click();
+    await page.getByRole("button", { name: "Apply", exact: true }).click();
     await expect(page).toHaveURL(/hasSales=1/);
     const rows = page.getByTestId("campaign-row");
     await expect(rows).toHaveCount(1);
@@ -60,14 +63,14 @@ test.describe("campaigns list", () => {
     // No clicks: only the draft.
     await page.getByLabel("Has sales").uncheck();
     await page.getByLabel("No clicks").check();
-    await page.getByRole("button", { name: "Filter", exact: true }).click();
+    await page.getByRole("button", { name: "Apply", exact: true }).click();
     await expect(page.getByTestId("campaign-row")).toHaveCount(1);
     await expect(page.getByTestId("campaign-row").first()).toContainText(draftName);
 
     // Spend above EUR 0.20: only the seeded campaign (EUR 0.225).
     await page.getByLabel("No clicks").uncheck();
     await page.getByLabel("Spend above (EUR)").fill("0.20");
-    await page.getByRole("button", { name: "Filter", exact: true }).click();
+    await page.getByRole("button", { name: "Apply", exact: true }).click();
     await expect(page.getByTestId("campaign-row")).toHaveCount(1);
     await expect(page.getByTestId("campaign-row").first()).toContainText(seeded.campaignName);
 
@@ -105,7 +108,7 @@ test.describe("campaigns list", () => {
     await page.keyboard.press("Escape");
     await page.getByRole("button", { name: "Date Range" }).click();
     await page.getByRole("button", { name: "Last 90 Days" }).click();
-    await page.getByRole("button", { name: "Filter", exact: true }).click();
+    await page.getByRole("button", { name: "Apply", exact: true }).click();
     await expect(page).toHaveURL(/country=ES/);
     await expect(page).toHaveURL(/from=\d{4}-\d{2}-\d{2}/);
     await expect(page.getByTestId("campaign-row")).toHaveCount(2);

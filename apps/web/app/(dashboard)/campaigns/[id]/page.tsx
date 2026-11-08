@@ -1,4 +1,4 @@
-import { can } from "@sendex/core";
+import { can, shortLinkLength } from "@sendex/core";
 import {
   campaignResults,
   clickStats,
@@ -124,6 +124,7 @@ export default async function CampaignPage({
         const results = resultRows ? toResultsView(resultRows) : null;
         const canSend = can(ctx.role, "campaign.send");
         const canEdit = can(ctx.role, "campaign.create");
+        const linkLength = shortLinkLength(process.env.LINKS_BASE_URL);
         return (
           <section className="space-y-6">
             <CampaignHeader
@@ -151,6 +152,7 @@ export default async function CampaignPage({
                     canSend={canSend}
                     canFlush={can(ctx.role, "list.flush")}
                     balanceMicro={Number(balanceMicro)}
+                    linkLength={linkLength}
                   />
                 ),
                 logs: (
@@ -163,7 +165,11 @@ export default async function CampaignPage({
                       adtexts: (
                         <LogPanelRefresh>
                           {(onChanged) => (
-                            <AdTextsPanel campaign={campaign} onChanged={onChanged} />
+                            <AdTextsPanel
+                              campaign={campaign}
+                              linkLength={linkLength}
+                              onChanged={onChanged}
+                            />
                           )}
                         </LogPanelRefresh>
                       ),

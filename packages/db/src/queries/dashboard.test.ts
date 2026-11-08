@@ -264,7 +264,9 @@ beforeAll(async () => {
     text: "Other text",
   });
 
-  // GB through the API: two contacts, one message each, one with a sale without a value.
+  // GB through the API: two contacts, one message each, one with a first deposit and a
+  // repeat deposit, both without a value. Only the first counts as a sale (FTD); both add
+  // the link's profit to revenue.
   const g1 = await seedContact(org, "GB", OCT, lgb.id);
   const g2 = await seedContact(org, "GB", OCT, lgb.id);
   const gb = { campaignId: campaignApi, lapId: lapApi.id, linkId: link.id };
@@ -273,7 +275,7 @@ beforeAll(async () => {
     contactId: g1,
     at: OCT,
     clicked: true,
-    sales: 1,
+    sales: 2,
     saleValue: null,
     costMicro: 38_000n,
   });
@@ -367,7 +369,7 @@ describe("roi", () => {
     });
     const gb = rows.find((r) => r.country === "GB");
     // A sale without a value takes the offer's profit per sale.
-    expect(gb?.revenue).toBe(80_000_000n);
+    expect(gb?.revenue).toBe(160_000_000n);
     expect(rows.find((r) => r.month === "2026-09")?.revenue).toBe(50_000_000n);
   });
 

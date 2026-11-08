@@ -119,7 +119,7 @@ export async function listAnalytics(
           where msgs.contact_id = mem.contact_id) as clicks,
         (select count(*) from postbacks p join msgs on msgs.id = p.message_id
           where msgs.contact_id = mem.contact_id and p.type = 'lead') as leads,
-        (select count(*) from postbacks p join msgs on msgs.id = p.message_id
+        (select count(distinct p.message_id) from postbacks p join msgs on msgs.id = p.message_id
           where msgs.contact_id = mem.contact_id and p.type = 'sale') as sales,
         (select coalesce(sum(p.value_micro), 0) from postbacks p join msgs on msgs.id = p.message_id
           where msgs.contact_id = mem.contact_id and p.type = 'sale') as revenue_micro,

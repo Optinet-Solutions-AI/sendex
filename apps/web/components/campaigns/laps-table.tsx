@@ -299,6 +299,7 @@ export function LapsTable({
     topUpPlan({
       amountMicro: Math.round(amountEur * 1_000_000),
       laps: rows.map((r) => ({ id: r.id, active: r.on, priceMicro: r.priceMicro })),
+      partsPerMessage: campaign.partsPerMessage,
     });
 
   function sortBy(key: LapSortKey) {

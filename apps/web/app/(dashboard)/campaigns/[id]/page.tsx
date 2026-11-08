@@ -117,14 +117,15 @@ export default async function CampaignPage({
         );
         const statsById = new Map(stats.map((s) => [s.groupId, s]));
         const groups = sidGroups.map((g) => toSidGroupView(g, statsById.get(g.id)));
+        const linkLength = shortLinkLength(process.env.LINKS_BASE_URL);
         const campaign = toCampaignView(
           detail,
           detail.sidGroup ? statsById.get(detail.sidGroup.id) : undefined,
+          linkLength,
         );
         const results = resultRows ? toResultsView(resultRows) : null;
         const canSend = can(ctx.role, "campaign.send");
         const canEdit = can(ctx.role, "campaign.create");
-        const linkLength = shortLinkLength(process.env.LINKS_BASE_URL);
         return (
           <section className="space-y-6">
             <CampaignHeader

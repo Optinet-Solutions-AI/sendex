@@ -24,6 +24,8 @@ export interface PlanLapsInput {
   routes: readonly LapRoute[];
   /** Send every available contact, split evenly across the routes, instead of a test slice. */
   sendAll?: boolean;
+  /** SMS parts billed per message (`messageParts`). Default 1. */
+  partsPerMessage?: number;
 }
 
 export interface PlannedLap {
@@ -44,6 +46,8 @@ export function planLaps(input: PlanLapsInput): PlannedLap[] {
   for (const r of input.routes) {
     assertNonNegativeInt("priceMicro", r.priceMicro);
   }
+  const parts = input.partsPerMessage ?? 1;
+  assertNonNegativeInt("partsPerMessage", parts);
 
   const laps: PlannedLap[] = [];
   const routeCount = input.routes.length;
@@ -72,7 +76,7 @@ export function planLaps(input: PlanLapsInput): PlannedLap[] {
         listId: list.listId,
         routeId: route.routeId,
         count,
-        costMicro: count * route.priceMicro,
+        costMicro: count * route.priceMicro * parts,
         ...(list.segmentId ? { segmentId: list.segmentId } : {}),
       });
     }
@@ -182,6 +186,8 @@ export interface TopUpLap {
 export interface TopUpPlanInput {
   amountMicro: number;
   laps: readonly TopUpLap[];
+  /** SMS parts billed per message (`messageParts`). Default 1. */
+  partsPerMessage?: number;
 }
 
 export interface TopUpPlan {
@@ -199,18 +205,23 @@ export const TOP_UP_AMOUNTS_EUR: readonly number[] = [5, 10, 20, 50, 100, 200];
 
 /**
  * A budget top-up adds `amountMicro` to every active, priced lap; each one then sends
- * `amount / price` more messages (`budgetPlan`). Inactive and unpriced laps are left out.
+ * `amount / (price × parts)` more messages (`budgetPlan`), so a lap of two-part messages
+ * does not spend twice the amount. Inactive and unpriced laps are left out.
  */
 export function topUpPlan(input: TopUpPlanInput): TopUpPlan {
   if (!Number.isInteger(input.amountMicro) || input.amountMicro <= 0) {
     throw new RangeError(`amountMicro must be a positive integer, got ${input.amountMicro}`);
+  }
+  const parts = input.partsPerMessage ?? 1;
+  if (!Number.isInteger(parts) || parts < 1) {
+    throw new RangeError(`partsPerMessage must be a positive integer, got ${parts}`);
   }
   const laps: Array<{ id: string; extra: number }> = [];
   for (const lap of input.laps) {
     if (!lap.active || lap.priceMicro === null || lap.priceMicro <= 0) continue;
     laps.push({
       id: lap.id,
-      extra: budgetPlan({ budgetMicro: input.amountMicro, priceMicro: lap.priceMicro }),
+      extra: budgetPlan({ budgetMicro: input.amountMicro, priceMicro: lap.priceMicro * parts }),
     });
   }
   return {

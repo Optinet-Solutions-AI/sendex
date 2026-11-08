@@ -133,6 +133,8 @@ export interface LapView {
 
 export interface CampaignView {
   id: string;
+  /** SMS parts billed per message: the longest active text as sent (`campaignMessageParts`). */
+  partsPerMessage: number;
   name: string;
   country: string;
   timezone: string;

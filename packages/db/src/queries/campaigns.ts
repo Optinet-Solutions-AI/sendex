@@ -1,6 +1,6 @@
 import {
   analyseSmsText,
-  estimateCost,
+  campaignMessageParts,
   type NewCampaign,
   type PlannedLap,
   planLaps,
@@ -1013,6 +1013,8 @@ export interface SendOptions {
   routeIds: readonly string[];
   /** Send every available contact instead of `testSize` per lap. */
   sendAll: boolean;
+  /** Characters `{{domain}}` becomes when sent (`shortLinkLength`). Default 50. */
+  linkLength?: number;
 }
 
 export interface SendEstimate {
@@ -1068,11 +1070,8 @@ export async function estimateSend(
     lists: planLists,
     routes: chosen.map((r) => ({ routeId: r.id, priceMicro: Number(r.priceMicro) })),
     sendAll: options.sendAll,
+    partsPerMessage: campaignMessageParts(campaign, options.linkLength),
   });
-  const priceOf = new Map(chosen.map((r) => [r.id, Number(r.priceMicro) / 1_000_000]));
-  const costEur = estimateCost(
-    planned.map((lap) => ({ count: lap.count, pricePerSms: priceOf.get(lap.routeId) ?? 0 })),
-  );
 
   return {
     contacts:
@@ -1084,7 +1083,7 @@ export async function estimateSend(
     testSize: campaign.testSize,
     sendAll: options.sendAll,
     smsCount: planned.reduce((sum, lap) => sum + lap.count, 0),
-    costMicro: BigInt(Math.round(costEur * 1_000_000)),
+    costMicro: planned.reduce((sum, lap) => sum + BigInt(lap.costMicro), 0n),
     lists: campaign.lists,
     segments: campaign.segments,
     routes: chosen,

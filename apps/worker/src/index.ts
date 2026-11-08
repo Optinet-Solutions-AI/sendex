@@ -1,5 +1,6 @@
 import os from "node:os";
 import { serve } from "@hono/node-server";
+import { shortLinkLength } from "@sendex/core";
 import {
   claimTest,
   claimVerificationRequest,
@@ -249,6 +250,7 @@ const publicApiDeps =
         store,
         progress,
         version,
+        linkLength: shortLinkLength(linksBaseUrl),
         serverUrl: process.env.WORKER_PUBLIC_URL ?? `http://localhost:${port}`,
         ...(postbackLimiter ? { rateLimit: { limiter: postbackLimiter } } : {}),
       }

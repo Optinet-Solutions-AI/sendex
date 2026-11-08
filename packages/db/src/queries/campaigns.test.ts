@@ -405,6 +405,41 @@ describe("estimateSend and createLaps", () => {
     });
     expect(estimate.routes.map((r) => r.name)).toEqual(["23Telecom"]);
   });
+
+  it("prices each message at the parts of the longest active text with the real link", async () => {
+    const campaign = await createCampaign(t.db, orgA, {
+      name: "Long texts",
+      country: "ES",
+      timezone: "Europe/Madrid",
+    });
+    await setCampaignLists(t.db, orgA, campaign.id, [listEs]);
+    // 141 characters as typed; over 160 once {{domain}} is a 30-character link.
+    await addAdTexts(
+      t.db,
+      orgA,
+      campaign.id,
+      `Short {{domain}}
+//
+${"a".repeat(130)} {{domain}}`,
+    );
+    const link = await createLink(t.db, orgA, { name: "L2", url: "https://x.example/{{dynamic}}" });
+    await attachLink(t.db, orgA, campaign.id, link.id);
+    await updateSendSettings(t.db, orgA, campaign.id, {
+      testSize: 3,
+      contactReuse: "per_campaign",
+      sendNow: true,
+    });
+    const estimate = await estimateSend(t.db, orgA, campaign.id, {
+      routeIds: [route405],
+      sendAll: false,
+      linkLength: 30,
+    });
+    expect(estimate.smsCount).toBe(3);
+    expect(estimate.costMicro).toBe(3n * 2n * 25_000n);
+    expect(estimate.laps).toEqual([
+      { listId: listEs, routeId: route405, count: 3, costMicro: 150_000 },
+    ]);
+  });
 });
 
 describe("duplicateCampaign and deleteCampaign", () => {

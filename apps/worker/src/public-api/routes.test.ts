@@ -1,6 +1,7 @@
 import {
   addAdTexts,
   addSenderIds,
+  adTexts,
   attachLink,
   auditLog,
   contacts,
@@ -299,6 +300,25 @@ describe("campaigns", () => {
     });
     expect(bad.status).toBe(400);
     expect(await bad.json()).toMatchObject({ error: "validation_failed" });
+  });
+
+  it("prices the send at the SMS parts of the text with the worker's real link length", async () => {
+    const sender = await createApiToken(t.db, orgA, { name: "Parts", scopes: ["send"] });
+    // 121 characters as typed: one part with a 20-character link, two with a 50-character one.
+    const text = `${"a".repeat(120)} {{domain}}`;
+    const send = async (deps: Partial<PublicApiDeps>, name: string) => {
+      const campaignId = await seedSendableCampaign(orgA, name);
+      await t.db.update(adTexts).set({ text }).where(eq(adTexts.campaignId, campaignId));
+      const res = await build(deps).app.request(`/api/v1/campaigns/${campaignId}/send`, {
+        method: "POST",
+        headers: { ...bearer(sender.token), "content-type": "application/json" },
+        body: JSON.stringify({ routeIds: [route405] }),
+      });
+      expect(res.status).toBe(201);
+      return ((await res.json()) as { costMicro: string }).costMicro;
+    };
+    expect(await send({ linkLength: 20 }, "Short link")).toBe("125000");
+    expect(await send({}, "Unknown link")).toBe("250000");
   });
 
   it("sends (send scope): estimate, queue the laps, audit, then report status with progress", async () => {

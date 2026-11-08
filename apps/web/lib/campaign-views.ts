@@ -1,3 +1,4 @@
+import { campaignMessageParts } from "@sendex/core";
 import type {
   AuditRow,
   CampaignDetail,
@@ -111,9 +112,11 @@ export function toLapView(lap: LapSummary): LapView {
 export function toCampaignView(
   detail: CampaignDetail,
   sidStats?: { sent: number; clicks: number },
+  linkLength?: number,
 ): CampaignView {
   return {
     id: detail.id,
+    partsPerMessage: campaignMessageParts(detail, linkLength),
     name: detail.name,
     country: detail.country,
     timezone: detail.timezone,

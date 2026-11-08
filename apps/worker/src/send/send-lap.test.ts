@@ -182,6 +182,45 @@ describe("sendLap", () => {
     expect(outbound).toMatchObject({ to: "+34600000001", route: "fake-1", country: "ES" });
   });
 
+  it("fills the last name and picks one option of each words randomizer", async () => {
+    const { deps, store } = harness(
+      {
+        ctx: context({
+          texts: [{ id: "t", text: "{Hi|Hey} {{first_name}} {{last_name}}" }],
+          link: null,
+        }),
+        members: [
+          { contactId: "c1", e164: "+34600000001", firstName: "Ana", lastName: "Ruiz" },
+          { contactId: "c2", e164: "+34600000002", firstName: "Bo", lastName: null },
+        ],
+      },
+      new FakeProvider(),
+      { pickOption: (options) => options[options.length - 1] ?? "" },
+    );
+    await sendLap(deps, job, meta());
+    expect(store.messages.map((m) => m.text)).toEqual(["Hey Ana Ruiz", "Hey Bo "]);
+  });
+
+  it("prices a randomizer at its longest option before sending", async () => {
+    const long = "y".repeat(200);
+    const { deps, store } = harness(
+      {
+        ctx: context({
+          texts: [{ id: "t", text: `{short|${long}}` }],
+          link: null,
+          lap: { ...context().lap, testSize: 1 },
+        }),
+        members: members(1),
+        // Covers one 1-part message but not one 2-part message.
+        balanceMicro: 30_000n,
+      },
+      new FakeProvider(),
+      { pickOption: (options) => options[0] ?? "" },
+    );
+    await sendLap(deps, job, meta());
+    expect(store.messages).toHaveLength(0);
+  });
+
   it("without a link renders {{domain}} empty and stores no short code", async () => {
     const { deps, store } = harness({ ctx: context({ link: null }) }, new FakeProvider());
     await sendLap(deps, job, meta());

@@ -16,6 +16,7 @@ export interface FakeMember {
   contactId: string;
   e164: string;
   firstName: string | null;
+  lastName?: string | null;
   bad?: boolean;
   sentAt?: Date | null;
   suppressed?: boolean;
@@ -150,7 +151,7 @@ export function createFakeStore(options: FakeStoreOptions): FakeStore {
     async selectEligibleMembers(input, limit) {
       return eligible(input.contactReuse)
         .slice(0, limit)
-        .map((m) => ({ memberId: `member-${m.contactId}`, ...m }));
+        .map((m) => ({ memberId: `member-${m.contactId}`, ...m, lastName: m.lastName ?? null }));
     },
     async countEligibleMembers(input) {
       return eligible(input.contactReuse).length;

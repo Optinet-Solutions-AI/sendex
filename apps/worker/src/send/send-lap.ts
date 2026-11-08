@@ -6,6 +6,7 @@ import {
   capReasonLabel,
   formatEur,
   isCustomProvider,
+  type PickOption,
   renderMessageText,
   startOfUtcDay,
   utcDayKey,
@@ -50,6 +51,8 @@ export interface SendLapDeps {
   pauseRetryMs?: number;
   shortCode?: () => string;
   dynamicId?: () => string;
+  /** Chooses the option of a `{a|b}` words randomizer. Default: at random. */
+  pickOption?: PickOption;
   /** Daily caps (D3-11). Absent means no cap is enforced (unit tests of the loop itself). */
   caps?: CapsStore;
   /** The clock, for the UTC day the caps apply to. Default `new Date()`. */
@@ -81,12 +84,19 @@ type Guard =
   /** A daily cap leaves no room today; `cap` is the value that binds. */
   | { kind: "refuse"; reason: CapReason; cap: number | bigint };
 
-/** A sample rendering used to estimate parts before any member is known. */
+const longestOption: PickOption = (options) =>
+  options.reduce((a, b) => (b.length > a.length ? b : a), "");
+
+/** A sample rendering used to estimate parts before any member is known; randomizers at their longest. */
 function estimateMaxParts(ctx: LapContext, linksBaseUrl: string): number {
   const domain = ctx.link ? `${linksBaseUrl}/xxxxxxxx` : null;
   let max = 1;
   for (const t of ctx.texts) {
-    const sample = renderMessageText(t.text, { firstName: "", phone: "+000000000000000", domain });
+    const sample = renderMessageText(
+      t.text,
+      { firstName: "", phone: "+000000000000000", domain },
+      longestOption,
+    );
     max = Math.max(max, analyseSmsText(sample).parts);
   }
   return max;
@@ -306,11 +316,16 @@ export async function sendLap(
       const template = adText?.text ?? "";
       rotation += 1;
       const shortCode = ctx.link ? newShortCode() : null;
-      const text = renderMessageText(template, {
-        firstName: m.firstName,
-        phone: m.e164,
-        domain: shortCode ? `${linksBaseUrl}/${shortCode}` : null,
-      });
+      const text = renderMessageText(
+        template,
+        {
+          firstName: m.firstName,
+          lastName: m.lastName,
+          phone: m.e164,
+          domain: shortCode ? `${linksBaseUrl}/${shortCode}` : null,
+        },
+        deps.pickOption,
+      );
       const analysis = analyseSmsText(text);
       return {
         contactId: m.contactId,

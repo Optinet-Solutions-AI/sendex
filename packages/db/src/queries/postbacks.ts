@@ -1,5 +1,5 @@
 import { type ConversionRates, conversionRates, type PostbackType } from "@sendex/core";
-import { and, asc, desc, eq, gte, ilike, isNotNull, lte, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gte, ilike, isNotNull, lte, ne, or, sql } from "drizzle-orm";
 import { adTexts, campaigns, laps } from "../schema/campaigns.js";
 import { routes } from "../schema/routes.js";
 import { messages, postbacks } from "../schema/tracking.js";
@@ -78,6 +78,10 @@ export interface AttributeResult {
  * record message / campaign / lap on it and add it to the lap's `leads` or `sales` (plus
  * `revenue_micro` for a sale value), all in one transaction. Idempotent: a postback that is
  * already attributed is left alone, so the counters never move twice for one event.
+ *
+ * Sales count first deposits only (SMS Edge's "Sales (FTD)"): a later sale on the same
+ * message (a repeat deposit) adds its value to revenue but not to `sales`. The message row
+ * is locked so two sales arriving together cannot both count as the first.
  */
 export async function attributePostback(db: Db, postback: PostbackRow): Promise<AttributeResult> {
   if (postback.messageId !== null) return { attributed: false, postback };
@@ -92,7 +96,8 @@ export async function attributePostback(db: Db, postback: PostbackRow): Promise<
         ),
       )
       .orderBy(desc(messages.createdAt))
-      .limit(1);
+      .limit(1)
+      .for("update");
     if (!message) return { attributed: false, postback };
 
     const [updated] = await tx
@@ -107,13 +112,28 @@ export async function attributePostback(db: Db, postback: PostbackRow): Promise<
 
     const value = updated.valueMicro ?? 0n;
     if (message.lapId !== null) {
+      let firstSale = false;
+      if (updated.type === "sale") {
+        const [earlier] = await tx
+          .select({ id: postbacks.id })
+          .from(postbacks)
+          .where(
+            and(
+              eq(postbacks.messageId, message.id),
+              eq(postbacks.type, "sale"),
+              ne(postbacks.id, updated.id),
+            ),
+          )
+          .limit(1);
+        firstSale = earlier === undefined;
+      }
       await tx
         .update(laps)
         .set(
           updated.type === "lead"
             ? { leads: sql`${laps.leads} + 1` }
             : {
-                sales: sql`${laps.sales} + 1`,
+                sales: firstSale ? sql`${laps.sales} + 1` : laps.sales,
                 revenueMicro: sql`${laps.revenueMicro} + ${value}`,
               },
         )
@@ -259,7 +279,8 @@ export async function conversionStats(
       leads: sql<number>`count(*) filter (where ${postbacks.type} = 'lead')`
         .mapWith(Number)
         .as("pb_leads"),
-      sales: sql<number>`count(*) filter (where ${postbacks.type} = 'sale')`
+      // First deposits only: at most one sale per message.
+      sales: sql<number>`least(count(*) filter (where ${postbacks.type} = 'sale'), 1)`
         .mapWith(Number)
         .as("pb_sales"),
       revenueMicro:

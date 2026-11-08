@@ -2,14 +2,15 @@
 
 import {
   type Action,
+  adTextProblem,
   adTextSchema,
-  hasDomainPlaceholder,
   lapCommentSchema,
   lapScheduleSchema,
   linkSchema,
   newCampaignSchema,
   senderIdsInputSchema,
   sendSettingsSchema,
+  shortLinkLength,
   sidGroupSchema,
   splitAdTexts,
   topUpSchema,
@@ -293,15 +294,20 @@ export async function detachLinkAction(input: unknown): Promise<ActionResult<nul
 const addAdTextsInput = campaignRef.extend({
   input: z.string().min(1, "Enter at least one text"),
   requireDomain: z.boolean().default(true),
+  longMessage: z.boolean().default(false),
 });
 
-function assertTexts(texts: string[], requireDomain: boolean): void {
+/** The same checks as the Add Ad Texts dialog, with `{{domain}}` at the real link length. */
+function assertTexts(
+  texts: string[],
+  rules: { requireDomain: boolean; longMessage: boolean },
+): void {
   if (texts.length === 0) throw new Error("Enter at least one text");
+  const linkLength = shortLinkLength(process.env.LINKS_BASE_URL);
   for (const text of texts) {
     adTextSchema.parse({ text });
-    if (requireDomain && !hasDomainPlaceholder(text)) {
-      throw new Error("Every text must contain {{domain}} (or switch the check off)");
-    }
+    const problem = adTextProblem(text, { ...rules, linkLength });
+    if (problem) throw new Error(problem);
   }
 }
 
@@ -309,7 +315,7 @@ export async function addAdTextsAction(input: unknown): Promise<ActionResult<{ a
   return run("campaign.create", async (ctx) => {
     const data = addAdTextsInput.parse(input);
     const texts = splitAdTexts(data.input);
-    assertTexts(texts, data.requireDomain);
+    assertTexts(texts, data);
     const rows = await addAdTexts(db(), ctx.organisationId, data.campaignId, data.input);
     revalidateCampaign(data.campaignId);
     return { added: rows.length };
@@ -320,13 +326,14 @@ const updateAdTextInput = campaignRef.extend({
   adTextId: uuid,
   text: z.string(),
   requireDomain: z.boolean().default(true),
+  longMessage: z.boolean().default(false),
 });
 
 export async function updateAdTextAction(input: unknown): Promise<ActionResult<AdTextView>> {
   return run("campaign.create", async (ctx) => {
     const data = updateAdTextInput.parse(input);
     const text = data.text.trim();
-    assertTexts([text], data.requireDomain);
+    assertTexts([text], data);
     const row = await updateAdText(db(), ctx.organisationId, data.adTextId, text);
     revalidateCampaign(data.campaignId);
     return {
@@ -392,6 +399,7 @@ export async function estimateSendAction(input: unknown): Promise<ActionResult<E
     const estimate = await estimateSend(db(), ctx.organisationId, data.campaignId, {
       routeIds: data.routeIds,
       sendAll: data.sendAll,
+      linkLength: shortLinkLength(process.env.LINKS_BASE_URL),
     });
     return toEstimateView(estimate);
   });
@@ -404,6 +412,7 @@ export async function sendCampaignAction(input: unknown): Promise<ActionResult<L
     const rows = await createLaps(db(), ctx.organisationId, data.campaignId, {
       routeIds: data.routeIds,
       sendAll: data.sendAll,
+      linkLength: shortLinkLength(process.env.LINKS_BASE_URL),
       actorUserId: ctx.userId,
     });
     revalidateCampaign(data.campaignId);
@@ -453,6 +462,7 @@ export async function topUpLapsAction(
     const result = await topUpLaps(db(), ctx.organisationId, {
       campaignId: data.campaignId,
       amountMicro: Math.round(data.amountEur * 1_000_000),
+      linkLength: shortLinkLength(process.env.LINKS_BASE_URL),
       actorUserId: ctx.userId,
     });
     revalidateCampaign(data.campaignId);

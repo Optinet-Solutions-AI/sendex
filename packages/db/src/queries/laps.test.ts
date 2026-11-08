@@ -1,6 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import {
+  adTexts,
   auditLog,
   campaigns,
   contacts,
@@ -125,6 +126,26 @@ describe("topUpLaps", () => {
     const audit = await t.db.select().from(auditLog).where(eq(auditLog.organisationId, org));
     expect(audit.map((a) => a.action)).toEqual(["lap.topup"]);
     expect(audit[0]?.details).toMatchObject({ amountMicro: "50000000", laps: 2, newSms: 4_000 });
+  });
+
+  it("buys half as many messages when the campaign's texts are two SMS parts", async () => {
+    const [text] = await t.db
+      .insert(adTexts)
+      .values({ organisationId: org, campaignId, text: "x".repeat(200), encoding: "GSM_7BIT" })
+      .returning({ id: adTexts.id });
+    if (!text) throw new Error("seed failed");
+    try {
+      const result = await topUpLaps(t.db, org, {
+        campaignId,
+        amountMicro: 10_000_000,
+        actorUserId: null,
+      });
+      expect(result).toEqual({ laps: 2, totalMicro: 20_000_000, newSms: 400 });
+      const [queued] = await t.db.select().from(laps).where(eq(laps.id, lapQueued));
+      expect(queued?.testSize).toBe(300);
+    } finally {
+      await t.db.delete(adTexts).where(eq(adTexts.id, text.id));
+    }
   });
 
   it("refuses a top-up above the balance and one with no active lap", async () => {

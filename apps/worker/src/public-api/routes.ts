@@ -62,6 +62,8 @@ export interface PublicApiDeps {
   serverUrl?: string;
   version?: string;
   log?: Logger;
+  /** Characters `{{domain}}` becomes when sent (`shortLinkLength(LINKS_BASE_URL)`), for the estimate. */
+  linkLength?: number;
 }
 
 export const LIST_PAGE_SIZE = 50;
@@ -380,9 +382,13 @@ export function createPublicApi(deps: PublicApiDeps) {
       return c.json({ error: "campaign not found" }, 404);
     }
     try {
-      const estimate = await estimateSend(deps.db, organisationId, campaignId, options);
-      const laps = await createLaps(deps.db, organisationId, campaignId, {
+      const sendOptions = {
         ...options,
+        ...(deps.linkLength === undefined ? {} : { linkLength: deps.linkLength }),
+      };
+      const estimate = await estimateSend(deps.db, organisationId, campaignId, sendOptions);
+      const laps = await createLaps(deps.db, organisationId, campaignId, {
+        ...sendOptions,
         actorUserId: null,
       });
       await recordAudit(deps.db, organisationId, {

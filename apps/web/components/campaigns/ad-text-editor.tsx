@@ -1,6 +1,6 @@
 "use client";
 
-import { analyseSmsText, hasDomainPlaceholder, splitAdTexts } from "@sendex/core";
+import { adTextProblem, analyseAdText, splitAdTexts } from "@sendex/core";
 import { Button, Toggle, Tooltip } from "@sendex/ui";
 import { ChevronDown, Info } from "lucide-react";
 import { useId, useRef, useState } from "react";
@@ -11,7 +11,6 @@ const PRIMARY_CHIPS: ReadonlyArray<{ label: string; token: string; title?: strin
   { label: "Domain", token: "{{domain}}", title: "The tracked short link of the active offer" },
   { label: "First Name", token: "{{first_name}}" },
   { label: "Phone", token: "{{phone}}" },
-  { label: "Opt-Out", token: "{{opt_out}}" },
   {
     label: "Words Randomizer",
     token: "{word1|word2}",
@@ -22,26 +21,36 @@ const MORE_CHIPS: ReadonlyArray<{ label: string; token: string }> = [
   { label: "Last Name", token: "{{last_name}}" },
 ];
 
+export interface AdTextSave {
+  text: string;
+  requireDomain: boolean;
+  longMessage: boolean;
+}
+
 export interface AdTextEditorProps {
   initial?: string;
   /** Several texts separated by a `//` line (add) or a single text (edit). */
   multi: boolean;
   pending: boolean;
   error: string | null;
-  onSave: (input: { text: string; requireDomain: boolean }) => void;
+  /** Characters `{{domain}}` becomes when sent, so the counter shows the parts that are billed. */
+  linkLength: number;
+  onSave: (input: AdTextSave) => void;
   onCancel: () => void;
 }
 
 /**
  * The Add Ad Texts dialog body of the spec: insert chips, the textarea, the live counter in
  * red monospace (`GSM_7BIT · 0 chars · 1 part · 160 left`), "Check {{domain}} exists" (on)
- * and "Long message" (off) toggles, Cancel and Add Text.
+ * and "Long message" (off) toggles, Cancel and Add Text. The counter counts `{{domain}}` at
+ * the real short link length; the server applies the same `adTextProblem` check.
  */
 export function AdTextEditor({
   initial = "",
   multi,
   pending,
   error,
+  linkLength,
   onSave,
   onCancel,
 }: AdTextEditorProps) {
@@ -49,19 +58,24 @@ export function AdTextEditor({
   const ref = useRef<HTMLTextAreaElement>(null);
   const [text, setText] = useState(initial);
   const [requireDomain, setRequireDomain] = useState(true);
-  const [longMessage, setLongMessage] = useState(false);
+  // Off by default (as SMS Edge); on when editing a text that is already longer than one part.
+  const [longMessage, setLongMessage] = useState(
+    () => initial.trim() !== "" && analyseAdText(initial.trim(), linkLength).parts > 1,
+  );
   const [moreOpen, setMoreOpen] = useState(false);
   const texts = multi ? splitAdTexts(text) : text.trim() ? [text.trim()] : [];
-  const missingDomain = requireDomain && texts.some((t) => !hasDomainPlaceholder(t));
   const seen = new Map<string, number>();
   const entries = texts.map((t) => {
     const n = (seen.get(t) ?? 0) + 1;
     seen.set(t, n);
-    return { text: t, key: `${t}#${n}`, analysis: analyseSmsText(t) };
+    return { text: t, key: `${t}#${n}`, analysis: analyseAdText(t, linkLength) };
   });
-  const tooLong = !longMessage && entries.some((e) => e.analysis.parts > 1);
-  const canSave = texts.length > 0 && !missingDomain && !tooLong && !pending;
-  const first = entries[0]?.analysis ?? analyseSmsText("");
+  const problem =
+    texts
+      .map((t) => adTextProblem(t, { requireDomain, longMessage, linkLength }))
+      .find((p) => p !== null) ?? null;
+  const canSave = texts.length > 0 && problem === null && !pending;
+  const first = entries[0]?.analysis ?? analyseAdText("", linkLength);
 
   function insert(token: string) {
     const area = ref.current;
@@ -100,7 +114,7 @@ export function AdTextEditor({
       className="space-y-3"
       onSubmit={(e) => {
         e.preventDefault();
-        if (canSave) onSave({ text, requireDomain });
+        if (canSave) onSave({ text, requireDomain, longMessage });
       }}
     >
       <p className="text-sm text-muted">
@@ -200,15 +214,9 @@ export function AdTextEditor({
           onCheckedChange={setLongMessage}
         />
       </div>
-      {missingDomain ? (
-        <p className="text-xs text-signal">
-          Every text needs {"{{domain}}"} so the tracked link is inserted. Switch the check off to
-          save anyway.
-        </p>
-      ) : null}
-      {tooLong ? (
-        <p className="text-xs text-signal">
-          A text needs more than one SMS part. Shorten it or switch Long message on.
+      {problem ? (
+        <p className="text-xs text-signal" data-testid="ad-text-problem">
+          {problem}
         </p>
       ) : null}
       <ErrorText error={error} />

@@ -271,6 +271,7 @@ describe("selectEligibleMembers", () => {
       contactId: contactIds.fresh,
       e164: "+34600000001",
       firstName: "fresh",
+      lastName: null,
     });
   });
 

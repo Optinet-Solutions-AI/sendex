@@ -10,6 +10,35 @@ test.describe("campaigns", () => {
   // The engine may have sent to this list in earlier local runs; start from a full list.
   test.beforeEach(() => flushListByName("Roy Boy_ES_14092026_Batch2"));
 
+  test("the ad text counter counts the real link, and Long message lets a two-part text through", async ({
+    page,
+  }) => {
+    await page.goto("/campaigns");
+    await page.getByTestId("new-campaign").click();
+    const dialog = page.getByRole("dialog", { name: "New Campaign" });
+    await dialog.getByLabel("Name").fill(`E2E Long message ${Date.now()}`);
+    await dialog.getByLabel("Country").selectOption("ES");
+    await dialog.getByRole("button", { name: "Create campaign" }).click();
+    await expect(page).toHaveURL(/\/campaigns\/[0-9a-f-]{36}$/);
+
+    await page.getByRole("button", { name: "Ad Texts", exact: true }).click();
+    await page.getByTestId("add-texts").click();
+    const editor = page.getByRole("dialog", { name: "Add Ad Texts" });
+    // No opt-out chip until the opt-out wording is decided.
+    await expect(editor.getByRole("button", { name: "Opt-Out" })).toHaveCount(0);
+
+    // 141 characters as typed, but over 160 once {{domain}} becomes the short link.
+    await editor.getByTestId("ad-text-input").fill(`${"a".repeat(130)} {{domain}}`);
+    await expect(editor.getByTestId("ad-text-parts-1")).toHaveText("2 parts");
+    await expect(editor.getByTestId("save-ad-text")).toBeDisabled();
+
+    await editor.getByRole("switch", { name: "Long message" }).click();
+    await expect(editor.getByTestId("save-ad-text")).toBeEnabled();
+    await editor.getByTestId("save-ad-text").click();
+    await expect(editor).toBeHidden();
+    await expect(page.getByTestId("ad-text-row")).toContainText("2 parts");
+  });
+
   test("create a Spanish campaign, build the send form, estimate and queue two laps", async ({
     page,
   }) => {

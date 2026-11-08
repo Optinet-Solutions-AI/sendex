@@ -104,15 +104,20 @@ their price. The price is the row with the latest `valid_from` not in the future
 
 ## The estimate
 
-`estimateSend(db, org, campaignId, { routeIds, sendAll })`:
+`estimateSend(db, org, campaignId, { routeIds, sendAll, linkLength })`:
 
 - keeps only the requested routes that the organisation may use and that have a price;
 - runs `planLaps` from `@sendex/core` with the campaign's `test_size`, the lists' available
   counts and the route prices: one lap per (list, route) sending `min(testSize, available)`,
   or with `sendAll` the available contacts of each list split evenly across the routes;
 - `smsCount` is the sum of the planned lap counts (equal to `testSize × lists × routes` when
-  every list has enough contacts), `costMicro` comes from `estimateCost` at each route's
-  price;
+  every list has enough contacts), `costMicro` is the sum of the planned laps' cost: count ×
+  route price × SMS parts per message. Parts per message is `campaignMessageParts` from
+  `@sendex/core`: the longest active text as sent (`{{domain}}` at `linkLength`, empty when no
+  link is on), the same rule as the send loop's balance check, so the estimate is never below
+  the charge. The web app and the public API pass `shortLinkLength(LINKS_BASE_URL)`; without it
+  the link counts 50 characters. `topUpLaps` uses the same parts, so a top-up buys
+  `amount ÷ (price × parts)` messages per lap;
 - also returns `contacts` (sum of available), `sids` (active sender ids in the group),
   `texts` (active), `links` (active), the planned laps and the resolved routes.
 

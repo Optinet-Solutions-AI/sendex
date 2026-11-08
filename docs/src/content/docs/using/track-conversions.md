@@ -72,7 +72,7 @@ Sendex answers:
 
 ## Duplicates
 
-A conversion is identified by your organisation, its type, the dynamic id and, when sent, `event_key`. If the brand's tracker retries a postback (they do, on timeouts) the second call is answered `duplicate` and nothing is counted again. One contact can therefore produce at most one lead and one sale per message unless the brand sends distinct `event_key` values.
+A conversion is identified by your organisation, its type, the dynamic id and, when sent, `event_key`. If the brand's tracker retries a postback (they do, on timeouts) the second call is answered `duplicate` and nothing is counted again. A brand that sends distinct `event_key` values can report more than one deposit for the same message. Sendex stores and lists every one, but **Sales counts first deposits only** (as SMS Edge's "Sales (FTD)"): the first sale on a message is the sale, later ones (repeat deposits) add their value to revenue but not to Sales, CPS or the sale rate.
 
 ## Rotating the secret
 

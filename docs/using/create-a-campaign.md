@@ -57,11 +57,19 @@ can be removed from the campaign.
 ### Ad Texts
 
 Click **Add Texts**. Type the message; click a chip to insert a placeholder (`{{domain}}`
-for the tracked link, `{{first_name}}`, `{{opt_out}}`, or `{word1|word2}` to randomise
-words). The counter under the box shows, per text, the encoding (GSM-7 or UCS-2), the
-character count, the number of SMS parts and how many characters are left before another
-part is needed. One accented or special character outside the GSM alphabet switches the
-whole text to UCS-2 and halves the capacity, so watch the counter.
+for the tracked link, `{{first_name}}`, `{{last_name}}` under **More**, `{{phone}}`, or
+`{word1|word2}` to randomise words: each message gets one of the words at random). The
+counter under the box shows, per text, the encoding (GSM-7 or UCS-2), the character count,
+the number of SMS parts and how many characters are left before another part is needed. It
+counts the text as it will be sent: `{{domain}}` at the length of the real short link, the
+phone at full length and a randomizer at its longest option, so the parts it shows are the
+parts you are billed for. Names are counted as typed, since their length is only known when
+sending. One accented or special character outside the GSM alphabet switches the whole
+text to UCS-2 and halves the capacity, so watch the counter.
+
+**Long message** is off by default, as in SMS Edge: a text longer than one SMS part cannot
+be saved until you shorten it or switch Long message on. Each extra part is billed as a full
+SMS. The opt-out placeholder is not available yet; write the opt-out wording into the text.
 
 To add several texts at once, separate them with a line containing only `//`.
 

@@ -13,7 +13,7 @@ Each route is a carrier connection with its own price per SMS for the country, i
 
 1. Open the campaign and go to **Send**. (coming on Day 2)
 2. Choose the **batch size** `N` (for example 500). Sendex takes the next `N` unsent numbers for each route you tick, so three routes at `N = 500` sends 1,500 test messages in total.
-3. Tick the **routes** to test. Each shows its price per SMS and the estimated cost of its batch; the total is checked against your balance before anything is queued.
+3. Tick the **routes** to test. Each shows its price per SMS and the estimated cost of its batch; the total is checked against your balance before anything is queued. The estimate counts every SMS part: each message is priced at the parts of the campaign's longest active text, with `{{domain}}` at the real link length, so a two-part text doubles the estimate.
 4. Start the batch. Progress updates per route as messages are accepted by the carrier.
 5. Wait for results. Delivery receipts arrive within minutes; clicks take longer, so give it at least an hour before judging.
 6. Compare the routes in the campaign's results table: delivered rate, CTR, cost per click.

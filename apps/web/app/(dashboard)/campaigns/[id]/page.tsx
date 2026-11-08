@@ -1,4 +1,4 @@
-import { can } from "@sendex/core";
+import { can, shortLinkLength } from "@sendex/core";
 import {
   campaignResults,
   clickStats,
@@ -117,9 +117,11 @@ export default async function CampaignPage({
         );
         const statsById = new Map(stats.map((s) => [s.groupId, s]));
         const groups = sidGroups.map((g) => toSidGroupView(g, statsById.get(g.id)));
+        const linkLength = shortLinkLength(process.env.LINKS_BASE_URL);
         const campaign = toCampaignView(
           detail,
           detail.sidGroup ? statsById.get(detail.sidGroup.id) : undefined,
+          linkLength,
         );
         const results = resultRows ? toResultsView(resultRows) : null;
         const canSend = can(ctx.role, "campaign.send");
@@ -151,6 +153,7 @@ export default async function CampaignPage({
                     canSend={canSend}
                     canFlush={can(ctx.role, "list.flush")}
                     balanceMicro={Number(balanceMicro)}
+                    linkLength={linkLength}
                   />
                 ),
                 logs: (
@@ -163,7 +166,11 @@ export default async function CampaignPage({
                       adtexts: (
                         <LogPanelRefresh>
                           {(onChanged) => (
-                            <AdTextsPanel campaign={campaign} onChanged={onChanged} />
+                            <AdTextsPanel
+                              campaign={campaign}
+                              linkLength={linkLength}
+                              onChanged={onChanged}
+                            />
                           )}
                         </LogPanelRefresh>
                       ),

@@ -1,10 +1,10 @@
-import { topUpPlan } from "@sendex/core";
+import { campaignMessageParts, topUpPlan } from "@sendex/core";
 import { and, eq, inArray, sql } from "drizzle-orm";
 import { laps } from "../schema/campaigns.js";
 import { lists } from "../schema/lists.js";
 import type { Db } from "../types.js";
 import { recordAudit } from "./audit.js";
-import { lapPriceSql } from "./campaigns.js";
+import { getCampaign, lapPriceSql } from "./campaigns.js";
 import { getBalanceMicro } from "./ledger.js";
 import { flushList } from "./lists.js";
 import { setLapOn } from "./results.js";
@@ -19,6 +19,8 @@ export interface TopUpInput {
   campaignId: string;
   amountMicro: number;
   actorUserId: string | null;
+  /** Characters `{{domain}}` becomes when sent (`shortLinkLength`). Default 50. */
+  linkLength?: number;
 }
 
 export interface TopUpResult {
@@ -41,7 +43,8 @@ async function lapOf(db: Db, organisationId: string, lapId: string): Promise<Lap
 }
 /**
  * Add `amountMicro` to the budget of every active lap of the campaign (queued, sending or
- * done; not switched off). Each lap's test size grows by amount / price so the send loop
+ * done; not switched off). Each lap's test size grows by amount / (price × parts per message,
+ * see `campaignMessageParts`) so the send loop
  * sends that many more messages; a finished lap goes back to queued. Refused when the
  * organisation's balance cannot cover amount × laps (rule 6: debits stay per message).
  */
@@ -55,8 +58,10 @@ export async function topUpLaps(
     .from(laps)
     .innerJoin(lists, eq(lists.id, laps.listId))
     .where(and(eq(laps.organisationId, organisationId), eq(laps.campaignId, input.campaignId)));
+  const campaign = await getCampaign(db, organisationId, input.campaignId);
   const plan = topUpPlan({
     amountMicro: input.amountMicro,
+    partsPerMessage: campaign ? campaignMessageParts(campaign, input.linkLength) : 1,
     laps: rows.map((r) => ({
       id: r.id,
       active: r.active && r.status !== "cancelled",

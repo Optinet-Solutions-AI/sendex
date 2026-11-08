@@ -310,6 +310,24 @@ describe("listPostbacks", () => {
   });
 });
 
+describe("repeat deposits", () => {
+  it("count once: a second sale on the same message adds its value but not a sale", async () => {
+    const repeat = await insertPostback(t.db, org, {
+      eventKey: "sale_d1_repeat",
+      type: "sale",
+      dynamicId: "d1",
+      valueMicro: 3_000_000,
+      params: { type: "deposit", dynamic_id: "d1", value: "3", event_key: "dep-2" },
+      receivedAt: at("2026-11-08T12:00:00Z"),
+    });
+    const result = await attributePostback(t.db, repeat.postback);
+    expect(result.attributed).toBe(true);
+    const [lap] = await t.db.select().from(laps).where(eq(laps.id, lap1));
+    expect(lap?.sales).toBe(1);
+    expect(lap?.revenueMicro).toBe(13_000_000n);
+  });
+});
+
 describe("conversionStats", () => {
   it("totals the campaign and breaks it down per lap, sender id and ad text", async () => {
     const stats = await conversionStats(t.db, org, campaignId);
@@ -321,7 +339,7 @@ describe("conversionStats", () => {
       leads: 2,
       sales: 2,
       costMicro: 160_000,
-      revenueMicro: 15_000_000,
+      revenueMicro: 18_000_000,
       leadRate: 2 / 6,
       saleRate: 2 / 6,
       cplMicro: 80_000,
@@ -329,7 +347,7 @@ describe("conversionStats", () => {
     });
 
     expect(stats.laps.map((l) => [l.key, l.sent, l.leads, l.sales, l.revenueMicro])).toEqual([
-      [lap1, 4, 2, 1, 10_000_000],
+      [lap1, 4, 2, 1, 13_000_000],
       [lap2, 2, 0, 1, 5_000_000],
     ]);
     expect(stats.laps[0]?.label).toBe("405");
@@ -342,7 +360,7 @@ describe("conversionStats", () => {
         leads: 1,
         sales: 2,
         costMicro: 80_000,
-        revenueMicro: 15_000_000,
+        revenueMicro: 18_000_000,
         leadRate: 1 / 3,
         saleRate: 2 / 3,
         cplMicro: 80_000,

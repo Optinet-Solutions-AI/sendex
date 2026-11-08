@@ -72,7 +72,7 @@ function messageFacts(organisationId: string, filter: DashboardFilter, onlyApi =
       exists (select 1 from clicks ck where ck.message_id = m.id and ck.device is distinct from 'bot') as clicked,
       (select count(*) from clicks ck where ck.message_id = m.id and ck.device = 'bot') as previews,
       (select count(*) from postbacks p where p.message_id = m.id and p.type = 'lead') as leads,
-      (select count(*) from postbacks p where p.message_id = m.id and p.type = 'sale') as sales,
+      (exists (select 1 from postbacks p where p.message_id = m.id and p.type = 'sale'))::int as sales,
       (select coalesce(sum(coalesce(p.value_micro, lk.profit_micro, 0)), 0) from postbacks p
          where p.message_id = m.id and p.type = 'sale') as revenue,
       (select coalesce(-sum(le.amount_micro), 0) from ledger_entries le

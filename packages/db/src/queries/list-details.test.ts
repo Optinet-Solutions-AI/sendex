@@ -142,6 +142,29 @@ beforeAll(async () => {
         campaignId,
         lapId: lap.id,
       });
+      // A first deposit and a repeat deposit: one sale (FTD), both values in revenue.
+      await t.db.insert(postbacks).values([
+        {
+          organisationId: org,
+          eventKey: "evt-2",
+          type: "sale",
+          dynamicId: "dyn-1",
+          messageId: message.id,
+          campaignId,
+          lapId: lap.id,
+          valueMicro: 10_000_000n,
+        },
+        {
+          organisationId: org,
+          eventKey: "evt-3",
+          type: "sale",
+          dynamicId: "dyn-1",
+          messageId: message.id,
+          campaignId,
+          lapId: lap.id,
+          valueMicro: 4_000_000n,
+        },
+      ]);
     }
   }
 });
@@ -173,9 +196,9 @@ describe("list details", () => {
         clicks: 1,
         ctr: 0.5,
         leads: 1,
-        sales: 0,
+        sales: 1,
         costMicro: 50_000n,
-        revenueMicro: 0n,
+        revenueMicro: 14_000_000n,
       },
     ]);
     const byCountry = await listAnalytics(t.db, org, listId, ["country"]);

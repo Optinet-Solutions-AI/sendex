@@ -75,7 +75,7 @@ export function UnderlineTabs<T extends string>({
     <div
       role="tablist"
       aria-label={label}
-      className={cn("flex gap-1 border-b border-rule", className)}
+      className={cn("flex flex-wrap gap-1 border-b border-rule", className)}
     >
       {tabs.map((t) => {
         const active = t.value === value;

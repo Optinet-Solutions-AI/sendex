@@ -56,7 +56,7 @@ export default async function DashboardLayout({ children }: { children: ReactNod
     <Link
       href="/billing"
       data-testid="header-balance"
-      className="rounded-md border border-rule bg-page px-3 py-1 text-sm font-medium tabular-nums text-ink hover:bg-neutral-100"
+      className="whitespace-nowrap rounded-md border border-rule bg-page px-3 py-1 text-sm font-medium tabular-nums text-ink hover:bg-neutral-100"
     >
       Balance: {formatEur(shell.balanceMicro)}
     </Link>
@@ -67,16 +67,17 @@ export default async function DashboardLayout({ children }: { children: ReactNod
       <div className="flex min-h-screen">
         <Rail tree={tree} brand={<Brand />} />
         <div className="flex min-w-0 flex-1 flex-col">
-          <header className="flex h-14 items-center gap-4 border-b border-rule bg-surface pr-6 pl-6">
+          {/* Wraps to a second line at phone width rather than pushing the page wider. */}
+          <header className="flex min-h-14 flex-wrap items-center gap-x-4 gap-y-2 border-b border-rule bg-surface px-4 py-2 sm:px-6">
             <span
-              className="rounded-md bg-neutral-100 px-3 py-1 text-sm font-semibold text-ink"
+              className="hidden rounded-md bg-neutral-100 px-3 py-1 text-sm font-semibold text-ink sm:inline-block"
               aria-current="true"
               data-testid="product-tab"
             >
               SMS
             </span>
             {mode === "dev" ? <DevAuthBanner config={devAuthConfig()} /> : null}
-            <div className="ml-auto flex items-center gap-3">
+            <div className="ml-auto flex flex-wrap items-center gap-3">
               <SearchPalette pages={pages} />
               {DOCS_URL ? (
                 <a
@@ -102,7 +103,7 @@ export default async function DashboardLayout({ children }: { children: ReactNod
             </div>
           </header>
           {shell ? <EmergencyStopBanner organisationId={shell.organisationId} /> : null}
-          <main className="flex-1 px-6 py-6">
+          <main className="min-w-0 flex-1 px-4 py-6 sm:px-6">
             <ToastProvider>
               {shell ? (
                 <AlertsBanner organisationId={shell.organisationId} role={shell.role} />

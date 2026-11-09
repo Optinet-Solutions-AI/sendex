@@ -23,7 +23,7 @@ import { AuthErrorView } from "../require-org";
 
 export const dynamic = "force-dynamic";
 
-const inputClass = "h-9 rounded-md border border-neutral-300 bg-white px-3 text-sm";
+const inputClass = "h-9 max-w-full rounded-md border border-neutral-300 bg-white px-3 text-sm";
 const linkButton =
   "inline-flex h-9 items-center rounded-md border border-neutral-300 bg-white px-4 text-sm font-medium hover:bg-neutral-100";
 
@@ -74,7 +74,7 @@ export default async function AuditPage({ searchParams }: { searchParams: Promis
       </p>
 
       <form method="get" action="/audit" className="mt-4 flex flex-wrap items-end gap-2">
-        <label className="flex flex-col gap-1 text-xs text-neutral-600">
+        <label className="flex max-w-full flex-col gap-1 text-xs text-neutral-600">
           Action
           <select name="action" defaultValue={query.action} className={inputClass}>
             <option value="">All actions</option>
@@ -85,7 +85,7 @@ export default async function AuditPage({ searchParams }: { searchParams: Promis
             ))}
           </select>
         </label>
-        <label className="flex flex-col gap-1 text-xs text-neutral-600">
+        <label className="flex max-w-full flex-col gap-1 text-xs text-neutral-600">
           Actor
           <select name="actor" defaultValue={query.actor} className={inputClass}>
             <option value="">All actors</option>
@@ -96,11 +96,11 @@ export default async function AuditPage({ searchParams }: { searchParams: Promis
             ))}
           </select>
         </label>
-        <label className="flex flex-col gap-1 text-xs text-neutral-600">
+        <label className="flex max-w-full flex-col gap-1 text-xs text-neutral-600">
           From
           <input type="date" name="from" defaultValue={query.from} className={inputClass} />
         </label>
-        <label className="flex flex-col gap-1 text-xs text-neutral-600">
+        <label className="flex max-w-full flex-col gap-1 text-xs text-neutral-600">
           To
           <input type="date" name="to" defaultValue={query.to} className={inputClass} />
         </label>

@@ -14,6 +14,9 @@ import {
   Input,
   PageHeader,
   PaginationBar,
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
   type SortingState,
   Toggle,
   useToast,
@@ -233,88 +236,78 @@ export function ListsTable({
         const open = menuFor === row.original.id;
         const archived = row.original.archivedAt !== null;
         return (
-          <div className="relative inline-block text-left">
-            <Button
-              variant="ghost"
-              size="icon"
-              aria-label={`Actions for ${row.original.name}`}
-              aria-haspopup="menu"
-              aria-expanded={open}
-              onClick={() => setMenuFor(open ? null : row.original.id)}
-            >
-              <span aria-hidden="true">⋯</span>
-            </Button>
-            {open ? (
-              <>
-                <button
-                  type="button"
-                  aria-label="Close menu"
-                  className="fixed inset-0 z-10 cursor-default"
+          // A portalled popover: an inline menu was cut off by the table's scroll box.
+          <Popover open={open} onOpenChange={(next) => setMenuFor(next ? row.original.id : null)}>
+            <PopoverTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label={`Actions for ${row.original.name}`}
+                aria-haspopup="menu"
+              >
+                <span aria-hidden="true">⋯</span>
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent align="end" className="w-40 p-0 py-1">
+              <div role="menu">
+                <Link
+                  role="menuitem"
+                  href={`/lists/${row.original.id}`}
+                  className="block px-3 py-1.5 hover:bg-neutral-100"
                   onClick={() => setMenuFor(null)}
-                />
-                <div
-                  role="menu"
-                  className="absolute right-0 z-20 mt-1 w-40 rounded-md border border-rule bg-surface py-1 text-sm shadow-md"
                 >
-                  <Link
+                  View
+                </Link>
+                {canFlush ? (
+                  <button
+                    type="button"
                     role="menuitem"
-                    href={`/lists/${row.original.id}`}
-                    className="block px-3 py-1.5 hover:bg-neutral-100"
-                    onClick={() => setMenuFor(null)}
+                    className="block w-full px-3 py-1.5 text-left hover:bg-neutral-100"
+                    onClick={() => {
+                      setMenuFor(null);
+                      setFlushTarget(row.original);
+                    }}
                   >
-                    View
-                  </Link>
-                  {canFlush ? (
-                    <button
-                      type="button"
-                      role="menuitem"
-                      className="block w-full px-3 py-1.5 text-left hover:bg-neutral-100"
-                      onClick={() => {
-                        setMenuFor(null);
-                        setFlushTarget(row.original);
-                      }}
-                    >
-                      Flush
-                    </button>
-                  ) : null}
-                  {canUpload ? (
-                    <button
-                      type="button"
-                      role="menuitem"
-                      className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-neutral-100"
-                      onClick={() => {
-                        setMenuFor(null);
-                        void archive(row.original, !archived);
-                      }}
-                    >
-                      {archived ? (
-                        <>
-                          <ArchiveRestore className="h-4 w-4" aria-hidden="true" /> Unarchive
-                        </>
-                      ) : (
-                        <>
-                          <Archive className="h-4 w-4" aria-hidden="true" /> Archive
-                        </>
-                      )}
-                    </button>
-                  ) : null}
-                  {canDelete ? (
-                    <button
-                      type="button"
-                      role="menuitem"
-                      className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-signal hover:bg-red-50"
-                      onClick={() => {
-                        setMenuFor(null);
-                        setDeleteTargets([row.original]);
-                      }}
-                    >
-                      <Trash2 className="h-4 w-4" aria-hidden="true" /> Delete
-                    </button>
-                  ) : null}
-                </div>
-              </>
-            ) : null}
-          </div>
+                    Flush
+                  </button>
+                ) : null}
+                {canUpload ? (
+                  <button
+                    type="button"
+                    role="menuitem"
+                    className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-neutral-100"
+                    onClick={() => {
+                      setMenuFor(null);
+                      void archive(row.original, !archived);
+                    }}
+                  >
+                    {archived ? (
+                      <>
+                        <ArchiveRestore className="h-4 w-4" aria-hidden="true" /> Unarchive
+                      </>
+                    ) : (
+                      <>
+                        <Archive className="h-4 w-4" aria-hidden="true" /> Archive
+                      </>
+                    )}
+                  </button>
+                ) : null}
+                {canDelete ? (
+                  <button
+                    type="button"
+                    role="menuitem"
+                    className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-signal hover:bg-red-50"
+                    onClick={() => {
+                      setMenuFor(null);
+                      setDeleteTargets([row.original]);
+                    }}
+                  >
+                    <Trash2 className="h-4 w-4" aria-hidden="true" /> Delete
+                  </button>
+                ) : null}
+              </div>
+            </PopoverContent>
+          </Popover>
         );
       },
     },

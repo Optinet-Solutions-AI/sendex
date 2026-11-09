@@ -202,6 +202,8 @@ test.describe("lists", () => {
     // Archive it from the row menu: it leaves the table, shows under "Show archived", comes back.
     await page.goto(`/lists?search=${encodeURIComponent(listName)}`);
     await page.getByRole("button", { name: `Actions for ${listName}` }).click();
+    // Fully on screen, not cut off by the table's scroll box (the only row has no room below).
+    await expect(page.getByRole("menuitem", { name: "Archive" })).toBeInViewport({ ratio: 1 });
     await page.getByRole("menuitem", { name: "Archive" }).click();
     await expect(page.getByTestId("toast")).toContainText(`Archived ${listName}`);
     await expect(page.getByRole("row", { name: new RegExp(listName) })).toHaveCount(0);
@@ -210,6 +212,8 @@ test.describe("lists", () => {
     await expect(archivedRow).toBeVisible();
     await expect(archivedRow).toContainText("Archived");
     await page.getByRole("button", { name: `Actions for ${listName}` }).click();
+    // Fully on screen, not cut off by the table's scroll box (the only row has no room below).
+    await expect(page.getByRole("menuitem", { name: "Unarchive" })).toBeInViewport({ ratio: 1 });
     await page.getByRole("menuitem", { name: "Unarchive" }).click();
     await expect(page.getByTestId("toast")).toContainText(`Unarchived ${listName}`);
 

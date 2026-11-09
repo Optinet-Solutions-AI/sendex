@@ -23,9 +23,12 @@ export function KpiStrip({
   return (
     <fieldset
       aria-label={label}
-      className={cn("grid gap-px overflow-hidden rounded-lg border border-rule bg-rule", className)}
+      className={cn(
+        "grid min-w-0 gap-px overflow-hidden rounded-lg border border-rule bg-rule",
+        className,
+      )}
       style={{
-        gridTemplateColumns: `repeat(auto-fit, minmax(${Math.max(110, Math.floor(760 / Math.max(items.length, 1)))}px, 1fr))`,
+        gridTemplateColumns: `repeat(auto-fit, minmax(min(100%, ${Math.max(110, Math.floor(760 / Math.max(items.length, 1)))}px), 1fr))`,
       }}
     >
       {items.map((item) => (

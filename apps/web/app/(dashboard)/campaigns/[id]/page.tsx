@@ -17,7 +17,6 @@ import {
   sidGroupStats,
 } from "@sendex/db";
 import { notFound } from "next/navigation";
-import { AdTextsPanel } from "../../../../components/campaigns/ad-texts-panel";
 import { AnalyticsSection } from "../../../../components/campaigns/analytics-section";
 import { CampaignControls } from "../../../../components/campaigns/campaign-controls";
 import { CampaignHeader } from "../../../../components/campaigns/campaign-header";
@@ -25,9 +24,7 @@ import { CampaignTabs } from "../../../../components/campaigns/campaign-tabs";
 import { ClicksSection } from "../../../../components/campaigns/clicks-section";
 import { ConversionsSection } from "../../../../components/campaigns/conversions-section";
 import { LogsTab } from "../../../../components/campaigns/logs-tab";
-import { OffersPanel } from "../../../../components/campaigns/offers-panel";
 import { SendForm } from "../../../../components/campaigns/send-form";
-import { SidPanel } from "../../../../components/campaigns/sid-panel";
 import { isCampaignTab, isLogsSubTab } from "../../../../components/campaigns/tabs";
 import { SendSingleForm } from "../../../../components/routes/send-single-dialog";
 import {
@@ -43,7 +40,7 @@ import {
 } from "../../../../lib/campaign-views";
 import type { SearchParams } from "../../../../lib/lists-params";
 import { RequireOrg } from "../../require-org";
-import { LogPanelRefresh } from "./log-panel-refresh";
+import { AdTextsLogPanel, OffersLogPanel, SidLogPanel } from "./log-panels";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -163,35 +160,11 @@ export default async function CampaignPage({
                     audit={audit.map(toAuditView)}
                     messages={toMessagesView(messages)}
                     panels={{
-                      adtexts: (
-                        <LogPanelRefresh>
-                          {(onChanged) => (
-                            <AdTextsPanel
-                              campaign={campaign}
-                              linkLength={linkLength}
-                              onChanged={onChanged}
-                            />
-                          )}
-                        </LogPanelRefresh>
-                      ),
+                      adtexts: <AdTextsLogPanel campaign={campaign} linkLength={linkLength} />,
                       offers: (
-                        <LogPanelRefresh>
-                          {(onChanged) => (
-                            <OffersPanel
-                              campaign={campaign}
-                              links={links.map(toLinkOption)}
-                              onChanged={onChanged}
-                            />
-                          )}
-                        </LogPanelRefresh>
+                        <OffersLogPanel campaign={campaign} links={links.map(toLinkOption)} />
                       ),
-                      sids: (
-                        <LogPanelRefresh>
-                          {(onChanged) => (
-                            <SidPanel campaign={campaign} groups={groups} onChanged={onChanged} />
-                          )}
-                        </LogPanelRefresh>
-                      ),
+                      sids: <SidLogPanel campaign={campaign} groups={groups} />,
                     }}
                   />
                 ),

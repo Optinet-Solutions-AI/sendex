@@ -39,6 +39,26 @@ test.describe("campaigns", () => {
     await expect(page.getByTestId("ad-text-row")).toContainText("2 parts");
   });
 
+  test("the Logs tab opens its Ad Texts, Offers and SIDs panels", async ({ page }) => {
+    await page.goto("/campaigns");
+    await page.getByTestId("new-campaign").click();
+    const dialog = page.getByRole("dialog", { name: "New Campaign" });
+    await dialog.getByLabel("Name").fill(`E2E Logs ${Date.now()}`);
+    await dialog.getByLabel("Country").selectOption("ES");
+    await dialog.getByRole("button", { name: "Create campaign" }).click();
+    await expect(page).toHaveURL(/\/campaigns\/[0-9a-f-]{36}$/);
+    const url = page.url();
+
+    for (const [sub, panel] of [
+      ["adtexts", "ad-texts-panel"],
+      ["offers", "links-panel"],
+      ["sids", "sid-panel"],
+    ] as const) {
+      await page.goto(`${url}?tab=logs&logs=${sub}`);
+      await expect(page.getByTestId(panel)).toBeVisible();
+    }
+  });
+
   test("create a Spanish campaign, build the send form, estimate and queue two laps", async ({
     page,
   }) => {

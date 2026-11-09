@@ -448,7 +448,7 @@ export function LapsTable({
         </div>
       </div>
       <ErrorText error={error} />
-      <div className="overflow-x-auto rounded-lg border border-rule bg-surface">
+      <div className="relative overflow-x-auto rounded-lg border border-rule bg-surface">
         <table className="w-full text-sm" data-testid="laps-table">
           <thead className="border-b border-rule bg-page text-left">
             <tr>

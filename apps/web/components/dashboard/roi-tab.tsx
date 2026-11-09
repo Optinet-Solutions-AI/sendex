@@ -245,7 +245,7 @@ export function RoiTab({ rows, cps, windowLabel }: RoiTabProps) {
           >
             <option value="none">None</option>
           </select>
-          <div className="ml-auto flex items-center gap-1">
+          <div className="ml-auto flex flex-wrap items-center gap-1">
             <Popover>
               <PopoverTrigger asChild>
                 <Button variant="outline" size="sm" data-testid="roi-metrics">

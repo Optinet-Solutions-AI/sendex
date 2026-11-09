@@ -179,7 +179,7 @@ export function ApiTokensPanel({
         </DialogContent>
       </Dialog>
 
-      <div className="rounded border border-neutral-200 bg-white">
+      <div className="overflow-x-auto rounded border border-neutral-200 bg-white">
         <table className="w-full text-sm">
           <thead className="border-b border-neutral-200 text-left text-xs uppercase text-neutral-500">
             <tr>

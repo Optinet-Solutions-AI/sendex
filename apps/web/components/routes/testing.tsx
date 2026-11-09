@@ -154,7 +154,7 @@ export function Testing({
               ? "Showing 0-0 of 0 items"
               : `Showing ${(query.page - 1) * pageSize + 1}-${Math.min(total, query.page * pageSize)} of ${int(total)} items`}
           </span>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Popover>
               <PopoverTrigger asChild>
                 <Button variant="outline" size="sm" data-testid="cost-report">

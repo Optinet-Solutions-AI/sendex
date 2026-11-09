@@ -3,7 +3,7 @@ import { cn } from "./cn.js";
 
 export function Table({ className, ...props }: HTMLAttributes<HTMLTableElement>) {
   return (
-    <div className="w-full overflow-x-auto rounded-lg border border-rule bg-surface [scrollbar-width:thin]">
+    <div className="relative w-full overflow-x-auto rounded-lg border border-rule bg-surface [scrollbar-width:thin]">
       <table className={cn("w-full caption-bottom text-sm", className)} {...props} />
     </div>
   );

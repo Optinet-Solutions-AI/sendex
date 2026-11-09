@@ -50,6 +50,23 @@ its own name or phone-number prefix (`e2e/helpers/db.ts`), so two specs running 
 would see each other's rows. Do not leave a worker process running while the suite runs
 either: its dispatcher sends the laps the campaign specs expect to stay queued.
 
+### Phone width
+
+`e2e/phone-width.spec.ts` opens the screens that overflowed in QA round two at 400 px and
+checks that the page never scrolls sideways and the title and header buttons stay on screen.
+Add a screen to its list when you build one. The usual causes, all found in that round:
+
+- a flex or grid child that holds a table without `min-w-0`, so it grows to the table's width;
+- a row of buttons or filters without `flex-wrap`;
+- a `fieldset`, which does not shrink below its content unless given `min-w-0`;
+- an absolutely placed element (an `sr-only` label) inside a scroll box that is not `relative`:
+  the box does not clip it, so it stretches the page.
+
+Menus inside a table row open in a `Popover` (portalled), not an absolute `div`: the
+table's scroll box clips an inline menu, which is what hid Unarchive on a lone archived list.
+Playwright scrolls a clipped menu into view and clicks it anyway, so those specs also assert
+`toBeInViewport({ ratio: 1 })` before clicking.
+
 ### The full flow (D2-20)
 
 `e2e/full-flow.spec.ts` is the one spec that uses the real engine. It starts the worker

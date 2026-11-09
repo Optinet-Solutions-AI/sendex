@@ -177,7 +177,7 @@ export function PostbacksTable({ rows, total, pageSize, query }: PostbacksTableP
             navigate({ range, from: "", to: "" });
           }}
         />
-        <form onSubmit={onDates} className="flex items-center gap-1.5">
+        <form onSubmit={onDates} className="flex flex-wrap items-center gap-1.5">
           <Input
             type="date"
             aria-label="From"

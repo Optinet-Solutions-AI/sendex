@@ -94,7 +94,7 @@ export function PlatformRoutes({
         ]}
       />
       <div className="grid gap-4 lg:grid-cols-2">
-        <Card className="flex max-h-[36rem] flex-col" data-testid="available-routes">
+        <Card className="flex max-h-[36rem] min-w-0 flex-col" data-testid="available-routes">
           <CardHeader title="Available Routes" note={`${int(sortedCatalogue.length)} routes`} />
           <div className="overflow-auto">
             <Table>
@@ -131,7 +131,7 @@ export function PlatformRoutes({
             </Table>
           </div>
         </Card>
-        <Card className="flex max-h-[36rem] flex-col" data-testid="delivery-report">
+        <Card className="flex max-h-[36rem] min-w-0 flex-col" data-testid="delivery-report">
           <CardHeader title="Delivery Report" note={describeRouteRange(query)} />
           <div className="overflow-auto">
             <Table>

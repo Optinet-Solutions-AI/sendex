@@ -122,7 +122,7 @@ export function EnrichmentPage({
         </p>
       ) : null}
       <div className="grid gap-4 lg:grid-cols-5">
-        <div className="space-y-4 lg:col-span-3">
+        <div className="min-w-0 space-y-4 lg:col-span-3">
           <Card data-testid="rules-card">
             <CardHeader
               title="Enrichment rules"
@@ -269,7 +269,7 @@ export function EnrichmentPage({
           </Card>
         </div>
 
-        <div className="space-y-4 lg:col-span-2">
+        <div className="min-w-0 space-y-4 lg:col-span-2">
           <Card data-testid="network-breakdown">
             <CardHeader title="Country network breakdown" />
             {networks.length === 0 ? (

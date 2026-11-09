@@ -32,7 +32,9 @@ list and route.
 - The **KPI strip** is for the visible month or week: Sent, Clicks, CTR, Countries and
   Campaign sends (campaign × day pairs). On the right, "40 country-days with sends".
 - **‹ Today ›** move by a month (or a week in the **Week** view). Today's date is a navy
-  circle.
+  circle. Days run midnight to midnight UTC, as the "Days in UTC" note beside the title
+  says, so ahead of UTC (Manila, for instance) the circle stays on yesterday's date until
+  8am local time; the day totals match the Campaigns Log for the same reason.
 - Each day cell shows the date, the day's total sent and a navy bar relative to the busiest
   day, then up to three country lines (flag, country, sent, CTR) with "+2 more countries"
   below; the week view lists every country. Hover a line for "Poland — 2,000 sent, 47 clicks

@@ -101,4 +101,21 @@ test.describe("reports", () => {
         .getByTestId("calendar-country-line"),
     ).toHaveCount(1);
   });
+
+  test.describe("for a viewer ahead of UTC", () => {
+    test.use({ timezoneId: "Asia/Manila" });
+
+    // QA round two saw 8 Nov circled on the morning of 9 Nov in Manila: the calendar counts
+    // UTC days, like every report, so it circles the UTC date and says so.
+    test("the Send Calendar circles today's UTC date and labels its days as UTC", async ({
+      page,
+    }) => {
+      await page.goto("/campaigns/scheduled");
+      await expect(page.getByTestId("calendar-utc-note")).toHaveText("Days in UTC");
+      const today = page
+        .getByTestId("calendar-day")
+        .filter({ has: page.getByTestId("calendar-today-mark") });
+      await expect(today).toHaveAttribute("data-day", new Date().toISOString().slice(0, 10));
+    });
+  });
 });

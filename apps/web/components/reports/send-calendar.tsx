@@ -135,6 +135,11 @@ export function SendCalendar({ query, grid, cells, today, countryDays }: SendCal
         <h2 className="ml-1 text-base font-semibold text-ink" data-testid="calendar-title">
           {title}
         </h2>
+        {/* Days run midnight to midnight UTC, like every report, so "today" can differ from
+            the viewer's own date in the hours around midnight. */}
+        <span className="text-xs text-muted" data-testid="calendar-utc-note">
+          Days in UTC
+        </span>
         <SegmentedControl
           label="View"
           size="sm"

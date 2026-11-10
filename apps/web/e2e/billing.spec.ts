@@ -114,6 +114,20 @@ test.describe("billing", () => {
     expect(await auditCsv.text()).toContain(reference);
   });
 
+  // QA: in the 20rem "Fund your account" panel, "Pay by card · Stage two" and "PayPal ·
+  // Stage two" ran out of their buttons. Each label must fit inside its button.
+  test("the stage-two payment buttons keep their labels inside the button", async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.goto("/billing");
+    const panel = page.getByTestId("fund-panel");
+    for (const name of [/Pay by card/, /PayPal/]) {
+      const button = panel.getByRole("button", { name });
+      await expect(button).toBeDisabled();
+      const overflow = await button.evaluate((el) => el.scrollWidth - el.clientWidth);
+      expect(overflow).toBeLessThanOrEqual(0);
+    }
+  });
+
   test("the owner can save the low balance alert and daily caps", async ({ page }) => {
     await page.goto("/settings/billing");
     await expect(page.getByRole("heading", { level: 1, name: "Billing settings" })).toBeVisible();

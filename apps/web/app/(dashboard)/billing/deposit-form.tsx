@@ -60,12 +60,26 @@ export function DepositForm({ canDeposit }: { canDeposit: boolean }) {
         </h2>
       </header>
       <div className="space-y-4 p-4">
+        {/* The panel is 20rem, so each button gets about 140px: the method on one line and
+            "Stage two" under it, rather than one line that runs past the button. */}
         <div className="grid grid-cols-2 gap-2">
-          <Button variant="outline" disabled title="Card payments arrive in stage two">
-            Pay by card · Stage two
+          <Button
+            variant="outline"
+            disabled
+            title="Card payments arrive in stage two"
+            className="h-auto flex-col gap-0 whitespace-normal py-1.5"
+          >
+            <span>Pay by card</span>
+            <span className="text-xs font-normal text-neutral-500">Stage two</span>
           </Button>
-          <Button variant="outline" disabled title="PayPal arrives in stage two">
-            PayPal · Stage two
+          <Button
+            variant="outline"
+            disabled
+            title="PayPal arrives in stage two"
+            className="h-auto flex-col gap-0 whitespace-normal py-1.5"
+          >
+            <span>PayPal</span>
+            <span className="text-xs font-normal text-neutral-500">Stage two</span>
           </Button>
         </div>
         {canDeposit ? (

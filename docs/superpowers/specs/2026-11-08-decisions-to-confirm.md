@@ -1,6 +1,6 @@
 # Decisions to confirm with Meny and Alex
 
-Date: 2026-11-08. Status: questions ready, not yet asked. Reviewed by Christian over three rounds in the local "Sendex Decisions to Confirm" page.
+Date: 2026-11-08. Status: the Costs and the first three Leads and sales questions answered on 2026-11-10 (answers below each question); the rest not yet asked. Reviewed by Christian over three rounds in the local "Sendex Decisions to Confirm" page.
 
 ## Why this exists
 
@@ -27,19 +27,29 @@ Every question is based on one of three sources, named after it:
 
 - **When we charge:** Is it fine that we take the money when the campaign is queued and refund whatever doesn't go out (failed, stopped, switched off)?
   *Emily 30:40: SMS Edge billing lists "unsent message refund · campaign · lap".*
+  **Answer (2026-11-10):** "We won't know how much to take; there's an approximate but not 100%. I think refund would make it more complicated, and based on deliverability we won't know exactly, because if someone's phone is off in the moment we won't get charged."
+  *What Sendex does today:* it does not take an estimate up front. It charges each batch just before the batch goes out, and gives money back only for messages that never left (rejected by the carrier, or still waiting when the campaign was stopped or switched off). No change needed.
+  *To confirm with Alex:* "if someone's phone is off we won't get charged" disagrees with the next answer and with 23Telecom's docs (only messages that never leave 23Telecom are free). If phone-off messages really are free, Sendex shows too much spend for undelivered messages.
 - **Refunds:** SMS Edge gives money back on some messages. Exactly which ones: only unsent, or also undelivered? Does 23Telecom refund undelivered messages?
   *Emily 28:03, "campaigns that we usually get money back on"; Emily 30:40.*
+  **Answer (2026-11-10):** "Only when an SMS is rejected do we not get charged for it." This matches 23Telecom's docs and what Sendex already does: rejected messages get their money back, undelivered ones stay charged.
 - **Price changes:** When 23Telecom changes a price, how do we hear about it, and who updates it in Sendex?
   *Emily 41:30, SMS Edge prices "can change, but from their admin side"; Ours: Sendex keeps the price entered until someone changes it.*
+  **Answer (2026-11-10):** "23Telecom should update us when prices change; not sure who needs to update this."
+  *Still open:* who types the new price into Sendex. 23Telecom's API also lists prices with the previous rate and the kind of change, so Sendex could read them itself; only to build if Alex agrees.
 
 ### Leads and sales
 
 - **Knowing about conversions:** How do we know when an SMS brought a conversion (a sign-up or a first deposit)? Where do you see it, and how does it get into SMS Edge?
   *Emily 08:20, the offer link's dynamic field "helps it connect with Tableau"; SMS Edge: offer URL `…?id={{{dynamic}}}`.*
+  **Answer (2026-11-10):** "We have a connection to our reporting and postback with our links, so we see it in real time, maybe a few minutes' delay."
 - **Postback URLs:** Do you use postback URLs to send sign-ups and deposits into SMS Edge? If yes, from which system?
   *SMS Edge: Reports › Postback Logs; Emily 32:57.*
+  **Answer (2026-11-10):** "Yes. Alex can explain how this works; he sets it."
 - **Leads and sales:** Are leads and sales set automatically by your tracking, or does someone tag them by hand? Does a sale always mean the first deposit (FTD)?
   *Emily 27:28, a filter for campaigns "that got an FTD"; SMS Edge: "Sales (FTD)".*
+  **Answer (2026-11-10):** "This is tracked in the postback to make the difference. Alex can help."
+  *Next:* ask Alex for an example postback, the value that tells a lead from a sale, and whether a sale is always the first deposit; then point his postbacks at Sendex (Settings › Postbacks) and check they land on the right campaign.
 - **Late conversions:** Should Sendex count conversions that come weeks after the SMS, or leave those to Tableau?
   *Emily 08:29, late conversions are seen in Tableau.*
 - **Who gets the credit:** If someone got texts from two campaigns and then signs up, which campaign gets the credit: the one whose link they used?
@@ -124,4 +134,5 @@ Every question is based on one of three sources, named after it:
 
 - Long message toggle on ad texts, off by default (copied from SMS Edge).
 - Campaign Sales counts first deposits only, to match SMS Edge's "Sales (FTD)".
+- Ask Alex: whether messages to a phone that is off are charged; who updates prices in Sendex, and whether Sendex should read 23Telecom's prices itself; his postback setup (example, lead or sale value, FTD).
 - Keep AutoSender's guessed numbers until the "Best route" answer comes back; consider switching it off meanwhile.

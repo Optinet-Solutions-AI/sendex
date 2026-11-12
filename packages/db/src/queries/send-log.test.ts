@@ -39,6 +39,8 @@ async function seedMessage(input: {
   clicked?: boolean;
   leads?: number;
   sales?: number;
+  /** Whole days between the SMS and its first deposit; 0 (same day) by default. */
+  saleDaysLater?: number;
   costMicro?: bigint;
 }): Promise<string> {
   seq += 1;
@@ -87,7 +89,7 @@ async function seedMessage(input: {
       messageId: message.id,
       campaignId: input.campaignId,
       lapId: input.lapId,
-      // A conversion three days later still counts on the send day.
+      // A sign-up three days later still counts on the send day.
       receivedAt: new Date(input.at.getTime() + 3 * 86_400_000),
     });
   }
@@ -101,6 +103,10 @@ async function seedMessage(input: {
       campaignId: input.campaignId,
       lapId: input.lapId,
       valueMicro: 50_000_000n,
+      // The first deposit an hour after the SMS (or days later); repeats a day apart.
+      receivedAt: new Date(
+        input.at.getTime() + 3_600_000 + ((input.saleDaysLater ?? 0) + i) * 86_400_000,
+      ),
     });
   }
   await t.db.insert(ledgerEntries).values({
@@ -173,10 +179,12 @@ beforeAll(async () => {
   const lapEs403 = await seedLap(org, campaignEs, listEs, routeB);
   const lapGb = await seedLap(org, campaignGb, listGb, routeB);
 
-  // Nov 6, ES, route 405: 3 sent, 2 clicked, 1 lead, 1 sale; one failed and one queued are not sent.
+  // Nov 6, ES, route 405: 3 sent, 2 clicked, 1 lead; one failed and one queued are not sent.
+  // The first contact deposits the same day and again the next day (a repeat, not counted);
+  // the second deposits two days later, on Nov 8 (a late sale, D4-12).
   const es = { org, campaignId: campaignEs, lapId: lapEs, routeId: routeA, country: "ES" };
-  await seedMessage({ ...es, at: NOV_6, clicked: true, leads: 1, sales: 1 });
-  await seedMessage({ ...es, at: NOV_6, clicked: true });
+  await seedMessage({ ...es, at: NOV_6, clicked: true, leads: 1, sales: 2 });
+  await seedMessage({ ...es, at: NOV_6, clicked: true, sales: 1, saleDaysLater: 2 });
   await seedMessage({ ...es, at: NOV_6, status: "delivered" });
   await seedMessage({ ...es, at: NOV_6, status: "failed" });
   await seedMessage({ ...es, at: NOV_6, status: "queued" });
@@ -218,27 +226,57 @@ const WINDOW = { from: new Date("2026-11-01T00:00:00Z"), to: new Date("2026-12-0
 describe("sendLog", () => {
   it("groups submitted messages by day, campaign, country, list and route, newest day first", async () => {
     const page = await sendLog(t.db, org, { ...WINDOW, page: 1, pageSize: 25 });
-    expect(page.total).toBe(3);
+    expect(page.total).toBe(4);
     expect(page.rows.map((r) => [r.day, r.campaignName, r.country, r.routeName, r.sent])).toEqual([
+      ["2026-11-08", "Casino ES", "ES", "405", 0],
       ["2026-11-07", "Bingo GB", "GB", "403", 2],
       ["2026-11-06", "Casino ES", "ES", "405", 3],
       ["2026-11-06", "Casino ES", "ES", "403", 1],
     ]);
-    const es405 = page.rows[1];
+    const es405 = page.rows[2];
     expect(es405?.listName).toBe("ES list");
     expect(es405?.clicks).toBe(2);
     expect(es405?.leads).toBe(1);
+    // One first deposit made on Nov 6 itself; the repeat deposit is not a sale.
     expect(es405?.sales).toBe(1);
+    expect(es405?.lateSales).toBe(0);
     expect(es405?.spendMicro).toBe(120_000n);
     expect(es405?.ctr).toBeCloseTo(2 / 3, 6);
     expect(es405?.cpcMicro).toBe(60_000n);
-    expect(page.rows[2]?.cpcMicro).toBeNull();
+    expect(page.rows[3]?.cpcMicro).toBeNull();
+  });
+
+  // D4-12: a deposit counts on the day it was made; one made after the SMS's day is late.
+  it("puts a late deposit on its own day, on a row without sends", async () => {
+    const page = await sendLog(t.db, org, { ...WINDOW, page: 1, pageSize: 25 });
+    expect(page.rows[0]).toMatchObject({
+      day: "2026-11-08",
+      campaignId: campaignEs,
+      listName: "ES list",
+      routeName: "405",
+      sent: 0,
+      clicks: 0,
+      leads: 0,
+      sales: 1,
+      lateSales: 1,
+      spendMicro: 0n,
+      ctr: 0,
+      cpcMicro: null,
+    });
+    const nov8 = await sendLog(t.db, org, {
+      from: new Date("2026-11-08T00:00:00Z"),
+      to: new Date("2026-11-09T00:00:00Z"),
+      page: 1,
+      pageSize: 25,
+    });
+    expect(nov8.total).toBe(1);
+    expect(nov8.kpis).toMatchObject({ sent: 0, sales: 1, lateSales: 1 });
   });
 
   it("totals the whole filtered log, not just the page", async () => {
     const page = await sendLog(t.db, org, { ...WINDOW, page: 2, pageSize: 2 });
-    expect(page.rows).toHaveLength(1);
-    expect(page.total).toBe(3);
+    expect(page.rows).toHaveLength(2);
+    expect(page.total).toBe(4);
     expect(page.kpis).toEqual({
       sent: 6,
       clicks: 3,
@@ -246,7 +284,8 @@ describe("sendLog", () => {
       spendMicro: 226_000n,
       cpcMicro: 75_333n,
       leads: 1,
-      sales: 1,
+      sales: 2,
+      lateSales: 1,
     });
   });
 
@@ -262,6 +301,8 @@ describe("sendLog", () => {
     });
     expect(nov6.rows.every((r) => r.day === "2026-11-06")).toBe(true);
     expect(nov6.kpis.sent).toBe(4);
+    // The late deposit of Nov 8 is outside this day.
+    expect(nov6.kpis).toMatchObject({ sales: 1, lateSales: 0 });
   });
 
   it("is empty for an organisation without sends in the window", async () => {
@@ -300,6 +341,21 @@ describe("sendCalendarDay", () => {
         ctr: 0.5,
         leads: 1,
         sales: 1,
+        lateSales: 0,
+      },
+    ]);
+    // The late deposit shows on its own day, for a campaign that sent nothing that day.
+    expect(await sendCalendarDay(t.db, org, { day: "2026-11-08", country: "ES" })).toEqual([
+      {
+        campaignId: campaignEs,
+        campaignName: "Casino ES",
+        account: "emily",
+        sent: 0,
+        clicks: 0,
+        ctr: 0,
+        leads: 0,
+        sales: 1,
+        lateSales: 1,
       },
     ]);
     expect(await sendCalendarDay(t.db, org, { day: "2026-11-06", country: "GB" })).toEqual([]);

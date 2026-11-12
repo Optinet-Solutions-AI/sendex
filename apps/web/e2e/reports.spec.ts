@@ -44,6 +44,8 @@ test.describe("reports", () => {
       ((await page.getByTestId("kpi-sent").textContent()) ?? "").replace(/,/g, ""),
     );
     expect(sent).toBeGreaterThanOrEqual(9);
+    // D4-12: sales count on the day the deposit was made; late ones have their own total.
+    await expect(page.getByTestId("kpi-late-sales")).toBeVisible();
 
     // Another country filter hides it; the CSV export carries the same filters.
     await page.goto(
@@ -59,6 +61,7 @@ test.describe("reports", () => {
     expect(csv.headers()["content-type"]).toContain("text/csv");
     const body = await csv.text();
     expect(body).toContain("Date,Campaign,Country,List,Route,Sent");
+    expect(body).toContain("Leads,Sales,Late sales");
     expect(body).toContain(`2026-09-14,${seeded.campaignName},ES,`);
   });
 

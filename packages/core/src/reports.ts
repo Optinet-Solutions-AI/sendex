@@ -12,7 +12,28 @@ export interface LogCounters {
   clicks: number;
   spendMicro: bigint;
   leads: number;
+  /** First deposits made on the row's day (D4-12), whenever their SMS went out. */
   sales: number;
+  /** The part of `sales` whose SMS went out on an earlier UTC day. */
+  lateSales: number;
+}
+
+export type ConversionTiming = "same_day" | "late";
+
+const DAY_MS = 86_400_000;
+
+/**
+ * Same day or late (D4-12): a sign-up or deposit is same day when it arrived on the UTC day
+ * its SMS was sent, and late from the next UTC day on. `daysLater` counts whole UTC days, so
+ * an SMS at 23:50 and a deposit at 00:10 is one day later.
+ */
+export function conversionTiming(
+  sentAt: Date,
+  receivedAt: Date,
+): { timing: ConversionTiming; daysLater: number } {
+  const days = Math.floor(receivedAt.getTime() / DAY_MS) - Math.floor(sentAt.getTime() / DAY_MS);
+  const daysLater = Math.max(0, days);
+  return { timing: daysLater > 0 ? "late" : "same_day", daysLater };
 }
 
 export interface LogKpis extends LogCounters {
@@ -29,12 +50,14 @@ export function logKpis(rows: readonly LogCounters[]): LogKpis {
   let spendMicro = 0n;
   let leads = 0;
   let sales = 0;
+  let lateSales = 0;
   for (const r of rows) {
     sent += r.sent;
     clicks += r.clicks;
     spendMicro += r.spendMicro;
     leads += r.leads;
     sales += r.sales;
+    lateSales += r.lateSales;
   }
   return {
     sent,
@@ -42,6 +65,7 @@ export function logKpis(rows: readonly LogCounters[]): LogKpis {
     spendMicro,
     leads,
     sales,
+    lateSales,
     ctr: sent > 0 ? clicks / sent : 0,
     cpcMicro: clicks > 0 ? spendMicro / BigInt(clicks) : null,
   };
@@ -62,8 +86,6 @@ export function formatCpc(cpcMicro: bigint | null): string {
 export function formatSpend(micro: bigint): string {
   return formatEur(micro);
 }
-
-const DAY_MS = 86_400_000;
 
 function utcDate(day: string): Date {
   return new Date(`${day}T00:00:00.000Z`);

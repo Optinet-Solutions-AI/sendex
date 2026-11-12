@@ -11,8 +11,9 @@ import type { Db } from "../types.js";
  * a materialised daily table can replace the CTE later without changing callers.
  *
  * "Sent" means submitted to the carrier (status sent, delivered or expired), as on the
- * campaign page. A conversion counts on the day its message was sent, not the day the
- * postback arrived, so every row reconciles with its own sends.
+ * campaign page. A sign-up (lead) counts on the day its message was sent. A sale is a first
+ * deposit and counts on the UTC day it was made (D4-12), so a past day's figures never change
+ * later; one made after its SMS's day is a late sale and can sit on a row without sends.
  */
 
 export interface SendLogFilter {
@@ -85,7 +86,6 @@ function perMessage(organisationId: string, filter: SendLogFilter): SQL {
       m.route_id,
       exists (select 1 from clicks ck where ck.message_id = m.id and ck.device is distinct from 'bot') as clicked,
       (select count(*) from postbacks p where p.message_id = m.id and p.type = 'lead') as leads,
-      (select count(*) from postbacks p where p.message_id = m.id and p.type = 'sale') as sales,
       (select coalesce(-sum(le.amount_micro), 0) from ledger_entries le
          where le.reference_type = 'message' and le.reference_id = m.id::text) as cost
     from messages m
@@ -98,17 +98,60 @@ function perMessage(organisationId: string, filter: SendLogFilter): SQL {
       and m.sent_at < ${filter.to.toISOString()}::timestamptz${countryFilter(filter.countries)}`;
 }
 
-/** The grouped log: day × campaign × country × list × route. */
+/**
+ * One row per first deposit made in the window (D4-12): the UTC day it was made, the
+ * dimensions of its message and whether that message went out on an earlier day. Only the
+ * first sale postback of a message counts, as on the campaign page ("Sales (FTD)").
+ */
+function perDeposit(organisationId: string, filter: SendLogFilter): SQL {
+  return sql`
+    select (fd.first_at at time zone 'UTC')::date as day,
+      m.campaign_id,
+      coalesce(li.country, c.country) as country,
+      l.list_id,
+      m.route_id,
+      ((fd.first_at at time zone 'UTC')::date > (m.sent_at at time zone 'UTC')::date) as late
+    from (
+      select p.message_id, min(p.received_at) as first_at
+      from postbacks p
+      where p.organisation_id = ${organisationId} and p.type = 'sale' and p.message_id is not null
+      group by p.message_id
+    ) fd
+    join messages m on m.id = fd.message_id
+    join laps l on l.id = m.lap_id
+    left join lists li on li.id = l.list_id
+    left join campaigns c on c.id = m.campaign_id
+    where m.organisation_id = ${organisationId}
+      and m.status in ('sent', 'delivered', 'expired')
+      and fd.first_at >= ${filter.from.toISOString()}::timestamptz
+      and fd.first_at < ${filter.to.toISOString()}::timestamptz${countryFilter(filter.countries)}`;
+}
+
+/**
+ * The grouped log: day × campaign × country × list × route. Sends (with their clicks, leads
+ * and spend) and first deposits are stacked and summed, so a day with a late deposit and no
+ * send still gets its row.
+ */
 function grouped(organisationId: string, filter: SendLogFilter): SQL {
   return sql`
-    select pm.day, pm.campaign_id, pm.country, pm.list_id, pm.route_id,
-      count(*)::int as sent,
-      count(*) filter (where pm.clicked)::int as clicks,
-      sum(pm.leads)::int as leads,
-      sum(pm.sales)::int as sales,
-      sum(pm.cost)::bigint as spend
-    from (${perMessage(organisationId, filter)}) pm
-    group by pm.day, pm.campaign_id, pm.country, pm.list_id, pm.route_id`;
+    select u.day, u.campaign_id, u.country, u.list_id, u.route_id,
+      sum(u.sent)::int as sent,
+      sum(u.clicks)::int as clicks,
+      sum(u.leads)::int as leads,
+      sum(u.sales)::int as sales,
+      sum(u.late_sales)::int as late_sales,
+      sum(u.spend)::bigint as spend
+    from (
+      select pm.day, pm.campaign_id, pm.country, pm.list_id, pm.route_id,
+        1 as sent, pm.clicked::int as clicks, pm.leads, pm.cost as spend,
+        0 as sales, 0 as late_sales
+      from (${perMessage(organisationId, filter)}) pm
+      union all
+      select pd.day, pd.campaign_id, pd.country, pd.list_id, pd.route_id,
+        0, 0, 0, 0, 1, pd.late::int
+      from (${perDeposit(organisationId, filter)}) pd
+    ) u
+    group by u.day, u.campaign_id, u.country, u.list_id, u.route_id`;
 }
 
 export interface SendLogInput extends SendLogFilter {
@@ -139,6 +182,7 @@ export async function sendLog(
       with g as (${grouped(organisationId, input)})
       select coalesce(sum(g.sent), 0)::int as sent, coalesce(sum(g.clicks), 0)::int as clicks,
         coalesce(sum(g.leads), 0)::int as leads, coalesce(sum(g.sales), 0)::int as sales,
+        coalesce(sum(g.late_sales), 0)::int as late_sales,
         coalesce(sum(g.spend), 0)::bigint as spend, count(*)::int as total
       from g`),
   ]);
@@ -150,6 +194,7 @@ export async function sendLog(
       spendMicro: big(totals?.spend),
       leads: num(totals?.leads),
       sales: num(totals?.sales),
+      lateSales: num(totals?.late_sales),
     },
   ]);
   const rows = rowsOf(pageRows).map((r): SendLogRow => {
@@ -170,6 +215,7 @@ export async function sendLog(
       spendMicro,
       leads: num(r.leads),
       sales: num(r.sales),
+      lateSales: num(r.late_sales),
       ctr: sent > 0 ? clicks / sent : 0,
       cpcMicro: clicks > 0 ? spendMicro / BigInt(clicks) : null,
     };
@@ -211,10 +257,16 @@ export interface CalendarDayCampaign {
   clicks: number;
   ctr: number;
   leads: number;
+  /** First deposits made that day, as in the Campaigns Log. */
   sales: number;
+  /** The part of `sales` whose SMS went out on an earlier day. */
+  lateSales: number;
 }
 
-/** The day modal: the campaigns that sent to `country` on `day` (UTC), busiest first. */
+/**
+ * The day modal: the campaigns with sends to `country` or first deposits from it on `day`
+ * (UTC), busiest first. The same grouping as the Campaigns Log, so the two always agree.
+ */
 export async function sendCalendarDay(
   db: Db,
   organisationId: string,
@@ -225,15 +277,16 @@ export async function sendCalendarDay(
   const to = new Date(from.getTime() + 86_400_000);
   const rows = rowsOf(
     await db.execute(sql`
-      select pm.campaign_id, c.name as campaign_name, coalesce(u.name, u.email) as account,
-        count(*)::int as sent,
-        count(*) filter (where pm.clicked)::int as clicks,
-        sum(pm.leads)::int as leads,
-        sum(pm.sales)::int as sales
-      from (${perMessage(organisationId, { from, to, countries: [input.country] })}) pm
-      left join campaigns c on c.id = pm.campaign_id
+      select g.campaign_id, c.name as campaign_name, coalesce(u.name, u.email) as account,
+        sum(g.sent)::int as sent,
+        sum(g.clicks)::int as clicks,
+        sum(g.leads)::int as leads,
+        sum(g.sales)::int as sales,
+        sum(g.late_sales)::int as late_sales
+      from (${grouped(organisationId, { from, to, countries: [input.country] })}) g
+      left join campaigns c on c.id = g.campaign_id
       left join users u on u.id = c.created_by
-      group by pm.campaign_id, c.name, u.name, u.email
+      group by g.campaign_id, c.name, u.name, u.email
       order by sent desc, c.name asc nulls last`),
   );
   return rows.map((r) => {
@@ -248,6 +301,7 @@ export async function sendCalendarDay(
       ctr: sent > 0 ? clicks / sent : 0,
       leads: num(r.leads),
       sales: num(r.sales),
+      lateSales: num(r.late_sales),
     };
   });
 }

@@ -21,6 +21,7 @@ const HEADER = [
   "CPC (EUR)",
   "Leads",
   "Sales",
+  "Late sales",
 ] as const;
 
 /** Streams the Campaigns Log as CSV with the same period and countries as the page. */
@@ -71,6 +72,7 @@ export async function GET(request: NextRequest): Promise<Response> {
                   row.cpcMicro === null ? "" : (Number(row.cpcMicro) / 1_000_000).toFixed(4),
                   row.leads,
                   row.sales,
+                  row.lateSales,
                 ]),
               ),
             );

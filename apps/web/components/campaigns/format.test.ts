@@ -9,7 +9,17 @@ import {
   formatPricePerSms,
   shortId,
   toCsv,
+  zoneAbbreviation,
 } from "./format";
+
+describe("zoneAbbreviation (D4-13)", () => {
+  it("names the campaign's time zone at that moment", () => {
+    expect(zoneAbbreviation("2026-01-15T12:00:00Z", "Europe/Madrid")).toBe("CET");
+    expect(zoneAbbreviation("2026-07-15T12:00:00Z", "Europe/Madrid")).toBe("CEST");
+    expect(zoneAbbreviation("2026-07-15T12:00:00Z", "UTC")).toBe("UTC");
+    expect(zoneAbbreviation(null, "Europe/Madrid")).toBe("");
+  });
+});
 
 describe("money and percentages", () => {
   it("formats micro-EUR with two decimals", () => {

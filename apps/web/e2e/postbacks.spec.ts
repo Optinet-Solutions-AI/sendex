@@ -33,6 +33,14 @@ test.describe("postbacks", () => {
     await expect(row).toContainText("Lead");
     await expect(row).toContainText(seeded.campaignName);
     await expect(row).toContainText("sub_id=e2e");
+    // D4-12: the lead came the day its SMS went out.
+    await expect(row.getByTestId("postback-timing")).toHaveText("Same day");
+    await page.getByTestId("timing-filter-late").click();
+    await expect(page).toHaveURL(/timing=late/);
+    await expect(row).toHaveCount(0);
+    await page.getByTestId("timing-filter-same_day").click();
+    await expect(row).toBeVisible();
+    await page.getByTestId("timing-filter-all").click();
 
     // Sales only: the lead disappears. Leads only: it is back.
     await page.getByTestId("type-filter-sale").click();
@@ -53,6 +61,8 @@ test.describe("postbacks", () => {
     expect(csv.headers()["content-type"]).toContain("text/csv");
     const body = await csv.text();
     expect(body).toContain("Event key,Type,Campaign");
+    expect(body).toContain("Received,SMS sent,Timing,Days later");
+    expect(body).toContain("same day,0");
     expect(body).toContain(seeded.eventKey);
     expect(body).toContain(seeded.campaignName);
   });
@@ -65,6 +75,7 @@ test.describe("postbacks", () => {
     const section = page.getByTestId("conversions-section");
     await expect(section).toBeVisible();
     await expect(page.getByTestId("conversions-leads")).toHaveText("1");
+    await expect(page.getByTestId("conversions-leads-timing")).toHaveText("1 same day · 0 late");
     await expect(page.getByTestId("conversions-sales")).toHaveText("0");
 
     const bySender = page.getByTestId("conversions-by-sender");

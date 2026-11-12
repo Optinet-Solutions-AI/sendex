@@ -3,15 +3,42 @@ import { formatMicro, formatPer, formatPercent } from "./format";
 
 /** The conversion breakdowns of a campaign (Analytics tab): totals, per sender id, per ad text. */
 
-function Stat({ label, value, testId }: { label: string; value: string; testId?: string }) {
+function Stat({
+  label,
+  value,
+  hint,
+  testId,
+}: {
+  label: string;
+  value: string;
+  hint?: string;
+  testId?: string;
+}) {
   return (
     <div className="rounded border border-neutral-200 bg-white px-3 py-2">
       <dt className="text-xs uppercase text-neutral-500">{label}</dt>
       <dd className="mt-0.5 text-lg font-semibold tabular-nums" data-testid={testId}>
         {value}
       </dd>
+      {hint ? (
+        <dd
+          className="text-xs text-neutral-500"
+          data-testid={testId ? `${testId}-timing` : undefined}
+        >
+          {hint}
+        </dd>
+      ) : null}
     </div>
   );
+}
+
+/**
+ * "3 same day · 1 late" under a total (D4-12): late means the sign-up or first deposit came
+ * on a later UTC day than its SMS. Nothing to say without conversions.
+ */
+export function splitHint(total: number, late: number): string {
+  if (total <= 0) return "";
+  return `${Math.max(0, total - late)} same day · ${late} late`;
 }
 
 function BreakdownTable({
@@ -91,10 +118,20 @@ export function ConversionsSection({ stats }: { stats: ConversionStats | null })
     <section className="space-y-4" data-testid="conversions-section">
       <h3 className="text-sm font-semibold">Conversions</h3>
       <dl className="grid grid-cols-2 gap-2 md:grid-cols-4 lg:grid-cols-6">
-        <Stat label="Leads" value={String(c.leads)} testId="conversions-leads" />
+        <Stat
+          label="Leads"
+          value={String(c.leads)}
+          hint={splitHint(c.leads, stats.timing.lateLeads)}
+          testId="conversions-leads"
+        />
         <Stat label="Lead rate" value={formatPercent(c.leadRate)} />
         <Stat label="CPL" value={formatPer(c.cplMicro)} />
-        <Stat label="Sales" value={String(c.sales)} testId="conversions-sales" />
+        <Stat
+          label="Sales"
+          value={String(c.sales)}
+          hint={splitHint(c.sales, stats.timing.lateSales)}
+          testId="conversions-sales"
+        />
         <Stat label="Sale rate" value={formatPercent(c.saleRate)} />
         <Stat label="CPS" value={formatPer(c.cpsMicro)} />
       </dl>

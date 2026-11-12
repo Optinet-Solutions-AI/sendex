@@ -41,6 +41,7 @@ export default async function CampaignsLogPage({
           cpcMicro: r.cpcMicro === null ? null : r.cpcMicro.toString(),
           leads: r.leads,
           sales: r.sales,
+          lateSales: r.lateSales,
         }));
         return (
           <CampaignsLog

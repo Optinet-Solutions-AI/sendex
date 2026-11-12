@@ -195,7 +195,11 @@ describe("listCampaigns sorting (D4-10)", () => {
       ["Charlie", 200, 40, 1_000_000n, 4],
     ];
     for (const [name, sent, clicks, costMicro, sales] of rows) {
-      const c = await createCampaign(t.db, orgS, { name, country: "ES", timezone: "Europe/Madrid" });
+      const c = await createCampaign(t.db, orgS, {
+        name,
+        country: "ES",
+        timezone: "Europe/Madrid",
+      });
       ids[name] = c.id;
       await t.db.insert(laps).values({
         organisationId: orgS,
@@ -212,8 +216,13 @@ describe("listCampaigns sorting (D4-10)", () => {
   });
 
   const names = async (sort?: Parameters<typeof listCampaigns>[2]["sort"], dir?: "asc" | "desc") =>
-    (await listCampaigns(t.db, orgS, { page: 1, ...(sort ? { sort } : {}), ...(dir ? { dir } : {}) }))
-      .items.map((c) => c.name);
+    (
+      await listCampaigns(t.db, orgS, {
+        page: 1,
+        ...(sort ? { sort } : {}),
+        ...(dir ? { dir } : {}),
+      })
+    ).items.map((c) => c.name);
 
   it("keeps newest first when no sort is given", async () => {
     expect(await names()).toEqual(["Charlie", "Bravo", "Alpha"]);

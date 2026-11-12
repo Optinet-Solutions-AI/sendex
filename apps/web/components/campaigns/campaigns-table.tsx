@@ -100,10 +100,7 @@ function SortTh({
       <Link
         href={href}
         data-testid={`sort-${col}`}
-        className={cn(
-          "inline-flex items-center gap-1 hover:text-ink",
-          active && "text-ink",
-        )}
+        className={cn("inline-flex items-center gap-1 hover:text-ink", active && "text-ink")}
       >
         {label}
         <span aria-hidden="true" className={active ? "" : "opacity-40"}>

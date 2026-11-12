@@ -8,8 +8,8 @@ test("sorting the campaigns list by Sent, then reversing it", async ({ page }) =
 
   // Sent column values as numbers, in table order.
   const sentValues = async () =>
-    (await page.getByTestId("campaign-row").locator("td:nth-child(6)").allTextContents()).map(
-      (t) => Number(t.replace(/[^\d]/g, "") || "0"),
+    (await page.getByTestId("campaign-row").locator("td:nth-child(6)").allTextContents()).map((t) =>
+      Number(t.replace(/[^\d]/g, "") || "0"),
     );
 
   await page.getByTestId("sort-sent").click();

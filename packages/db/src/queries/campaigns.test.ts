@@ -23,6 +23,7 @@ import {
   listsForCountry,
   routesForCountry,
   setCampaignLists,
+  setCampaignRoutes,
   setCampaignSegments,
   setCampaignSidGroup,
   toggleAdText,
@@ -455,6 +456,7 @@ describe("duplicateCampaign and deleteCampaign", () => {
     await addAdTexts(t.db, orgA, campaign.id, "A\n//\nB");
     const link = await createLink(t.db, orgA, { name: "Dup", url: "https://d.example/" });
     await attachLink(t.db, orgA, campaign.id, link.id);
+    await setCampaignRoutes(t.db, orgA, campaign.id, [route403, route405]);
     await updateSendSettings(t.db, orgA, campaign.id, {
       testSize: 50,
       contactReuse: "per_campaign",
@@ -474,11 +476,58 @@ describe("duplicateCampaign and deleteCampaign", () => {
     expect(detail?.sidGroup?.id).toBe(group.id);
     expect(detail?.adTexts.map((x) => x.text)).toEqual(["A", "B"]);
     expect(detail?.links.map((l) => l.id)).toEqual([link.id]);
+    // D4-09: the copy keeps the routes, in the order they were picked.
+    expect(detail?.routeIds).toEqual([route403, route405]);
 
     expect(await deleteCampaign(t.db, orgA, copy.id)).toBe(true);
     expect(await getCampaign(t.db, orgA, copy.id)).toBeNull();
     expect(await deleteCampaign(t.db, orgB, campaign.id)).toBe(false);
     await expect(duplicateCampaign(t.db, orgB, campaign.id)).rejects.toThrow(/not found/);
+  });
+});
+
+describe("setCampaignRoutes (D4-09)", () => {
+  it("saves the picked routes in order and returns them with the campaign", async () => {
+    const c = await createCampaign(t.db, orgA, {
+      name: "Routes",
+      country: "ES",
+      timezone: "Europe/Madrid",
+    });
+    expect((await getCampaign(t.db, orgA, c.id))?.routeIds).toEqual([]);
+    await setCampaignRoutes(t.db, orgA, c.id, [route405, customRoute, route403]);
+    expect((await getCampaign(t.db, orgA, c.id))?.routeIds).toEqual([
+      route405,
+      customRoute,
+      route403,
+    ]);
+    // Saving again replaces the choice; an empty choice clears it.
+    await setCampaignRoutes(t.db, orgA, c.id, [route403]);
+    expect((await getCampaign(t.db, orgA, c.id))?.routeIds).toEqual([route403]);
+    await setCampaignRoutes(t.db, orgA, c.id, []);
+    expect((await getCampaign(t.db, orgA, c.id))?.routeIds).toEqual([]);
+  });
+
+  it("drops routes the organisation cannot use for the campaign's country", async () => {
+    const c = await createCampaign(t.db, orgA, {
+      name: "Routes 2",
+      country: "ES",
+      timezone: "Europe/Madrid",
+    });
+    const [otherOrgRoute] = (await routesForCountry(t.db, orgB, "ES")).filter((r) => !r.platform);
+    if (!otherOrgRoute) throw new Error("setup failed");
+    const frOnly = (await routesForCountry(t.db, orgA, "FR")).find((r) => r.name === "375");
+    if (!frOnly) throw new Error("setup failed");
+    await setCampaignRoutes(t.db, orgA, c.id, [otherOrgRoute.id, route405, frOnly.id]);
+    expect((await getCampaign(t.db, orgA, c.id))?.routeIds).toEqual([route405]);
+  });
+
+  it("refuses another organisation's campaign", async () => {
+    const c = await createCampaign(t.db, orgA, {
+      name: "Routes 3",
+      country: "ES",
+      timezone: "Europe/Madrid",
+    });
+    await expect(setCampaignRoutes(t.db, orgB, c.id, [route405])).rejects.toThrow();
   });
 });
 

@@ -3,10 +3,11 @@
 import { Button, Card, Toggle } from "@sendex/ui";
 import { ChevronRight, RefreshCw, Send, Tag, X } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useId, useState, useTransition } from "react";
+import { useCallback, useEffect, useId, useRef, useState, useTransition } from "react";
 import {
   estimateSendAction,
   sendCampaignAction,
+  setCampaignRoutesAction,
   updateSendSettingsAction,
 } from "../../app/(dashboard)/campaigns/actions";
 import { AdTextsPanel } from "./ad-texts-panel";
@@ -94,7 +95,10 @@ export function SendForm({
   const router = useRouter();
   const id = useId();
   const [tab, setTab] = useState<ContextTab>("summary");
-  const [routeIds, setRouteIds] = useState<string[]>([]);
+  // The routes saved on the campaign (D4-09), so they are still picked when it is opened again.
+  const [routeIds, setRouteIds] = useState<string[]>(campaign.routeIds);
+  const routeSaves = useRef<Promise<void>>(Promise.resolve());
+  const [routeSavesPending, setRouteSavesPending] = useState(0);
   const [sendAll, setSendAll] = useState(false);
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [estimate, setEstimate] = useState<EstimateView | null>(null);
@@ -142,6 +146,20 @@ export function SendForm({
       });
       if (!result.ok) setError(result.error);
       else onChanged();
+    });
+  }
+
+  /**
+   * Pick routes and save the choice on the campaign. Saves run one after another, so quick
+   * clicks cannot land out of order and leave an older choice saved; a failed save shows the error.
+   */
+  function pickRoutes(next: string[]) {
+    setRouteIds(next);
+    setRouteSavesPending((n) => n + 1);
+    routeSaves.current = routeSaves.current.then(async () => {
+      const result = await setCampaignRoutesAction({ campaignId: campaign.id, routeIds: next });
+      if (!result.ok) setError(result.error);
+      setRouteSavesPending((n) => n - 1);
     });
   }
 
@@ -288,6 +306,8 @@ export function SendForm({
             <FormRow label="Routes">
               <button
                 type="button"
+                aria-busy={routeSavesPending > 0}
+                data-testid="routes-row"
                 className={rowButton}
                 onClick={() => setTab("routes")}
                 aria-label="Routes"
@@ -310,7 +330,7 @@ export function SendForm({
                           aria-label={`Remove ${r.name}`}
                           onClick={(e) => {
                             e.stopPropagation();
-                            setRouteIds(routeIds.filter((x) => x !== r.id));
+                            pickRoutes(routeIds.filter((x) => x !== r.id));
                           }}
                         />
                       </span>
@@ -372,7 +392,7 @@ export function SendForm({
                 <RoutesPanel
                   routes={routes}
                   selected={routeIds}
-                  onChange={setRouteIds}
+                  onChange={pickRoutes}
                   {...(performance ? { performance } : {})}
                 />
               ),

@@ -302,6 +302,7 @@ erDiagram
     bigint low_balance_threshold_micro
     uuid organisation_id PK, FK
     text routing_strategy
+    jsonb sending_hours
     timestamp_with_time_zone updated_at
   }
   organisations {

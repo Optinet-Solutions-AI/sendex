@@ -6,6 +6,7 @@ import {
   db,
   getBalanceMicro,
   getCampaign,
+  getSendingHours,
   listAuditLog,
   listCampaignMessages,
   listLinks,
@@ -84,6 +85,7 @@ export default async function CampaignPage({
           balanceMicro,
           performance,
           segmentListing,
+          sendingHours,
         ] = await Promise.all([
           listSidGroups(database, ctx.organisationId, detail.country),
           listsForCountry(database, ctx.organisationId, detail.country),
@@ -97,6 +99,7 @@ export default async function CampaignPage({
           getBalanceMicro(database, ctx.organisationId),
           routePerformance(database, ctx.organisationId, detail.country),
           listSegments(database, ctx.organisationId, { tab: "all" }),
+          getSendingHours(database, ctx.organisationId),
         ]);
         const segmentOptions = segmentListing.rows
           .filter((seg) => !seg.isTemplate && !seg.globalExclude)
@@ -151,6 +154,7 @@ export default async function CampaignPage({
                     canFlush={can(ctx.role, "list.flush")}
                     balanceMicro={Number(balanceMicro)}
                     linkLength={linkLength}
+                    sendingHours={sendingHours}
                   />
                 ),
                 logs: (

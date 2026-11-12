@@ -20,6 +20,7 @@ export * from "./route-ranks.js";
 export * from "./routes.js";
 export * from "./segments.js";
 export * from "./send-count.js";
+export * from "./sending-hours.js";
 export * from "./sms-encoding.js";
 export * from "./suppressions.js";
 export * from "./verification.js";

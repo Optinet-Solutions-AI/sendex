@@ -1,5 +1,6 @@
+import type { SendingHours } from "@sendex/core";
 import { sql } from "drizzle-orm";
-import { bigint, integer, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { bigint, integer, jsonb, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
 import { organisations } from "./core.js";
 
 /**
@@ -28,6 +29,14 @@ export const organisationSettings = pgTable("organisation_settings", {
   customRouteFeeMicro: bigint("custom_route_fee_micro", { mode: "bigint" })
     .notNull()
     .default(sql`10000`),
+  /**
+   * Suggested sending hours (D4-14): a default window and per-country windows in local
+   * time. Sending outside them shows a notice on the campaign and never blocks it.
+   */
+  sendingHours: jsonb("sending_hours")
+    .$type<SendingHours>()
+    .notNull()
+    .default({ default: null, countries: {} }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });

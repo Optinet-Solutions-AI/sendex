@@ -596,3 +596,17 @@ export async function cleanupE2eEnrichment(): Promise<void> {
     await sql.end();
   }
 }
+
+/** Clear the suggested sending hours of the seeded "external" organisation (D4-14 spec). */
+export async function resetE2eSendingHours(): Promise<void> {
+  const url = process.env.DATABASE_URL;
+  if (!url) throw new Error("DATABASE_URL must be set to run the sending hours e2e spec");
+  const sql = postgres(url, { max: 1 });
+  try {
+    await sql`
+      update organisation_settings set sending_hours = '{"default":null,"countries":{}}'::jsonb
+      where organisation_id = (select id from organisations where slug = 'external')`;
+  } finally {
+    await sql.end();
+  }
+}

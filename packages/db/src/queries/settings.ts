@@ -1,4 +1,9 @@
-import { MAX_LOW_BALANCE_EMAILS } from "@sendex/core";
+import {
+  EMPTY_SENDING_HOURS,
+  MAX_LOW_BALANCE_EMAILS,
+  type SendingHours,
+  sendingHoursSchema,
+} from "@sendex/core";
 import { eq } from "drizzle-orm";
 import { organisationSettings } from "../schema/settings.js";
 import type { Db } from "../types.js";
@@ -94,4 +99,31 @@ export async function markLowBalanceAlerted(
       target: organisationSettings.organisationId,
       set: { lowBalanceAlertedAt: at, updatedAt: new Date() },
     });
+}
+
+/** The organisation's suggested sending hours (D4-14); empty when none were saved. */
+export async function getSendingHours(db: Db, organisationId: string): Promise<SendingHours> {
+  const [row] = await db
+    .select({ sendingHours: organisationSettings.sendingHours })
+    .from(organisationSettings)
+    .where(eq(organisationSettings.organisationId, organisationId))
+    .limit(1);
+  return row?.sendingHours ?? EMPTY_SENDING_HOURS;
+}
+
+/** Replace the organisation's suggested sending hours; the other settings are left alone. */
+export async function updateSendingHours(
+  db: Db,
+  organisationId: string,
+  hours: SendingHours,
+): Promise<SendingHours> {
+  const sendingHours = sendingHoursSchema.parse(hours);
+  await db
+    .insert(organisationSettings)
+    .values({ organisationId, sendingHours })
+    .onConflictDoUpdate({
+      target: organisationSettings.organisationId,
+      set: { sendingHours, updatedAt: new Date() },
+    });
+  return sendingHours;
 }

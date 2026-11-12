@@ -1,5 +1,6 @@
 "use client";
 
+import type { SendingHours } from "@sendex/core";
 import { Button, Card, Toggle } from "@sendex/ui";
 import { ChevronRight, RefreshCw, Send, Tag, X } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -20,6 +21,7 @@ import { OffersPanel } from "./offers-panel";
 import { RoutesPanel } from "./routes-panel";
 import { isoToLocalInput, localInputToIso, scheduleNote } from "./schedule";
 import { SendBar } from "./send-bar";
+import { SendingHoursNotice } from "./sending-hours-notice";
 import { SidGroupSelect, SidPanel } from "./sid-panel";
 import type {
   CampaignView,
@@ -51,6 +53,8 @@ export interface SendFormProps {
   balanceMicro: number;
   /** Characters `{{domain}}` becomes when sent, for the ad text counter. */
   linkLength: number;
+  /** The organisation's suggested sending hours, for the notice (D4-14). */
+  sendingHours?: SendingHours;
 }
 
 /** A form row of the spec: label on the left, control on the right; clicking it opens its tab. */
@@ -91,6 +95,7 @@ export function SendForm({
   canFlush,
   balanceMicro,
   linkLength,
+  sendingHours,
 }: SendFormProps) {
   const router = useRouter();
   const id = useId();
@@ -399,6 +404,16 @@ export function SendForm({
             }}
           />
         </div>
+        {sendingHours ? (
+          <div className="px-4 pb-2 empty:hidden">
+            <SendingHoursNotice
+              hours={sendingHours}
+              country={campaign.country}
+              timezone={campaign.timezone}
+              scheduledAt={sendNow ? null : localInputToIso(local, campaign.timezone)}
+            />
+          </div>
+        ) : null}
         {error ? (
           <div className="px-4 pb-2">
             <ErrorText error={error} />

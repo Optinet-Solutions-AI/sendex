@@ -15,6 +15,8 @@ describe("parseCampaignsQuery", () => {
       spendMin: "",
       spendMax: "",
       page: 1,
+      sort: "",
+      dir: "desc",
     });
   });
 
@@ -45,11 +47,15 @@ describe("parseCampaignsQuery", () => {
       spendMin: "12.5",
       spendMax: "",
       page: 3,
+      sort: "",
+      dir: "desc",
     });
     expect(parseCampaignsQuery({ status: "bogus", country: "ESP", page: "-2" })).toMatchObject({
       status: "",
       countries: [],
       page: 1,
+      sort: "",
+      dir: "desc",
     });
   });
 });
@@ -95,5 +101,23 @@ describe("campaignsListInput", () => {
 
   it("leaves unset filters out so the old query path is unchanged", () => {
     expect(campaignsListInput(parseCampaignsQuery({}))).toEqual({ page: 1 });
+  });
+});
+
+describe("sorting (D4-10)", () => {
+  it("reads a known sort column and direction, and drops anything else", () => {
+    const q = parseCampaignsQuery({ sort: "sent", dir: "asc" });
+    expect([q.sort, q.dir]).toEqual(["sent", "asc"]);
+    const bad = parseCampaignsQuery({ sort: "password", dir: "sideways" });
+    expect([bad.sort, bad.dir]).toEqual(["", "desc"]);
+  });
+
+  it("keeps the sort in the URL and passes it to the list query", () => {
+    const q = parseCampaignsQuery({ status: "sending", sort: "ctr", dir: "asc", page: "2" });
+    expect(campaignsQueryString(q)).toBe("?status=sending&page=2&sort=ctr&dir=asc");
+    expect(campaignsListInput(q)).toMatchObject({ sort: "ctr", dir: "asc" });
+    // Descending is the default direction, so it stays out of the URL.
+    expect(campaignsQueryString({ sort: "cost", dir: "desc" })).toBe("?sort=cost");
+    expect(campaignsListInput(parseCampaignsQuery({}))).not.toHaveProperty("sort");
   });
 });

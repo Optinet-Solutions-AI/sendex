@@ -48,6 +48,12 @@ erDiagram
     uuid list_id PK, FK
     uuid organisation_id FK
   }
+  campaign_routes {
+    uuid campaign_id PK, FK
+    uuid organisation_id FK
+    integer position
+    uuid route_id PK, FK
+  }
   campaign_segments {
     uuid campaign_id PK, FK
     uuid organisation_id FK
@@ -461,6 +467,7 @@ erDiagram
   campaigns ||--o{ ad_texts : "campaign_id"
   campaigns ||--o{ campaign_links : "campaign_id"
   campaigns ||--o{ campaign_lists : "campaign_id"
+  campaigns ||--o{ campaign_routes : "campaign_id"
   campaigns ||--o{ campaign_segments : "campaign_id"
   campaigns ||--o{ campaign_sid_group : "campaign_id"
   campaigns ||--o{ clicks : "campaign_id"
@@ -487,6 +494,7 @@ erDiagram
   organisations ||--o{ audit_log : "organisation_id"
   organisations ||--o{ campaign_links : "organisation_id"
   organisations ||--o{ campaign_lists : "organisation_id"
+  organisations ||--o{ campaign_routes : "organisation_id"
   organisations ||--o{ campaign_segments : "organisation_id"
   organisations ||--o{ campaign_sid_group : "organisation_id"
   organisations ||--o{ campaigns : "organisation_id"
@@ -516,6 +524,7 @@ erDiagram
   organisations ||--o{ suppression_imports : "organisation_id"
   organisations ||--o{ suppressions : "organisation_id"
   organisations ||--o{ verification_requests : "organisation_id"
+  routes ||--o{ campaign_routes : "route_id"
   routes ||--o{ laps : "route_id"
   routes ||--o{ messages : "route_id"
   routes ||--o{ route_connection_events : "route_id"
@@ -536,4 +545,4 @@ erDiagram
   users ||--o{ verification_requests : "requested_by"
 ```
 
-Generated from the Drizzle schema by `pnpm --filter @sendex/db erd` (38 tables, 77 relationships). Do not edit by hand: regenerate after every schema change. CI runs `pnpm --filter @sendex/db erd:check` and fails when this file is stale.
+Generated from the Drizzle schema by `pnpm --filter @sendex/db erd` (39 tables, 80 relationships). Do not edit by hand: regenerate after every schema change. CI runs `pnpm --filter @sendex/db erd:check` and fails when this file is stale.

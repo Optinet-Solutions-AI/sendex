@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { auditLog, contacts, listMembers, lists, suppressions } from "../schema/index.js";
+import { auditLog, contacts, laps, listMembers, lists, suppressions } from "../schema/index.js";
 import { routePrices, routes } from "../schema/routes.js";
 import { createTestDb, seedOrganisation, type TestDb } from "../test/db.js";
 import { listAuditLog } from "./audit.js";
@@ -23,6 +23,7 @@ import {
   listsForCountry,
   routesForCountry,
   setCampaignLists,
+  setCampaignRoutes,
   setCampaignSegments,
   setCampaignSidGroup,
   toggleAdText,
@@ -177,6 +178,65 @@ describe("createCampaign and listCampaigns", () => {
     const byStatus = await listCampaigns(t.db, orgA, { page: 1, status: "completed" });
     expect(byStatus.items).toEqual([]);
     expect(byStatus.total).toBe(0);
+  });
+});
+
+describe("listCampaigns sorting (D4-10)", () => {
+  // A separate organisation so the other tests' campaigns do not change the order.
+  let orgS: string;
+  const ids: Record<string, string> = {};
+
+  beforeAll(async () => {
+    orgS = await seedOrganisation(t.db, "org-sort");
+    const list = await seedList(orgS, "Sort list", "ES", "+34611000", 1);
+    // name, sent, clicks, cost (micro-EUR), sales
+    const rows: [string, number, number, bigint, number][] = [
+      ["Alpha", 100, 10, 5_000_000n, 1],
+      ["Bravo", 300, 3, 9_000_000n, 0],
+      ["Charlie", 200, 40, 1_000_000n, 4],
+    ];
+    for (const [name, sent, clicks, costMicro, sales] of rows) {
+      const c = await createCampaign(t.db, orgS, {
+        name,
+        country: "ES",
+        timezone: "Europe/Madrid",
+      });
+      ids[name] = c.id;
+      await t.db.insert(laps).values({
+        organisationId: orgS,
+        campaignId: c.id,
+        listId: list.id,
+        routeId: route405,
+        testSize: 1,
+        sent,
+        clicks,
+        costMicro,
+        sales,
+      });
+    }
+  });
+
+  const names = async (sort?: Parameters<typeof listCampaigns>[2]["sort"], dir?: "asc" | "desc") =>
+    (
+      await listCampaigns(t.db, orgS, {
+        page: 1,
+        ...(sort ? { sort } : {}),
+        ...(dir ? { dir } : {}),
+      })
+    ).items.map((c) => c.name);
+
+  it("keeps newest first when no sort is given", async () => {
+    expect(await names()).toEqual(["Charlie", "Bravo", "Alpha"]);
+  });
+
+  it("sorts by sent, CTR, cost, sales and name in either direction", async () => {
+    expect(await names("sent", "desc")).toEqual(["Bravo", "Charlie", "Alpha"]);
+    expect(await names("sent", "asc")).toEqual(["Alpha", "Charlie", "Bravo"]);
+    // CTR: Charlie 20%, Alpha 10%, Bravo 1%.
+    expect(await names("ctr", "desc")).toEqual(["Charlie", "Alpha", "Bravo"]);
+    expect(await names("cost", "desc")).toEqual(["Bravo", "Alpha", "Charlie"]);
+    expect(await names("sales", "desc")).toEqual(["Charlie", "Alpha", "Bravo"]);
+    expect(await names("name", "asc")).toEqual(["Alpha", "Bravo", "Charlie"]);
   });
 });
 
@@ -455,6 +515,7 @@ describe("duplicateCampaign and deleteCampaign", () => {
     await addAdTexts(t.db, orgA, campaign.id, "A\n//\nB");
     const link = await createLink(t.db, orgA, { name: "Dup", url: "https://d.example/" });
     await attachLink(t.db, orgA, campaign.id, link.id);
+    await setCampaignRoutes(t.db, orgA, campaign.id, [route403, route405]);
     await updateSendSettings(t.db, orgA, campaign.id, {
       testSize: 50,
       contactReuse: "per_campaign",
@@ -474,11 +535,58 @@ describe("duplicateCampaign and deleteCampaign", () => {
     expect(detail?.sidGroup?.id).toBe(group.id);
     expect(detail?.adTexts.map((x) => x.text)).toEqual(["A", "B"]);
     expect(detail?.links.map((l) => l.id)).toEqual([link.id]);
+    // D4-09: the copy keeps the routes, in the order they were picked.
+    expect(detail?.routeIds).toEqual([route403, route405]);
 
     expect(await deleteCampaign(t.db, orgA, copy.id)).toBe(true);
     expect(await getCampaign(t.db, orgA, copy.id)).toBeNull();
     expect(await deleteCampaign(t.db, orgB, campaign.id)).toBe(false);
     await expect(duplicateCampaign(t.db, orgB, campaign.id)).rejects.toThrow(/not found/);
+  });
+});
+
+describe("setCampaignRoutes (D4-09)", () => {
+  it("saves the picked routes in order and returns them with the campaign", async () => {
+    const c = await createCampaign(t.db, orgA, {
+      name: "Routes",
+      country: "ES",
+      timezone: "Europe/Madrid",
+    });
+    expect((await getCampaign(t.db, orgA, c.id))?.routeIds).toEqual([]);
+    await setCampaignRoutes(t.db, orgA, c.id, [route405, customRoute, route403]);
+    expect((await getCampaign(t.db, orgA, c.id))?.routeIds).toEqual([
+      route405,
+      customRoute,
+      route403,
+    ]);
+    // Saving again replaces the choice; an empty choice clears it.
+    await setCampaignRoutes(t.db, orgA, c.id, [route403]);
+    expect((await getCampaign(t.db, orgA, c.id))?.routeIds).toEqual([route403]);
+    await setCampaignRoutes(t.db, orgA, c.id, []);
+    expect((await getCampaign(t.db, orgA, c.id))?.routeIds).toEqual([]);
+  });
+
+  it("drops routes the organisation cannot use for the campaign's country", async () => {
+    const c = await createCampaign(t.db, orgA, {
+      name: "Routes 2",
+      country: "ES",
+      timezone: "Europe/Madrid",
+    });
+    const [otherOrgRoute] = (await routesForCountry(t.db, orgB, "ES")).filter((r) => !r.platform);
+    if (!otherOrgRoute) throw new Error("setup failed");
+    const frOnly = (await routesForCountry(t.db, orgA, "FR")).find((r) => r.name === "375");
+    if (!frOnly) throw new Error("setup failed");
+    await setCampaignRoutes(t.db, orgA, c.id, [otherOrgRoute.id, route405, frOnly.id]);
+    expect((await getCampaign(t.db, orgA, c.id))?.routeIds).toEqual([route405]);
+  });
+
+  it("refuses another organisation's campaign", async () => {
+    const c = await createCampaign(t.db, orgA, {
+      name: "Routes 3",
+      country: "ES",
+      timezone: "Europe/Madrid",
+    });
+    await expect(setCampaignRoutes(t.db, orgB, c.id, [route405])).rejects.toThrow();
   });
 });
 

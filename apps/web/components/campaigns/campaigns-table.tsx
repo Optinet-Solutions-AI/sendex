@@ -1,6 +1,6 @@
 "use client";
 
-import { countryName, countryOptions, flagEmoji } from "@sendex/core";
+import { type CampaignSort, countryName, countryOptions, flagEmoji } from "@sendex/core";
 import {
   Badge,
   Button,
@@ -57,6 +57,48 @@ function Check({ name, label, checked }: { name: string; label: string; checked:
 }
 
 const Dash = () => <span className="text-muted">-</span>;
+
+/** Text columns sort A to Z first; number and date columns largest or newest first. */
+const ASC_FIRST: ReadonlySet<CampaignSort> = new Set(["name", "status", "country"]);
+
+/**
+ * A column header that sorts the table (D4-10): the first click sorts by the column, the next
+ * reverses it. The sort lives in the URL with the filters and sends the list back to page 1.
+ */
+function SortTh({
+  col,
+  label,
+  filters,
+  right,
+}: {
+  col: CampaignSort;
+  label: string;
+  filters: CampaignsQuery;
+  right?: boolean;
+}) {
+  const active = filters.sort === col;
+  const firstDir = ASC_FIRST.has(col) ? "asc" : "desc";
+  const nextDir = active ? (filters.dir === "asc" ? "desc" : "asc") : firstDir;
+  const href = `/campaigns${campaignsQueryString({ ...filters, page: 1, sort: col, dir: nextDir })}`;
+  const arrow = active ? (filters.dir === "asc" ? "↑" : "↓") : "↕";
+  return (
+    <th
+      className={cn("px-3 py-2.5", right && "text-right")}
+      aria-sort={active ? (filters.dir === "asc" ? "ascending" : "descending") : "none"}
+    >
+      <Link
+        href={href}
+        data-testid={`sort-${col}`}
+        className={cn("inline-flex items-center gap-1 hover:text-ink", active && "text-ink")}
+      >
+        {label}
+        <span aria-hidden="true" className={active ? "" : "opacity-40"}>
+          {arrow}
+        </span>
+      </Link>
+    </th>
+  );
+}
 
 const COUNTRIES = countryOptions.map((c) => ({ code: c.code, name: c.name, flag: c.flag }));
 
@@ -144,6 +186,10 @@ export function CampaignsTable({
           </Button>
           <CountPill count={total} noun="campaign" className="ml-auto" testId="campaign-count" />
         </div>
+        {filters.sort ? <input type="hidden" name="sort" value={filters.sort} /> : null}
+        {filters.sort && filters.dir === "asc" ? (
+          <input type="hidden" name="dir" value="asc" />
+        ) : null}
         <div className={showFilters ? "flex flex-wrap items-center gap-3" : "hidden"}>
           {countries.map((c) => (
             <input key={c} type="hidden" name="country" value={c} />
@@ -204,17 +250,17 @@ export function CampaignsTable({
           <thead className="bg-page text-left font-mono text-[11px] font-semibold uppercase tracking-[0.07em] text-muted">
             <tr>
               <th className="px-3 py-2.5">ID</th>
-              <th className="px-3 py-2.5">Campaign</th>
-              <th className="px-3 py-2.5">Status</th>
-              <th className="px-3 py-2.5">Country</th>
-              <th className="px-3 py-2.5 text-right">Laps</th>
-              <th className="px-3 py-2.5 text-right">Sent</th>
-              <th className="px-3 py-2.5 text-right">Clicks</th>
-              <th className="px-3 py-2.5 text-right">CTR</th>
-              <th className="px-3 py-2.5 text-right">Cost</th>
-              <th className="px-3 py-2.5 text-right">Leads</th>
-              <th className="px-3 py-2.5 text-right">Sales</th>
-              <th className="px-3 py-2.5">Period</th>
+              <SortTh col="name" label="Campaign" filters={filters} />
+              <SortTh col="status" label="Status" filters={filters} />
+              <SortTh col="country" label="Country" filters={filters} />
+              <SortTh col="laps" label="Laps" filters={filters} right />
+              <SortTh col="sent" label="Sent" filters={filters} right />
+              <SortTh col="clicks" label="Clicks" filters={filters} right />
+              <SortTh col="ctr" label="CTR" filters={filters} right />
+              <SortTh col="cost" label="Cost" filters={filters} right />
+              <SortTh col="leads" label="Leads" filters={filters} right />
+              <SortTh col="sales" label="Sales" filters={filters} right />
+              <SortTh col="period" label="Period" filters={filters} />
               <th className="px-3 py-2.5 text-right">Actions</th>
             </tr>
           </thead>

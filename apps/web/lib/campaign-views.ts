@@ -157,6 +157,7 @@ export function toCampaignView(
       profitMicro: Number(l.profitMicro),
     })),
     laps: detail.laps.map(toLapView),
+    routeIds: [...detail.routeIds],
   };
 }
 

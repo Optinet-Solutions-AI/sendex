@@ -23,6 +23,14 @@ page, with the totals of its laps.
 | **Period** | When the first lap started and the last one finished, in the campaign's timezone. "–" for a campaign that has not sent. |
 | **Actions** | A menu with **View**, **Duplicate** and **Delete**. |
 
+## Sorting
+
+Click a column header to sort by it: Campaign, Status, Country, Laps, Sent, Clicks, CTR, Cost,
+Leads, Sales or Period. Click it again to reverse the order. Names, statuses and countries sort A
+to Z first; numbers and the period sort largest or newest first. The sorted column shows ↓ or ↑
+and the others ↕. Without a sort the newest campaign is on top. The sort is kept in the page
+address with the filters, applies to **Export CSV** too, and sends you back to page 1.
+
 ## Filters
 
 Type in **Search** and press Enter to search by name. **Filters** opens the filter row below it;
@@ -49,8 +57,8 @@ ISO timestamps). The file is named `campaigns-<date>.csv`.
 
 - **View** opens the campaign page.
 - **Duplicate** creates a new draft called "Copy of …" with the same lists, sender id group,
-  ad texts, tracked links, test size and contact-reuse setting, and opens it. Routes are picked
-  again in the send form, and nothing is sent until you press **Send**.
+  ad texts, tracked links, routes, test size and contact-reuse setting, and opens it. Change
+  whatever needs changing on the copy; nothing is sent until you press **Send**.
 - **Delete** removes a campaign that is still a draft. Campaigns that have sent cannot be
   deleted, so their history stays on the books.
 

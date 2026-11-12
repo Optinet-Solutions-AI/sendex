@@ -293,8 +293,9 @@ function DayModal({
       clicks: t.clicks + r.clicks,
       leads: t.leads + r.leads,
       sales: t.sales + r.sales,
+      lateSales: t.lateSales + r.lateSales,
     }),
-    { sent: 0, clicks: 0, leads: 0, sales: 0 },
+    { sent: 0, clicks: 0, leads: 0, sales: 0, lateSales: 0 },
   );
 
   return (
@@ -361,6 +362,11 @@ function DayModal({
                         </TableCell>
                         <TableCell className="text-right tabular-nums">
                           {formatNumber(r.sales)}
+                          {r.lateSales > 0 ? (
+                            <span className="ml-1 text-xs text-amber-700">
+                              ({formatNumber(r.lateSales)} late)
+                            </span>
+                          ) : null}
                         </TableCell>
                       </TableRow>
                     ))}
@@ -384,6 +390,11 @@ function DayModal({
                       </TableCell>
                       <TableCell className="text-right tabular-nums">
                         {formatNumber(totals.sales)}
+                        {totals.lateSales > 0 ? (
+                          <span className="ml-1 text-xs font-normal text-amber-700">
+                            ({formatNumber(totals.lateSales)} late)
+                          </span>
+                        ) : null}
                       </TableCell>
                     </TableRow>
                   </TableBody>

@@ -57,8 +57,8 @@ ISO timestamps). The file is named `campaigns-<date>.csv`.
 
 - **View** opens the campaign page.
 - **Duplicate** creates a new draft called "Copy of …" with the same lists, sender id group,
-  ad texts, tracked links, test size and contact-reuse setting, and opens it. Routes are picked
-  again in the send form, and nothing is sent until you press **Send**.
+  ad texts, tracked links, routes, test size and contact-reuse setting, and opens it. Change
+  whatever needs changing on the copy; nothing is sent until you press **Send**.
 - **Delete** removes a campaign that is still a draft. Campaigns that have sent cannot be
   deleted, so their history stays on the books.
 

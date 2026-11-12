@@ -21,6 +21,10 @@ number on the right is how many can still be sent to. **+ Create Segment** opens
 
 ## Routes tab
 
+The routes you pick are saved on the campaign straight away, in the order you pick them, so
+they are still picked when you come back to it, and **Duplicate** copies them. Only routes
+your organisation can use for the campaign's country are kept.
+
 Under the route picker, **{Country} Routes Performance** shows two tables, each switchable
 between Daily, Weekly and Monthly: **Platform Statistics** ranks every platform route for the
 country by CTR, by cost per click and overall, pooled across all accounts on the platform

@@ -149,6 +149,27 @@ export const campaignLists = pgTable(
   (t) => [primaryKey({ columns: [t.campaignId, t.listId] })],
 );
 
+/**
+ * The routes picked on a campaign's send form, in the order they were picked (D4-09), so the
+ * choice is still there when the campaign is opened again and a duplicate keeps it.
+ */
+export const campaignRoutes = pgTable(
+  "campaign_routes",
+  {
+    campaignId: uuid("campaign_id")
+      .notNull()
+      .references(() => campaigns.id, { onDelete: "cascade" }),
+    routeId: uuid("route_id")
+      .notNull()
+      .references(() => routes.id, { onDelete: "cascade" }),
+    organisationId: uuid("organisation_id")
+      .notNull()
+      .references(() => organisations.id, { onDelete: "cascade" }),
+    position: integer("position").notNull().default(0),
+  },
+  (t) => [primaryKey({ columns: [t.campaignId, t.routeId] })],
+);
+
 /** A campaign sends from exactly one sender id group. */
 export const campaignSidGroup = pgTable("campaign_sid_group", {
   campaignId: uuid("campaign_id")

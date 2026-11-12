@@ -156,6 +156,8 @@ export interface CampaignView {
   adTexts: AdTextView[];
   links: CampaignLinkView[];
   laps: LapView[];
+  /** Routes saved on the send form, in the order they were picked (D4-09). */
+  routeIds: string[];
 }
 
 export interface PlannedLapView {

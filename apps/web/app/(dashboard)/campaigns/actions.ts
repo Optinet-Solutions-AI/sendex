@@ -34,6 +34,7 @@ import {
   rescheduleLap,
   setAllLapsOn,
   setCampaignLists,
+  setCampaignRoutes,
   setCampaignSegments,
   setCampaignSidGroup,
   setLapComment,
@@ -230,6 +231,17 @@ export async function setCampaignListsAction(input: unknown): Promise<ActionResu
     const data = setListsInput.parse(input);
     await setCampaignLists(db(), ctx.organisationId, data.campaignId, data.listIds);
     revalidateCampaign(data.campaignId);
+    return null;
+  });
+}
+
+const setRoutesInput = campaignRef.extend({ routeIds: z.array(uuid).max(50) });
+
+/** Save the routes picked on the send form (D4-09); unusable routes are dropped by the helper. */
+export async function setCampaignRoutesAction(input: unknown): Promise<ActionResult<null>> {
+  return run("campaign.create", async (ctx) => {
+    const data = setRoutesInput.parse(input);
+    await setCampaignRoutes(db(), ctx.organisationId, data.campaignId, data.routeIds);
     return null;
   });
 }

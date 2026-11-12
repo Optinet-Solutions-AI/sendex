@@ -3,6 +3,7 @@
 import { Button, ConfirmDialog, useToast } from "@sendex/ui";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { useReauthAction } from "../../../../lib/use-reauth-action";
 import { rotatePostbackSecretAction } from "./actions";
 
 /** Owner-only: replaces the postback secret after confirmation (and a recent sign-in). */
@@ -10,6 +11,7 @@ export function RotateSecretButton() {
   const [open, setOpen] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
+  const rotateSecret = useReauthAction(rotatePostbackSecretAction);
   return (
     <>
       <Button variant="outline" onClick={() => setOpen(true)} data-testid="rotate-secret">
@@ -23,7 +25,7 @@ export function RotateSecretButton() {
         confirmLabel="Rotate secret"
         destructive
         onConfirm={async () => {
-          const result = await rotatePostbackSecretAction();
+          const result = await rotateSecret();
           if (!result.ok) throw new Error(result.error);
           toast({
             title: "Postback secret rotated",

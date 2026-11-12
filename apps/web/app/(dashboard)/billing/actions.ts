@@ -17,7 +17,7 @@ import {
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { AuthError, requireAction } from "../../../lib/auth";
-import { assertRecentAuth } from "../../../lib/reauth";
+import { type ReauthHint, ReauthRequired, requireRecentAuth } from "../../../lib/reauth";
 
 /**
  * Server actions of the billing screens. Each resolves the tenant with `requireAction`,
@@ -27,10 +27,12 @@ import { assertRecentAuth } from "../../../lib/reauth";
  */
 export type ActionResult<T> = { ok: true; data: T } | { ok: false; error: string };
 
-async function run<T>(fn: () => Promise<T>): Promise<ActionResult<T>> {
+async function run<T>(fn: () => Promise<T>): Promise<ActionResult<T> | ReauthHint> {
   try {
     return { ok: true, data: await fn() };
   } catch (error) {
+    // A stale sign-in: hand Clerk's hint back so the form can prompt for the password.
+    if (error instanceof ReauthRequired) return error.hint;
     if (error instanceof AuthError) return { ok: false, error: error.message };
     if (error instanceof DuplicateDepositError) return { ok: false, error: error.message };
     if (error instanceof z.ZodError) {
@@ -55,10 +57,10 @@ export interface DepositResult {
  */
 export async function recordDepositAction(
   input: DepositFormInput,
-): Promise<ActionResult<DepositResult>> {
+): Promise<ActionResult<DepositResult> | ReauthHint> {
   return run(async () => {
     const ctx = await requireAction("balance.deposit");
-    await assertRecentAuth();
+    await requireRecentAuth();
     const deposit = depositSchema.parse(input);
     const database = db();
     const entry = await recordDeposit(database, ctx.organisationId, {
@@ -90,7 +92,8 @@ export async function recordDepositAction(
 export async function updateBillingSettingsAction(
   input: BillingSettingsFormInput,
 ): Promise<ActionResult<{ saved: true }>> {
-  return run(async () => {
+  // No recent sign-in is asked here, so `run` never returns a hint for this action.
+  return (await run(async () => {
     const ctx = await requireAction("settings.manage");
     const settings = billingSettingsSchema.parse(input);
     const database = db();
@@ -110,5 +113,5 @@ export async function updateBillingSettingsAction(
     });
     revalidatePath("/settings/billing");
     return { saved: true as const };
-  });
+  })) as ActionResult<{ saved: true }>;
 }

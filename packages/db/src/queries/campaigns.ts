@@ -996,9 +996,11 @@ export async function setCampaignRoutes(
   await db.transaction(async (tx) => {
     await tx.delete(campaignRoutes).where(eq(campaignRoutes.campaignId, campaignId));
     if (kept.length > 0) {
-      await tx.insert(campaignRoutes).values(
-        kept.map((routeId, position) => ({ campaignId, routeId, organisationId, position })),
-      );
+      await tx
+        .insert(campaignRoutes)
+        .values(
+          kept.map((routeId, position) => ({ campaignId, routeId, organisationId, position })),
+        );
     }
   });
   await touch(db, campaignId);

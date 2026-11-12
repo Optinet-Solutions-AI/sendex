@@ -1,6 +1,12 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createTestDb, seedOrganisation, type TestDb } from "../test/db.js";
-import { getSettings, markLowBalanceAlerted, updateSettings } from "./settings.js";
+import {
+  getSendingHours,
+  getSettings,
+  markLowBalanceAlerted,
+  updateSendingHours,
+  updateSettings,
+} from "./settings.js";
 
 let t: TestDb;
 let orgA: string;
@@ -70,5 +76,44 @@ describe("organisation settings", () => {
         dailySpendCapMicro: null,
       }),
     ).rejects.toThrow(/five/i);
+  });
+});
+
+// D4-14: suggested sending hours, a default window plus per-country windows.
+describe("sending hours", () => {
+  const hours = {
+    default: { from: "09:00", to: "20:00" },
+    countries: { ES: { from: "10:00", to: "21:00" } },
+  };
+
+  it("are empty until someone saves them", async () => {
+    expect(await getSendingHours(t.db, orgB)).toEqual({ default: null, countries: {} });
+  });
+
+  it("are saved per organisation and replaced on the next save", async () => {
+    await updateSendingHours(t.db, orgB, hours);
+    expect(await getSendingHours(t.db, orgB)).toEqual(hours);
+    expect(await getSendingHours(t.db, orgA)).toEqual({ default: null, countries: {} });
+    await updateSendingHours(t.db, orgB, { default: null, countries: {} });
+    expect(await getSendingHours(t.db, orgB)).toEqual({ default: null, countries: {} });
+  });
+
+  it("leave the billing settings alone, and the other way round", async () => {
+    await updateSendingHours(t.db, orgA, hours);
+    await updateSettings(t.db, orgA, {
+      lowBalanceThresholdMicro: 5_000_000n,
+      lowBalanceEmails: [],
+      dailyMessageCap: 100,
+      dailySpendCapMicro: null,
+    });
+    expect(await getSendingHours(t.db, orgA)).toEqual(hours);
+    await updateSendingHours(t.db, orgA, { default: null, countries: {} });
+    expect((await getSettings(t.db, orgA)).dailyMessageCap).toBe(100);
+  });
+
+  it("refuses hours that do not validate", async () => {
+    await expect(
+      updateSendingHours(t.db, orgA, { default: { from: "20:00", to: "09:00" }, countries: {} }),
+    ).rejects.toThrow();
   });
 });

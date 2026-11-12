@@ -4,6 +4,7 @@ import {
   POSTBACKS_PAGE_SIZE,
   parsePostbacksQuery,
   postbackDateBounds,
+  postbackTimingFilter,
   postbackTypeFilter,
   type SearchParams,
 } from "../../../../lib/postbacks-params";
@@ -29,6 +30,7 @@ export default async function PostbacksReportPage({
   const bounds = postbackDateBounds(query);
   const result = await listPostbacks(db(), organisationId, {
     type: postbackTypeFilter(query),
+    timing: postbackTimingFilter(query),
     from: bounds.from,
     to: bounds.to,
     search: query.search,
@@ -45,6 +47,9 @@ export default async function PostbacksReportPage({
     valueMicro: r.valueMicro === null ? null : Number(r.valueMicro),
     params: r.params,
     receivedAt: r.receivedAt.toISOString(),
+    messageSentAt: r.messageSentAt === null ? null : r.messageSentAt.toISOString(),
+    timing: r.timing,
+    daysLater: r.daysLater,
   }));
   return (
     <PostbacksTable rows={rows} total={result.total} pageSize={POSTBACKS_PAGE_SIZE} query={query} />

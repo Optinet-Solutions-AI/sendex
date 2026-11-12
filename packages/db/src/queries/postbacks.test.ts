@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { adTexts, campaigns, contacts, laps, lists, messages, routes } from "../schema/index.js";
 import { createTestDb, seedOrganisation, type TestDb } from "../test/db.js";
@@ -310,6 +310,50 @@ describe("listPostbacks", () => {
   });
 });
 
+// D4-12: every attributed conversion says when its SMS went out and whether it came the same
+// UTC day or later.
+describe("listPostbacks timing", () => {
+  beforeAll(async () => {
+    await t.db
+      .update(messages)
+      .set({ sentAt: at("2026-11-07T08:00:00Z") })
+      .where(inArray(messages.id, [messageIds.d3 ?? "", messageIds.d5 ?? ""]));
+    await t.db
+      .update(messages)
+      .set({ sentAt: at("2026-11-06T09:00:00Z") })
+      .where(eq(messages.id, messageIds.d1 ?? ""));
+  });
+
+  it("marks same-day and late conversions and leaves unattributed ones unmarked", async () => {
+    const page = await listPostbacks(t.db, org, { page: 1, pageSize: 10 });
+    const byKey = Object.fromEntries(page.rows.map((r) => [r.eventKey, r]));
+    expect(byKey.lead_d3).toMatchObject({
+      messageSentAt: at("2026-11-07T08:00:00Z"),
+      timing: "same_day",
+      daysLater: 0,
+    });
+    expect(byKey.sale_d5).toMatchObject({
+      messageSentAt: at("2026-11-07T08:00:00Z"),
+      timing: "late",
+      daysLater: 1,
+    });
+    expect(byKey.lead_unknown).toMatchObject({
+      messageSentAt: null,
+      timing: null,
+      daysLater: null,
+    });
+  });
+
+  it("filters by timing", async () => {
+    const late = await listPostbacks(t.db, org, { timing: "late", page: 1, pageSize: 10 });
+    expect(late.rows.map((r) => r.eventKey)).toEqual(["sale_d5"]);
+    expect(late.total).toBe(1);
+    const same = await listPostbacks(t.db, org, { timing: "same_day", page: 1, pageSize: 10 });
+    expect(same.rows.map((r) => r.eventKey)).toEqual(["lead_d3", "sale_d1", "lead_d1"]);
+    expect(same.total).toBe(3);
+  });
+});
+
 describe("repeat deposits", () => {
   it("count once: a second sale on the same message adds its value but not a sale", async () => {
     const repeat = await insertPostback(t.db, org, {
@@ -345,6 +389,10 @@ describe("conversionStats", () => {
       cplMicro: 80_000,
       cpsMicro: 80_000,
     });
+
+    // D4-12: both sign-ups came the day of their SMS; the d5 first deposit came a day later.
+    // The repeat deposit on d1 is not a sale, so it is not a late one either.
+    expect(stats.timing).toEqual({ lateLeads: 0, lateSales: 1 });
 
     expect(stats.laps.map((l) => [l.key, l.sent, l.leads, l.sales, l.revenueMicro])).toEqual([
       [lap1, 4, 2, 1, 13_000_000],

@@ -3,7 +3,7 @@
 import { db, recordAudit, rotatePostbackKey } from "@sendex/db";
 import { revalidatePath } from "next/cache";
 import { AuthError, requireAction } from "../../../../lib/auth";
-import { assertRecentAuth } from "../../../../lib/reauth";
+import { type ReauthHint, ReauthRequired, requireRecentAuth } from "../../../../lib/reauth";
 
 export type ActionResult<T> = { ok: true; data: T } | { ok: false; error: string };
 
@@ -12,10 +12,12 @@ export type ActionResult<T> = { ok: true; data: T } | { ok: false; error: string
  * tracker stops working until it is given the new secret, so this must not be casual), and
  * written to the audit log. The secret itself never goes into the audit row.
  */
-export async function rotatePostbackSecretAction(): Promise<ActionResult<{ rotatedAt: string }>> {
+export async function rotatePostbackSecretAction(): Promise<
+  ActionResult<{ rotatedAt: string }> | ReauthHint
+> {
   try {
     const ctx = await requireAction("settings.manage");
-    await assertRecentAuth();
+    await requireRecentAuth();
     const key = await rotatePostbackKey(db(), ctx.organisationId);
     await recordAudit(db(), ctx.organisationId, {
       actorUserId: ctx.userId,
@@ -27,6 +29,8 @@ export async function rotatePostbackSecretAction(): Promise<ActionResult<{ rotat
     revalidatePath("/settings/postbacks");
     return { ok: true, data: { rotatedAt: key.rotatedAt?.toISOString() ?? "" } };
   } catch (error) {
+    // A stale sign-in: hand Clerk's hint back so the button can prompt for the password.
+    if (error instanceof ReauthRequired) return error.hint;
     if (error instanceof AuthError) return { ok: false, error: error.message };
     console.error("rotate postback secret failed", error instanceof Error ? error.message : error);
     return { ok: false, error: "Something went wrong. Please try again." };

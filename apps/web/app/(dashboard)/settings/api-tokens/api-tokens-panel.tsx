@@ -22,6 +22,7 @@ import {
 import { useRouter } from "next/navigation";
 import { type FormEvent, useState, useTransition } from "react";
 import { formatDateTime } from "../../../../lib/format";
+import { useReauthAction } from "../../../../lib/use-reauth-action";
 import { type CreatedApiTokenView, createApiTokenAction, revokeApiTokenAction } from "./actions";
 
 export interface ApiTokenView {
@@ -55,6 +56,9 @@ export function ApiTokensPanel({
   const [pending, startTransition] = useTransition();
   const [revealed, setRevealed] = useState<CreatedApiTokenView | null>(null);
   const [revoking, setRevoking] = useState<ApiTokenView | null>(null);
+  // Both need a recent sign-in; Clerk asks for the password in place when it is stale (D4-15).
+  const createApiToken = useReauthAction(createApiTokenAction);
+  const revokeApiToken = useReauthAction(revokeApiTokenAction);
 
   function toggleScope(scope: ApiTokenScope, on: boolean) {
     setScopes((current) =>
@@ -66,7 +70,7 @@ export function ApiTokensPanel({
     event.preventDefault();
     setError(null);
     startTransition(async () => {
-      const result = await createApiTokenAction({ name, scopes });
+      const result = await createApiToken({ name, scopes });
       if (!result.ok) {
         setError(result.error);
         return;
@@ -252,7 +256,7 @@ export function ApiTokensPanel({
         destructive
         onConfirm={async () => {
           if (!revoking) return;
-          const result = await revokeApiTokenAction({ id: revoking.id });
+          const result = await revokeApiToken({ id: revoking.id });
           if (!result.ok) throw new Error(result.error);
           toast({ title: "Token revoked", variant: "success" });
           router.refresh();

@@ -5,6 +5,7 @@ import { csvLine } from "../../../../../lib/csv";
 import {
   parsePostbacksQuery,
   postbackDateBounds,
+  postbackTimingFilter,
   postbackTypeFilter,
   type SearchParams,
 } from "../../../../../lib/postbacks-params";
@@ -19,9 +20,12 @@ const HEADER = [
   "Value (EUR)",
   "Parameters",
   "Received",
+  "SMS sent",
+  "Timing",
+  "Days later",
 ] as const;
 
-/** Streams the postback log as CSV with the same type, period and search as the page. */
+/** Streams the postback log as CSV with the same type, timing, period and search as the page. */
 export async function GET(request: NextRequest): Promise<Response> {
   let organisationId: string;
   try {
@@ -45,6 +49,7 @@ export async function GET(request: NextRequest): Promise<Response> {
         for (;;) {
           const { rows } = await listPostbacks(db(), organisationId, {
             type: postbackTypeFilter(query),
+            timing: postbackTimingFilter(query),
             from: bounds.from,
             to: bounds.to,
             search: query.search,
@@ -62,6 +67,9 @@ export async function GET(request: NextRequest): Promise<Response> {
                   row.valueMicro === null ? null : (Number(row.valueMicro) / 1_000_000).toFixed(2),
                   JSON.stringify(row.params),
                   row.receivedAt,
+                  row.messageSentAt,
+                  row.timing === null ? "" : row.timing === "late" ? "late" : "same day",
+                  row.daysLater,
                 ]),
               ),
             );

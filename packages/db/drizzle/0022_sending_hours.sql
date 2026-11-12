@@ -1,0 +1,1 @@
+ALTER TABLE "organisation_settings" ADD COLUMN "sending_hours" jsonb DEFAULT '{"default":null,"countries":{}}'::jsonb NOT NULL;

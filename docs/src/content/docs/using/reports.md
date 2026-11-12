@@ -5,8 +5,17 @@ description: The Campaigns Log, the Send Calendar and the Postback Logs under Ca
 
 Three reports sit under **Campaigns › Reports**. All of them count in UTC days, the way every
 date in Sendex is counted, and a message is "sent" once the carrier accepted it (the same
-rule as the campaign page). A lead or sale counts on the day its message was sent, so every
-row reconciles with its own sends.
+rule as the campaign page).
+
+## Same-day and late conversions
+
+A sign-up or deposit is **same day** when it arrives on the UTC day its SMS was sent, and
+**late** from the next UTC day on (an SMS at 23:50 and a deposit at 00:10 is one day late).
+
+- A **lead** (sign-up) counts on the day its SMS was sent.
+- A **sale** is a first deposit and counts on the day it was **made**. A past day's sales
+  therefore never change afterwards, and a deposit that comes days after the SMS shows on its
+  own day, marked late.
 
 ## Campaigns Log
 
@@ -17,13 +26,17 @@ list and route.
   narrows to one or more countries. The count on the right ("72 rows") and **↻ Refresh**
   re-read the log.
 - The **KPI strip** totals the filtered log: SENT, CLICKS, CTR, SPEND, CPC (to four
-  decimals, "—" without clicks) and LEADS / SALES.
+  decimals, "—" without clicks), LEADS / SALES and LATE SALES (the part of the sales whose
+  SMS went out on an earlier day).
 - One **row per day × campaign × country × list × route**, newest day first and busiest
   first within a day: Date, Campaign (a link), Country, List, Route, Sent, Spend, CTR,
   Clicks, CPC, Leads, Sales. Spend is the ledger debit of those messages. Sends that have no
   campaign show "(API / no campaign)" and "—" for the list.
-- **Export CSV** downloads the whole filtered log; the page shows 50 rows at a time ("Page 1
-  of 2").
+- **Sales** are the first deposits made that day; "(2 late)" beside the number says how many
+  came from an SMS sent on an earlier day. A late deposit on a day the campaign sent nothing
+  gets its own row with Sent 0.
+- **Export CSV** downloads the whole filtered log, with a **Late sales** column; the page
+  shows 50 rows at a time ("Page 1 of 2").
 
 ## Send Calendar
 
@@ -40,7 +53,9 @@ list and route.
   below; the week view lists every country. Hover a line for "Poland — 2,000 sent, 47 clicks
   (2.35%), 1 campaign"; click it for the **day modal**: the campaigns that sent to that
   country that day, with the account that created each one, Sent, Clicks, CTR, Leads, Sales
-  and a TOTAL row. The campaign name links to the campaign.
+  and a TOTAL row. The campaign name links to the campaign. Sales follow the Campaigns Log:
+  the first deposits made that day, with "(1 late)" for those from an earlier SMS, so a
+  campaign with a late deposit is listed even if it sent nothing that day.
 - Under the grid, **Scheduled sends** lists what is queued for the next 30 days, per day in
   each campaign's own timezone.
 
@@ -48,14 +63,17 @@ list and route.
 
 **Campaigns › Reports › Postback Logs** lists every lead and sale your tracker reported.
 
-- Filters: search by event key (or dynamic id), **All events | Leads | Sales**, **All time |
-  Today | 7 days | 30 days | 90 days** or a date range, and **✕ Reset** once anything is
-  set. The count ("204 events") sits on the right.
+- Filters: search by event key (or dynamic id), **All events | Leads | Sales**, **Any timing |
+  Same day | Late**, **All time | Today | 7 days | 30 days | 90 days** or a date range, and
+  **✕ Reset** once anything is set. The count ("204 events") sits on the right.
 - Columns: Event Key (monospace), Type (green **Sale**, grey **Lead**), Campaign (name and
   dynamic id), Parameters ("No extra parameters" when the tracker sent nothing else),
-  Received (date, with the time lighter) and ⌄ to expand the row: dynamic id, value, the
-  full timestamp and every parameter.
-- **Postback URL** opens Settings › Postbacks; **Export CSV** carries the same filters.
+  Received (date, with the time lighter), Timing (grey **Same day** or amber **Late · 3
+  days**; hover for the day the SMS was sent; "—" for an event that matched no message) and
+  ⌄ to expand the row: dynamic id, value, the full timestamp, when the SMS was sent and
+  every parameter.
+- **Postback URL** opens Settings › Postbacks; **Export CSV** carries the same filters and
+  adds SMS sent, Timing and Days later.
   Pages hold 50 events ("Page 1 of 5").
 
 ## How the figures are computed

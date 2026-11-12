@@ -109,7 +109,9 @@ top-ups; flushing needs the list flush permission.
   messages that carried none), how many messages went out with it, how many were clicked and
   the CTR.
 - **Conversions**: leads and sales per sender id and per ad text; see
-  [Track conversions](/using/track-conversions/).
+  [Track conversions](/using/track-conversions/). Under the Leads and Sales totals, "3 same
+  day · 1 late" says how many came on the UTC day their SMS was sent and how many on a later
+  day ([Same-day and late conversions](/using/reports/#same-day-and-late-conversions)).
 
 ## Checking a number
 

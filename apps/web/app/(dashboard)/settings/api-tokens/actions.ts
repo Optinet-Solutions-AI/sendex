@@ -5,7 +5,7 @@ import { createApiToken, db, recordAudit, revokeApiToken } from "@sendex/db";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { AuthError, requireAction } from "../../../../lib/auth";
-import { assertRecentAuth } from "../../../../lib/reauth";
+import { type ReauthHint, ReauthRequired, requireRecentAuth } from "../../../../lib/reauth";
 
 export type ActionResult<T> = { ok: true; data: T } | { ok: false; error: string };
 
@@ -21,10 +21,12 @@ export interface CreatedApiTokenView {
 /** A refusal with a message safe to show the user. */
 class ActionFailure extends Error {}
 
-async function run<T>(fn: () => Promise<T>): Promise<ActionResult<T>> {
+async function run<T>(fn: () => Promise<T>): Promise<ActionResult<T> | ReauthHint> {
   try {
     return { ok: true, data: await fn() };
   } catch (error) {
+    // A stale sign-in: hand Clerk's hint back so the form can prompt for the password.
+    if (error instanceof ReauthRequired) return error.hint;
     if (error instanceof AuthError || error instanceof ActionFailure) {
       return { ok: false, error: error.message };
     }
@@ -42,10 +44,10 @@ async function run<T>(fn: () => Promise<T>): Promise<ActionResult<T>> {
  */
 export async function createApiTokenAction(
   input: unknown,
-): Promise<ActionResult<CreatedApiTokenView>> {
+): Promise<ActionResult<CreatedApiTokenView> | ReauthHint> {
   return run(async () => {
     const ctx = await requireAction("settings.manage");
-    await assertRecentAuth();
+    await requireRecentAuth();
     const data = newApiTokenSchema.parse(input);
     const database = db();
     const created = await createApiToken(database, ctx.organisationId, {
@@ -74,10 +76,12 @@ export async function createApiTokenAction(
 const revokeInput = z.object({ id: z.uuid() });
 
 /** Revoke a token: the next API call with it answers 401. Owner only, audited. */
-export async function revokeApiTokenAction(input: unknown): Promise<ActionResult<null>> {
+export async function revokeApiTokenAction(
+  input: unknown,
+): Promise<ActionResult<null> | ReauthHint> {
   return run(async () => {
     const ctx = await requireAction("settings.manage");
-    await assertRecentAuth();
+    await requireRecentAuth();
     const { id } = revokeInput.parse(input);
     const database = db();
     const row = await revokeApiToken(database, ctx.organisationId, id);

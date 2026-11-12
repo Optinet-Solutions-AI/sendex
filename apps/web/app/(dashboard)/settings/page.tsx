@@ -35,6 +35,13 @@ export default function SettingsPage() {
             >
               Billing: low balance alert and daily caps
             </Link>
+            <Link
+              href="/settings/sending-hours"
+              data-testid="sending-hours-link"
+              className="inline-flex h-9 items-center rounded-md border border-neutral-300 bg-white px-4 text-sm font-medium hover:bg-neutral-100"
+            >
+              Suggested sending hours
+            </Link>
             {can(ctx.role, "emergency.stop") ? (
               <Link
                 href="/settings/emergency-stop"

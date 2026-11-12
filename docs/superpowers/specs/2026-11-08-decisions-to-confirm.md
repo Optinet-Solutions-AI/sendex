@@ -80,7 +80,7 @@ Every question is based on one of three sources, named after it:
   *SMS Edge: Countries tab utilisation map; Ours: the badge and the 50% line.*
   **Answer (2026-11-12):** "this is niot a section i use reffer to our dashboard - https://sms-edge.vercel.app/ there are many reasons a list is under used and that could be due to low engagment results sms edge i guess judges it based on used or not the logic for us is more accurate in the dashboard"
   *What it means for Sendex:* The Under-worked badge and its 50% line are our own invention, and the team does not use it.
-  *Next:* Get access to https://sms-edge.vercel.app/ and copy its logic. Until then, consider removing the badge.
+  *Next:* Decide whether to keep the badge: the team judges under-use outside SMS Edge's Countries tab, so it may not be needed.
 
 ### Numbers and lists
 
@@ -220,6 +220,6 @@ Every question is based on one of three sources, named after it:
   - our own link domains, chosen per campaign (item 32);
   - a yellow, non-blocking "outside suggested sending hours" notice per country (item 34);
   - later: permission switches per person (item 42); possibly a button to remove routes with zero clicks (item 27).
-- To confirm before building: resending a list after a number of days, 3 by default (item 25); the default for duplicates on upload (item 24); removing the Under-worked badge in favour of the logic in https://sms-edge.vercel.app/ (item 19).
+- To confirm before building: resending a list after a number of days, 3 by default (item 25); the default for duplicates on upload (item 24); whether to keep the Under-worked badge (item 19).
 - To explain back: suspicious numbers (21), campaign numbers (36), the test-handset provider (45), why currency mattered (15). Item 43 (Monday's demo) is dropped; item 44 (23Telecom) is still unanswered.
 - Keep AutoSender's guessed numbers until the "Best route" answer comes back; consider switching it off meanwhile.

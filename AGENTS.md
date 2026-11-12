@@ -1,6 +1,6 @@
 # Sendex: instructions for coding agents
 
-Sendex is a bulk SMS marketing platform modelled on SMS Edge. It owns lists, campaigns, scheduling, click tracking, conversion tracking and billing, and rents SMS routes from providers (first: 23Telecom over SMPP). Version one is the five functions in the brief: upload lists by country, create campaigns (lists + sender ID + text with a tracked link), send through providers, schedule and manage sending, track sent / delivered / failed / clicks / registrations / sales.
+Sendex is a bulk SMS marketing platform modelled on SMS Edge. It owns lists, campaigns, scheduling, click tracking, conversion tracking and billing, and rents SMS routes from providers (first: 23Telecom over its REST API; SMPP was dropped for it on 2026-11-09, ADR 0007). Version one is the five functions in the brief: upload lists by country, create campaigns (lists + sender ID + text with a tracked link), send through providers, schedule and manage sending, track sent / delivered / failed / clicks / registrations / sales.
 
 Planning docs (read when a decision is unclear): meeting analysis, tech stack, first-version plan. Links are in the PMS project description. The PMS board (Sendex project) is the task list: every card is keyed `D1-xx`, `D2-xx`, `D3-xx` and names its branch.
 

@@ -35,6 +35,6 @@ interface Provider {
 
 | Adapter        | Transport                                 | Use                                                          |
 | -------------- | ----------------------------------------- | ------------------------------------------------------------ |
-| `SmppProvider` | SMPP 3.4 bind, `submit_sm` / `deliver_sm` | 23Telecom, the first production route.                       |
-| `HttpProvider` | HTTPS JSON with a webhook for receipts    | Carriers without SMPP.                                       |
+| `SmppProvider` | SMPP 3.4 bind, `submit_sm` / `deliver_sm` | Carriers reached over SMPP, including custom routes.         |
+| `HttpProvider` | HTTPS JSON with a webhook for receipts    | Carriers with a web API: 23Telecom, the first route.         |
 | `FakeProvider` | In memory                                 | Tests and local development; configurable failure injection. |

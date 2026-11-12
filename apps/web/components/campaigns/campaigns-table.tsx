@@ -24,6 +24,7 @@ import {
 } from "../../app/(dashboard)/campaigns/actions";
 import { type CampaignsQuery, campaignsQueryString } from "../../lib/campaigns-params";
 import { formatMicro, formatPercent, formatPeriod, shortId } from "./format";
+import { campaignStatusLabel } from "./status";
 import type { CampaignStatus, CampaignSummaryView } from "./types";
 import { ErrorText, inputClass } from "./ui";
 
@@ -36,23 +37,11 @@ const STATUSES: readonly CampaignStatus[] = [
   "completed",
 ];
 
-/** The spec shows one badge per campaign: Active while it can send, Paused, Done afterwards. */
-const STATUS_LABEL: Record<
-  CampaignStatus,
-  { label: string; variant: "active" | "warning" | "secondary" }
-> = {
-  draft: { label: "Active", variant: "active" },
-  scheduled: { label: "Active", variant: "active" },
-  sending: { label: "Active", variant: "active" },
-  paused: { label: "Paused", variant: "warning" },
-  stopped: { label: "Done", variant: "secondary" },
-  completed: { label: "Done", variant: "secondary" },
-};
-
+/** One badge per campaign, with its own label for every status (decisions item 35). */
 export function CampaignStatusBadge({ status }: { status: CampaignStatus }) {
-  const { label, variant } = STATUS_LABEL[status];
+  const { label, variant } = campaignStatusLabel(status);
   return (
-    <Badge variant={variant} data-status={status} title={status}>
+    <Badge variant={variant} data-status={status}>
       {label}
     </Badge>
   );
@@ -214,8 +203,8 @@ export function CampaignsTable({
           >
             <option value="">All statuses</option>
             {STATUSES.map((s) => (
-              <option key={s} value={s} className="capitalize">
-                {s}
+              <option key={s} value={s}>
+                {campaignStatusLabel(s).label}
               </option>
             ))}
           </select>

@@ -504,3 +504,34 @@ describe("listLists", () => {
     expect(remaining).toHaveLength(1);
   });
 });
+
+describe("importContacts: bad members actually added", () => {
+  it("counts bad members by reason, leaving out rows that were skipped", async () => {
+    const first = await importContacts(t.db, orgA, {
+      newList: { name: "Import_bad_counts", country: "ES" },
+      rows: [
+        { ...es(901), bad: true, badReason: "landline" },
+        { ...es(902), bad: true, badReason: "suspicious" },
+        es(903),
+      ],
+      duplicates: "allow",
+      flushAfterImport: false,
+    });
+    expect(first.imported).toBe(3);
+    expect(first.importedBad).toEqual({ landline: 1, suspicious: 1 });
+
+    // A later chunk repeats one bad number (already a member) and brings a new one.
+    const second = await importContacts(t.db, orgA, {
+      listId: first.listId,
+      rows: [
+        { ...es(901), bad: true, badReason: "landline" },
+        { ...es(904), bad: true, badReason: "landline" },
+      ],
+      duplicates: "allow",
+      flushAfterImport: false,
+    });
+    expect(second.imported).toBe(1);
+    expect(second.skippedExisting).toBe(1);
+    expect(second.importedBad).toEqual({ landline: 1, suspicious: 0 });
+  });
+});

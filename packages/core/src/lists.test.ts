@@ -17,6 +17,7 @@ import {
   parseCountryCell,
   totalDropped,
   UploadSettingsSchema,
+  UploadSummarySchema,
 } from "./lists.js";
 import { cleanBatch } from "./phone.js";
 
@@ -304,6 +305,7 @@ describe("drop counts", () => {
   it("starts at zero for every reason and sums a batch's drops", () => {
     expect(emptyDropCounts()).toEqual({
       invalid: 0,
+      damaged: 0,
       unparseable: 0,
       no_country: 0,
       landline: 0,
@@ -380,5 +382,26 @@ describe("cleanUploadRows with a country column", () => {
       ["+34612345678", "ES"],
       ["+34612345679", "ES"],
     ]);
+  });
+});
+
+describe("cleanUploadRows: a file re-saved by a spreadsheet", () => {
+  it("rejects the damaged cells with their own reason and keeps the good rows", () => {
+    const out = cleanUploadRows(
+      [{ phone: "4.91516E+12" }, { phone: "4.91516E+12" }, { phone: "4915155501234" }],
+      { defaultCountry: "DE", removeLandlines: true, keepBad: true },
+    );
+    expect(out.kept.map((k) => k.e164)).toEqual(["+4915155501234"]);
+    expect(out.kept[0]?.bad).toBeUndefined();
+    expect(out.summary.dropped.damaged).toBe(2);
+    expect(out.summary.duplicates).toBe(0);
+    expect(out.summary.addedBad).toEqual({ landline: 0, suspicious: 0 });
+    expect(out.summary.samples.rejected).toEqual(["4.91516E+12", "4.91516E+12"]);
+  });
+
+  it("reads a summary stored before the damaged reason existed", () => {
+    const { damaged: _damaged, ...oldDropped } = emptyDropCounts();
+    const parsed = UploadSummarySchema.parse({ ...emptyUploadSummary(), dropped: oldDropped });
+    expect(parsed.dropped.damaged).toBe(0);
   });
 });

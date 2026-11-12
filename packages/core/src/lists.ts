@@ -414,6 +414,7 @@ export function detectColumns(
 
 export const DROP_REASONS = [
   "invalid",
+  "damaged",
   "unparseable",
   "no_country",
   "landline",
@@ -427,6 +428,7 @@ export type DropCounts = Record<DropReason, number>;
 export function emptyDropCounts(): DropCounts {
   return {
     invalid: 0,
+    damaged: 0,
     unparseable: 0,
     no_country: 0,
     landline: 0,
@@ -444,6 +446,7 @@ export function countDrops(dropped: readonly DroppedNumber[]): DropCounts {
 
 export const DROP_REASON_LABELS: Record<DropReason, string> = {
   invalid: "Invalid",
+  damaged: "Damaged by a spreadsheet (like 4.9E+12)",
   unparseable: "Unparseable",
   no_country: "No country",
   landline: "Landline",
@@ -484,6 +487,8 @@ export const UploadSummarySchema = z.object({
   duplicates: z.number().int().nonnegative(),
   dropped: z.object({
     invalid: z.number().int().nonnegative(),
+    /** Absent from summaries stored before 2026-11-12. */
+    damaged: z.number().int().nonnegative().default(0),
     unparseable: z.number().int().nonnegative(),
     no_country: z.number().int().nonnegative(),
     landline: z.number().int().nonnegative(),

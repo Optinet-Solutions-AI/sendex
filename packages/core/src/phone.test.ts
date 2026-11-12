@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { cleanBatch, isSuspiciousPattern, logicalCheck, normalisePhone } from "./phone.js";
+import {
+  cleanBatch,
+  countSpreadsheetDamaged,
+  isSpreadsheetDamaged,
+  isSuspiciousPattern,
+  logicalCheck,
+  normalisePhone,
+} from "./phone.js";
 
 describe("normalisePhone", () => {
   it("parses an E.164 number as-is", () => {
@@ -522,5 +529,88 @@ describe("isSuspiciousPattern", () => {
     expect(isSuspiciousPattern("+34622000001")).toBe(false);
     expect(isSuspiciousPattern("+447700900123")).toBe(false);
     expect(isSuspiciousPattern("+35699001122")).toBe(false);
+  });
+});
+
+describe("normalisePhone: country code without a plus, with a list country", () => {
+  it("reads a German mobile that starts with 49 as +49…, not as a local landline", () => {
+    // SMS Edge exports write numbers as 4915123456789. Read as a local German number it
+    // passes as a landline (+49 4915123456789), which flagged a whole file Bad.
+    expect(normalisePhone("4915123456789", "DE")).toMatchObject({
+      ok: true,
+      e164: "+4915123456789",
+      country: "DE",
+      type: "MOBILE",
+    });
+  });
+
+  it("gives the same number for every way of writing it", () => {
+    for (const raw of ["+4915123456789", "004915123456789", "015123456789", "15123456789"]) {
+      expect(normalisePhone(raw, "DE"), raw).toMatchObject({ ok: true, e164: "+4915123456789" });
+    }
+  });
+
+  it("reads a German landline that starts with 49 as +49…, too", () => {
+    expect(normalisePhone("4930123456", "DE")).toMatchObject({
+      ok: true,
+      e164: "+4930123456",
+      type: "FIXED_LINE",
+    });
+  });
+
+  it("does the same for Austria, whose plan is as loose as Germany's", () => {
+    expect(normalisePhone("436641234567", "AT")).toMatchObject({
+      ok: true,
+      e164: "+436641234567",
+      type: "MOBILE",
+    });
+  });
+
+  it("still reads a local number when the country-code reading is not a valid number", () => {
+    // +612345678 and +07424473269 are not numbers, so only the local reading is left.
+    expect(normalisePhone("612345678", "ES")).toMatchObject({ ok: true, e164: "+34612345678" });
+    expect(normalisePhone("07424473269", "GB")).toMatchObject({ ok: true, e164: "+447424473269" });
+  });
+
+  it("still accepts another country's number written without a plus", () => {
+    expect(normalisePhone("447424473269", "DE")).toMatchObject({
+      ok: true,
+      e164: "+447424473269",
+      country: "GB",
+    });
+  });
+});
+
+describe("normalisePhone: numbers cut short by a spreadsheet", () => {
+  it("rejects scientific notation as damaged instead of reading its digits", () => {
+    for (const raw of [
+      "4.91516E+12",
+      "4.9175E+11",
+      "4,91516E+12",
+      "4.91516e+12",
+      " 4.91516E12 ",
+      "5E+11",
+    ]) {
+      expect(normalisePhone(raw, "DE"), raw).toEqual({ ok: false, reason: "damaged" });
+      expect(isSpreadsheetDamaged(raw), raw).toBe(true);
+    }
+  });
+
+  it("does not call ordinary numbers damaged", () => {
+    for (const raw of [
+      "4915123456789",
+      "+49 151 2345 6789",
+      "0151-23456789",
+      "abc",
+      "",
+      "1.5",
+      "E+12",
+    ]) {
+      expect(isSpreadsheetDamaged(raw), raw).toBe(false);
+    }
+  });
+
+  it("counts damaged cells in a column", () => {
+    expect(countSpreadsheetDamaged(["4.91516E+12", "4915123456789", "4.9175E+11", ""])).toBe(2);
   });
 });

@@ -46,6 +46,7 @@ test.describe("campaign control", () => {
     await expect(dialog).toContainText("10 contacts");
     await dialog.getByTestId("confirm-stop").click();
     await expect(headerStatus(page)).toHaveAttribute("data-status", "stopped");
+    await expect(headerStatus(page)).toHaveText("Stopped");
     await expect(page.getByTestId("lap-row").first()).toHaveAttribute(
       "data-lap-status",
       "cancelled",
@@ -96,6 +97,7 @@ test.describe("campaign control", () => {
     await expect(dialog).toBeVisible();
     await dialog.getByTestId("confirm-cancel-schedule").click();
     await expect(headerStatus(page)).toHaveAttribute("data-status", "draft");
+    await expect(headerStatus(page)).toHaveText("Draft");
     await expect(page.getByTestId("lap-row").first()).toHaveAttribute(
       "data-lap-status",
       "cancelled",

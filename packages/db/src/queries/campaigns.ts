@@ -1,5 +1,6 @@
 import {
   analyseSmsText,
+  type CampaignSort,
   campaignMessageParts,
   type NewCampaign,
   type PlannedLap,
@@ -107,6 +108,9 @@ export interface ListCampaignsInput {
   page: number;
   /** Defaults to `CAMPAIGN_PAGE_SIZE`; the CSV export walks larger pages. */
   pageSize?: number;
+  /** Sort column; newest first (`created`, `desc`) when absent. */
+  sort?: CampaignSort;
+  dir?: "asc" | "desc";
 }
 
 export interface CampaignSummary {
@@ -135,7 +139,7 @@ export interface CampaignPage {
   pageSize: number;
 }
 
-/** Campaigns of the organisation with lap aggregates, newest first, paginated. */
+/** Campaigns of the organisation with lap aggregates, newest first unless sorted, paginated. */
 export async function listCampaigns(
   db: Db,
   organisationId: string,
@@ -195,6 +199,24 @@ export async function listCampaigns(
   if (input.to) conditions.push(sql`${periodStart} < ${input.to.toISOString()}::timestamptz`);
   const filtered = and(...conditions);
 
+  const sentSum = sql`coalesce(${agg.sent}, 0)`;
+  const sortExpr: Record<CampaignSort, SQL> = {
+    name: sql`lower(${campaigns.name})`,
+    status: sql`${campaigns.status}`,
+    country: sql`${campaigns.country}`,
+    laps: sql`coalesce(${agg.lapsCount}, 0)`,
+    sent: sentSum,
+    clicks: clicksSum,
+    ctr: sql`case when ${sentSum} > 0 then ${clicksSum}::float8 / ${sentSum} else 0 end`,
+    cost: costSum,
+    leads: leadsSum,
+    sales: salesSum,
+    period: periodStart,
+    created: sql`${campaigns.createdAt}`,
+  };
+  const sortBy = sortExpr[input.sort ?? "created"];
+  const primary = (input.dir ?? "desc") === "asc" ? asc(sortBy) : desc(sortBy);
+
   const page = Math.max(1, Math.floor(input.page));
   const pageSize = Math.max(1, Math.floor(input.pageSize ?? CAMPAIGN_PAGE_SIZE));
   const rows = await db
@@ -217,7 +239,7 @@ export async function listCampaigns(
     .from(campaigns)
     .leftJoin(agg, eq(agg.campaignId, campaigns.id))
     .where(filtered)
-    .orderBy(desc(campaigns.createdAt), desc(campaigns.id))
+    .orderBy(primary, desc(campaigns.createdAt), desc(campaigns.id))
     .limit(pageSize)
     .offset((page - 1) * pageSize);
 

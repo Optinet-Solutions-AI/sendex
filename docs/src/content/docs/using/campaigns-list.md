@@ -12,7 +12,7 @@ page, with the totals of its laps.
 | --- | --- |
 | **ID** | The first block of the campaign's id; hover for the full id. |
 | **Campaign** | The name; click it to open the campaign. |
-| **Status** | `draft`, `scheduled`, `sending`, `paused`, `stopped` or `completed`. |
+| **Status** | A badge with its own label for each status: **Draft** (grey), **Scheduled** (outlined), **Sending** (green outline), **Paused** (amber), **Stopped** (red) or **Completed** (green). The campaign page and a list's Campaigns tab use the same badge. |
 | **Country** | The flag and country code the campaign sends to. |
 | **Laps** | How many laps (list × route sends) the campaign has queued or run. |
 | **Sent** | Messages the carrier accepted, over all laps. |
@@ -22,6 +22,14 @@ page, with the totals of its laps.
 | **Leads** / **Sales** | Conversions reported by your tracker's postbacks. |
 | **Period** | When the first lap started and the last one finished, in the campaign's timezone. "–" for a campaign that has not sent. |
 | **Actions** | A menu with **View**, **Duplicate** and **Delete**. |
+
+## Sorting
+
+Click a column header to sort by it: Campaign, Status, Country, Laps, Sent, Clicks, CTR, Cost,
+Leads, Sales or Period. Click it again to reverse the order. Names, statuses and countries sort A
+to Z first; numbers and the period sort largest or newest first. The sorted column shows ↓ or ↑
+and the others ↕. Without a sort the newest campaign is on top. The sort is kept in the page
+address with the filters, applies to **Export CSV** too, and sends you back to page 1.
 
 ## Filters
 

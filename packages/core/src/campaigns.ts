@@ -369,3 +369,24 @@ export const lapCommentSchema = z.object({
 export const lapScheduleSchema = z.object({
   scheduledAt: z.iso.datetime({ offset: true }),
 });
+
+/** Columns the campaigns table can be sorted by (D4-10). Shared by the URL parser and the query. */
+export const CAMPAIGN_SORTS = [
+  "name",
+  "status",
+  "country",
+  "laps",
+  "sent",
+  "clicks",
+  "ctr",
+  "cost",
+  "leads",
+  "sales",
+  "period",
+  "created",
+] as const;
+export type CampaignSort = (typeof CAMPAIGN_SORTS)[number];
+
+export function isCampaignSort(value: string): value is CampaignSort {
+  return (CAMPAIGN_SORTS as readonly string[]).includes(value);
+}

@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { auditLog, contacts, listMembers, lists, suppressions } from "../schema/index.js";
+import { auditLog, contacts, laps, listMembers, lists, suppressions } from "../schema/index.js";
 import { routePrices, routes } from "../schema/routes.js";
 import { createTestDb, seedOrganisation, type TestDb } from "../test/db.js";
 import { listAuditLog } from "./audit.js";
@@ -178,6 +178,65 @@ describe("createCampaign and listCampaigns", () => {
     const byStatus = await listCampaigns(t.db, orgA, { page: 1, status: "completed" });
     expect(byStatus.items).toEqual([]);
     expect(byStatus.total).toBe(0);
+  });
+});
+
+describe("listCampaigns sorting (D4-10)", () => {
+  // A separate organisation so the other tests' campaigns do not change the order.
+  let orgS: string;
+  const ids: Record<string, string> = {};
+
+  beforeAll(async () => {
+    orgS = await seedOrganisation(t.db, "org-sort");
+    const list = await seedList(orgS, "Sort list", "ES", "+34611000", 1);
+    // name, sent, clicks, cost (micro-EUR), sales
+    const rows: [string, number, number, bigint, number][] = [
+      ["Alpha", 100, 10, 5_000_000n, 1],
+      ["Bravo", 300, 3, 9_000_000n, 0],
+      ["Charlie", 200, 40, 1_000_000n, 4],
+    ];
+    for (const [name, sent, clicks, costMicro, sales] of rows) {
+      const c = await createCampaign(t.db, orgS, {
+        name,
+        country: "ES",
+        timezone: "Europe/Madrid",
+      });
+      ids[name] = c.id;
+      await t.db.insert(laps).values({
+        organisationId: orgS,
+        campaignId: c.id,
+        listId: list.id,
+        routeId: route405,
+        testSize: 1,
+        sent,
+        clicks,
+        costMicro,
+        sales,
+      });
+    }
+  });
+
+  const names = async (sort?: Parameters<typeof listCampaigns>[2]["sort"], dir?: "asc" | "desc") =>
+    (
+      await listCampaigns(t.db, orgS, {
+        page: 1,
+        ...(sort ? { sort } : {}),
+        ...(dir ? { dir } : {}),
+      })
+    ).items.map((c) => c.name);
+
+  it("keeps newest first when no sort is given", async () => {
+    expect(await names()).toEqual(["Charlie", "Bravo", "Alpha"]);
+  });
+
+  it("sorts by sent, CTR, cost, sales and name in either direction", async () => {
+    expect(await names("sent", "desc")).toEqual(["Bravo", "Charlie", "Alpha"]);
+    expect(await names("sent", "asc")).toEqual(["Alpha", "Charlie", "Bravo"]);
+    // CTR: Charlie 20%, Alpha 10%, Bravo 1%.
+    expect(await names("ctr", "desc")).toEqual(["Charlie", "Alpha", "Bravo"]);
+    expect(await names("cost", "desc")).toEqual(["Bravo", "Alpha", "Charlie"]);
+    expect(await names("sales", "desc")).toEqual(["Charlie", "Alpha", "Bravo"]);
+    expect(await names("name", "asc")).toEqual(["Alpha", "Bravo", "Charlie"]);
   });
 });
 

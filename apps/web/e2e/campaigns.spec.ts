@@ -140,6 +140,7 @@ test.describe("campaigns", () => {
     const row = page.getByTestId("campaign-row").filter({ hasText: name });
     await expect(row).toBeVisible();
     await expect(row.locator("[data-status]")).toHaveAttribute("data-status", "sending");
+    await expect(row.locator("[data-status]")).toHaveText("Sending");
     await expect(row.locator("td").nth(4)).toHaveText("2");
   });
 });

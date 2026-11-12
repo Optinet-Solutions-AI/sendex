@@ -2,7 +2,7 @@
 
 Account runbook for the first carrier. 23Telecom offers two ways in: a REST API (what we use first, provider key `23telecom`) and SMPP (provider key `smpp`, section below, pending account details and IP whitelisting).
 
-Status: **REST API live with a production key** (2026-11-06 evening; sandbox QA passed the same day). SMPP: template, account details pending.
+Status: **REST API live with a production key** (2026-11-06 evening; sandbox QA passed the same day), but **connections from the worker are refused** since 2026-11-06 (see "Connection refused from the worker"). SMPP: dropped on 2026-11-09 in favour of the REST API; the section below is kept for reference.
 
 ## REST API (provider `23telecom`)
 
@@ -23,7 +23,27 @@ Status: **REST API live with a production key** (2026-11-06 evening; sandbox QA 
 | Sandbox | Simulated sends with ids `test_…`, a `DELIVRD` webhook about 5 s after each send (`"sandbox": true` in the body), balance untouched, messages kept 24 h. Sandbox keys can call only the send, status and messages endpoints; pricing, balance and webhook settings need a live key |
 | Prices | Not fetched from the API; `route_prices` rows on the 23Telecom route (per country) price the sends, as for every provider |
 | Lost receipts | The worker polls `GET /sms/status/{id}` for `sent` messages whose webhook has not arrived after `RECEIPT_POLL_AFTER_MS` (default 10 min), at most every `RECEIPT_POLL_EVERY_MS` (60 s), **50 lookups per poll, 2 in parallel**; after a failed poll the carrier is left alone for 5 minutes (D2-23). The sandbox sends each receipt once from a bounded pool, so a burst of 200 loses most of them; live receipts are not guaranteed either |
-| Sandbox ids under a live key | `test_…` ids only answer to a sandbox key. When the key goes live, the poll retires any still-`sent` sandbox message as `expired` (`SANDBOX_MESSAGE`) instead of asking about it. On 2026-11-06 the first version asked 200 times a minute for an hour and 23Telecom's firewall refused the worker's IP (`ECONNREFUSED` from `209.71.97.132`); the account manager has to lift such a block |
+| Sandbox ids under a live key | `test_…` ids only answer to a sandbox key. When the key goes live, the poll retires any still-`sent` sandbox message as `expired` (`SANDBOX_MESSAGE`) instead of asking about it. On 2026-11-06 the first version asked about 200 times a minute for an hour; from then on the worker's connections were refused (see "Connection refused from the worker" below) |
+| IP allowlist | None: their docs say "API keys have no IP allowlist", so the REST API needs no whitelisting (only SMPP would) |
+| Rate limits | Every documented limit answers with HTTP 429 (per IP about 10,000 req/s at their edge, per account 500 req/s, burst 1,000); none refuses the connection. Their polling guide allows one status check every 3–5 s per message |
+
+### Connection refused from the worker
+
+23Telecom refuses TCP connections from the worker's outbound address while answering everyone else. Test from the worker, with no key and no SMS (run in WSL Ubuntu if Windows blocks `flyctl`):
+
+```bash
+flyctl ssh console -a sendex-worker -C "node -e \"fetch('https://restlink23telecom.com/api/v1/user/balance').then(r=>console.log(r.status)).catch(e=>console.log('ERR',e.cause?.code||e.message))\""
+flyctl ssh console -a sendex-worker -C "node -e \"fetch('https://api.ipify.org').then(r=>r.text()).then(console.log)\""
+```
+
+`401` means the worker gets through (no key sent); `ERR ECONNREFUSED` means it is still refused. The image has no `curl`, hence `node -e`.
+
+| Date (UTC) | From the worker | From another address | Worker address |
+| --- | --- | --- | --- |
+| 2026-11-06 | `ECONNREFUSED` (worker logs) | not checked | `209.71.97.132` |
+| 2026-11-11 16:40 | `ERR ECONNREFUSED` | `401` from `135.181.225.187` | `209.71.97.132` (ipify) |
+
+None of their documented limits behaves like this, so it looks like a firewall in front of the API. Send 23Telecom the table above (address, time, endpoint, the `401` from elsewhere) and record here when they answer and when the first test returns `401`.
 
 Code: `packages/providers/src/http/telecom23-provider.ts` (adapter), `apps/worker/src/webhooks/telecom23.ts` (webhook), `apps/worker/src/send/providers.ts` (registration). Decision record: ADR 0007.
 

@@ -135,8 +135,18 @@ from `apps/web/lib/reauth.ts` before doing anything. It passes when either:
 - the Clerk session's `createdAt` (Backend API) is within `maxAgeSeconds`.
 
 `lastActiveAt` is deliberately not used: it moves on every request, so a stolen session would
-always look fresh. When the check fails it throws `AuthError` 403 `reauth_required`; the client
-should call Clerk's `useReverification()` to re-prompt for the password and retry.
+always look fresh. When the check fails it throws `AuthError` 403 `reauth_required`.
+
+Server actions behind a form (record a deposit, create or revoke an API token, rotate the
+postback secret) call `requireRecentAuth()` instead (D4-15). When the sign-in is stale the
+action returns Clerk's reverification hint (`reverificationError({ level: "first_factor",
+afterMinutes: 5 })`), and the form, which calls the action through `useReauthAction`
+(`apps/web/lib/use-reauth-action.ts`, a thin wrapper over Clerk's `useReverification`), shows
+Clerk's password dialog and runs the action again. Closing the dialog leaves everything
+unchanged with "Password not confirmed, so nothing was changed." Under the development login
+there is no ClerkProvider, so the wrapper calls the action directly; the check passes there
+anyway. If Clerk cannot refresh the verification age (an instance without the `fva` claim),
+the hint is turned into a message that says to sign out and in again, which still works.
 
 ## Two-factor authentication policy
 

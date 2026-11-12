@@ -4,6 +4,7 @@ import { DEPOSIT_METHODS, type DepositMethod, formatEur } from "@sendex/core";
 import { Button, Input, Label, Textarea, useToast } from "@sendex/ui";
 import { useRouter } from "next/navigation";
 import { type FormEvent, useState, useTransition } from "react";
+import { useReauthAction } from "../../../lib/use-reauth-action";
 import { recordDepositAction } from "./actions";
 
 const METHOD_LABELS: Record<DepositMethod, string> = {
@@ -15,7 +16,8 @@ const METHOD_LABELS: Record<DepositMethod, string> = {
 /**
  * "Fund your account": the manual deposit form (owners only) next to the card and PayPal
  * buttons that arrive in stage two. Submits through `recordDepositAction`, which also
- * requires a recent sign-in; the error from a stale session is shown inline.
+ * requires a recent sign-in: when it is stale, Clerk asks for the password in a dialog and
+ * the deposit is then recorded (D4-15).
  */
 export function DepositForm({ canDeposit }: { canDeposit: boolean }) {
   const router = useRouter();
@@ -26,12 +28,13 @@ export function DepositForm({ canDeposit }: { canDeposit: boolean }) {
   const [note, setNote] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  const recordDeposit = useReauthAction(recordDepositAction);
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
     startTransition(async () => {
-      const result = await recordDepositAction({ amountEur: amount, method, reference, note });
+      const result = await recordDeposit({ amountEur: amount, method, reference, note });
       if (!result.ok) {
         setError(result.error);
         return;

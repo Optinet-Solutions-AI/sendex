@@ -1,4 +1,4 @@
-import { eurToMicro } from "@sendex/core";
+import { type CampaignSort, eurToMicro, isCampaignSort } from "@sendex/core";
 import type { CampaignStatus, ListCampaignsInput } from "@sendex/db";
 import { dayRangeBounds, parseIsoDay, parsePage } from "./billing-params";
 import type { SearchParams } from "./lists-params";
@@ -6,7 +6,7 @@ import type { SearchParams } from "./lists-params";
 /**
  * Query-string state of the campaigns table (D3-06), shared by the page and the CSV export:
  * `/campaigns?search=roy&country=ES&country=FR&status=sending&from=2026-09-01&to=2026-09-30
- *   &hasLeads=1&hasSales=1&noClicks=1&spendMin=10&spendMax=250&page=2`.
+ *   &hasLeads=1&hasSales=1&noClicks=1&spendMin=10&spendMax=250&page=2&sort=sent&dir=asc`.
  */
 export interface CampaignsQuery {
   search: string;
@@ -24,6 +24,9 @@ export interface CampaignsQuery {
   spendMin: string;
   spendMax: string;
   page: number;
+  /** Sort column, or blank for newest first (D4-10). */
+  sort: CampaignSort | "";
+  dir: "asc" | "desc";
 }
 
 const STATUSES: readonly CampaignStatus[] = [
@@ -68,6 +71,7 @@ export function isCampaignStatus(value: string): value is CampaignStatus {
 /** Parse the URL search params with safe defaults; anything malformed is dropped. */
 export function parseCampaignsQuery(params: SearchParams): CampaignsQuery {
   const status = first(params.status).trim();
+  const sort = first(params.sort).trim();
   return {
     search: first(params.search).trim(),
     countries: countries(params.country),
@@ -80,6 +84,8 @@ export function parseCampaignsQuery(params: SearchParams): CampaignsQuery {
     spendMin: eur(params.spendMin),
     spendMax: eur(params.spendMax),
     page: parsePage(params.page),
+    sort: isCampaignSort(sort) ? sort : "",
+    dir: first(params.dir).trim() === "asc" ? "asc" : "desc",
   };
 }
 
@@ -97,6 +103,8 @@ export function campaignsQueryString(query: Partial<CampaignsQuery>): string {
   if (query.spendMin) params.set("spendMin", query.spendMin);
   if (query.spendMax) params.set("spendMax", query.spendMax);
   if (query.page && query.page > 1) params.set("page", String(query.page));
+  if (query.sort) params.set("sort", query.sort);
+  if (query.sort && query.dir === "asc") params.set("dir", "asc");
   const s = params.toString();
   return s ? `?${s}` : "";
 }
@@ -116,5 +124,6 @@ export function campaignsListInput(query: CampaignsQuery): ListCampaignsInput {
     ...(query.noClicks ? { noClicks: true } : {}),
     ...(query.spendMin ? { spendMinMicro: eurToMicro(query.spendMin) } : {}),
     ...(query.spendMax ? { spendMaxMicro: eurToMicro(query.spendMax) } : {}),
+    ...(query.sort ? { sort: query.sort, dir: query.dir } : {}),
   };
 }

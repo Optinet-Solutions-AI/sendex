@@ -23,6 +23,14 @@ page, with the totals of its laps.
 | **Period** | When the first lap started and the last one finished, in the campaign's timezone. "–" for a campaign that has not sent. |
 | **Actions** | A menu with **View**, **Duplicate** and **Delete**. |
 
+## Sorting
+
+Click a column header to sort by it: Campaign, Status, Country, Laps, Sent, Clicks, CTR, Cost,
+Leads, Sales or Period. Click it again to reverse the order. Names, statuses and countries sort A
+to Z first; numbers and the period sort largest or newest first. The sorted column shows ↓ or ↑
+and the others ↕. Without a sort the newest campaign is on top. The sort is kept in the page
+address with the filters, applies to **Export CSV** too, and sends you back to page 1.
+
 ## Filters
 
 Type in **Search** and press Enter to search by name. **Filters** opens the filter row below it;

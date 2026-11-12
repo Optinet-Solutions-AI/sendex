@@ -240,6 +240,82 @@ describe("listCampaigns sorting (D4-10)", () => {
   });
 });
 
+describe("listCampaigns filters by offer, sender id and minimum results (D4-13)", () => {
+  // A separate organisation so other tests' campaigns stay out of the way.
+  let orgF: string;
+  let offerA: string;
+  let offerB: string;
+
+  beforeAll(async () => {
+    orgF = await seedOrganisation(t.db, "org-filter");
+    const list = await seedList(orgF, "Filter list", "ES", "+34622000", 1);
+    // name, sender id, sent, clicks, leads, sales
+    const rows: [string, string, number, number, number, number][] = [
+      ["Lucky ES", "LUCKY777", 100, 10, 2, 1],
+      ["Bingo ES", "BINGOES", 50, 0, 0, 0],
+    ];
+    const offers: string[] = [];
+    for (const [name, sender, sent, clicks, leads, sales] of rows) {
+      const c = await createCampaign(t.db, orgF, {
+        name,
+        country: "ES",
+        timezone: "Europe/Madrid",
+      });
+      const group = await createSidGroup(t.db, orgF, { name: `${name} SIDs`, country: "ES" });
+      await addSenderIds(t.db, orgF, group.id, [sender]);
+      await setCampaignSidGroup(t.db, orgF, c.id, group.id);
+      const link = await createLink(t.db, orgF, {
+        name: `${name} offer`,
+        url: "https://o.example/",
+      });
+      await attachLink(t.db, orgF, c.id, link.id);
+      offers.push(link.id);
+      await t.db.insert(laps).values({
+        organisationId: orgF,
+        campaignId: c.id,
+        listId: list.id,
+        routeId: route405,
+        testSize: 1,
+        sent,
+        clicks,
+        leads,
+        sales,
+      });
+    }
+    offerA = offers[0] ?? "";
+    offerB = offers[1] ?? "";
+  });
+
+  const names = async (input: Omit<Parameters<typeof listCampaigns>[2], "page">) =>
+    (await listCampaigns(t.db, orgF, { page: 1, ...input })).items.map((c) => c.name).sort();
+
+  it("keeps the campaigns that use an offer", async () => {
+    expect(await names({ linkId: offerA })).toEqual(["Lucky ES"]);
+    expect(await names({ linkId: offerB })).toEqual(["Bingo ES"]);
+    // An offer of another organisation matches nothing here.
+    const foreign = await createLink(t.db, orgA, { name: "foreign", url: "https://f.example/" });
+    expect(await names({ linkId: foreign.id })).toEqual([]);
+  });
+
+  it("keeps the campaigns whose sender id group has a matching sender id", async () => {
+    expect(await names({ senderId: "lucky" })).toEqual(["Lucky ES"]);
+    expect(await names({ senderId: "ES" })).toEqual(["Bingo ES"]);
+    expect(await names({ senderId: "nobody" })).toEqual([]);
+    // Wildcard characters are taken literally.
+    expect(await names({ senderId: "%" })).toEqual([]);
+  });
+
+  it("keeps the campaigns with at least so many clicks, leads or sales", async () => {
+    expect(await names({ clicksMin: 5 })).toEqual(["Lucky ES"]);
+    expect(await names({ clicksMin: 0 })).toEqual(["Bingo ES", "Lucky ES"]);
+    expect(await names({ leadsMin: 2 })).toEqual(["Lucky ES"]);
+    expect(await names({ leadsMin: 3 })).toEqual([]);
+    expect(await names({ salesMin: 1 })).toEqual(["Lucky ES"]);
+    const page = await listCampaigns(t.db, orgF, { page: 1, salesMin: 1 });
+    expect(page.total).toBe(1);
+  });
+});
+
 describe("sender id groups", () => {
   it("creates a group, dedupes added ids and toggles one", async () => {
     const group = await createSidGroup(t.db, orgA, { name: "ES Casino", country: "ES" });

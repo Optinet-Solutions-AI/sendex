@@ -20,7 +20,7 @@ page, with the totals of its laps.
 | **CTR** | Clicks divided by sent. |
 | **Cost** | What the campaign has debited from your balance. |
 | **Leads** / **Sales** | Conversions reported by your tracker's postbacks. |
-| **Period** | When the first lap started and the last one finished, in the campaign's timezone. "–" for a campaign that has not sent. |
+| **Period** | When the first lap started and the last one finished, in the campaign's own time zone (the country's local time), followed by the zone's short name, e.g. "14 Sep 2026 12:00 – 14:30 CEST". Hover for the full zone name. "–" for a campaign that has not sent. |
 | **Actions** | A menu with **View**, **Duplicate** and **Delete**. |
 
 ## Sorting
@@ -44,6 +44,13 @@ press **Apply** there to apply, **Clear** to reset.
 - **Has leads**, **Has sales**: only campaigns with at least one lead / sale.
 - **No clicks**: only campaigns with no click yet (drafts included).
 - **Spend above** / **below**: cost bounds in EUR, both inclusive.
+- **Offer**: only campaigns with that offer (tracked link) attached.
+- **Sender ID**: only campaigns whose sender ID group has a sender ID containing what you
+  type ("lucky" finds LUCKY777).
+- **Clicks / Leads / Sales at least**: only campaigns with at least that many, over all
+  their laps.
+
+Brand and partner are not filters yet: Sendex has no brand or partner on an offer today.
 
 The filters live in the page address, so a filtered view can be bookmarked or shared.
 

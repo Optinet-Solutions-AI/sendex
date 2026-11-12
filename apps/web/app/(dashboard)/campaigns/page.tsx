@@ -1,4 +1,4 @@
-import { db, listCampaigns } from "@sendex/db";
+import { db, listCampaigns, listLinks } from "@sendex/db";
 import { PageHeader } from "@sendex/ui";
 import { CampaignsTable } from "../../../components/campaigns/campaigns-table";
 import { NewCampaignModal } from "../../../components/campaigns/new-campaign-modal";
@@ -17,7 +17,10 @@ export default async function CampaignsPage({
   return (
     <RequireOrg action="campaign.view">
       {async (ctx) => {
-        const result = await listCampaigns(db(), ctx.organisationId, campaignsListInput(query));
+        const [result, links] = await Promise.all([
+          listCampaigns(db(), ctx.organisationId, campaignsListInput(query)),
+          listLinks(db(), ctx.organisationId),
+        ]);
         return (
           <section className="space-y-4">
             <PageHeader
@@ -31,6 +34,7 @@ export default async function CampaignsPage({
               page={result.page}
               pageSize={result.pageSize}
               filters={query}
+              offers={links.map((l) => ({ id: l.id, name: l.name }))}
             />
           </section>
         );

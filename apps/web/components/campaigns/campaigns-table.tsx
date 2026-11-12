@@ -23,7 +23,7 @@ import {
   duplicateCampaignAction,
 } from "../../app/(dashboard)/campaigns/actions";
 import { type CampaignsQuery, campaignsQueryString } from "../../lib/campaigns-params";
-import { formatMicro, formatPercent, formatPeriod, shortId } from "./format";
+import { formatMicro, formatPercent, formatPeriod, shortId, zoneAbbreviation } from "./format";
 import { campaignStatusLabel } from "./status";
 import type { CampaignStatus, CampaignSummaryView } from "./types";
 import { ErrorText, inputClass } from "./ui";
@@ -52,6 +52,24 @@ function Check({ name, label, checked }: { name: string; label: string; checked:
     <label className="inline-flex items-center gap-1.5 text-sm">
       <input type="checkbox" name={name} value="1" defaultChecked={checked} />
       {label}
+    </label>
+  );
+}
+
+/** "Clicks at least [ 5 ]": a whole-number minimum for a result column (D4-13). */
+function AtLeast({ name, label, value }: { name: string; label: string; value: string }) {
+  return (
+    <label className="inline-flex items-center gap-1.5 text-sm">
+      {label} at least
+      <input
+        type="text"
+        name={name}
+        inputMode="numeric"
+        defaultValue={value}
+        aria-label={`${label} at least`}
+        placeholder="0"
+        className={cn(inputClass, "w-16")}
+      />
     </label>
   );
 }
@@ -113,12 +131,15 @@ export function CampaignsTable({
   page,
   pageSize,
   filters,
+  offers = [],
 }: {
   items: CampaignSummaryView[];
   total: number;
   page: number;
   pageSize: number;
   filters: CampaignsQuery;
+  /** The organisation's offers (tracked links) for the Offer filter (D4-13). */
+  offers?: ReadonlyArray<{ id: string; name: string }>;
 }) {
   const router = useRouter();
   const { toast } = useToast();
@@ -131,7 +152,9 @@ export function CampaignsTable({
     filters.hasLeads ||
     filters.hasSales ||
     filters.noClicks ||
-    Boolean(filters.spendMin || filters.spendMax);
+    Boolean(filters.spendMin || filters.spendMax) ||
+    Boolean(filters.offer || filters.sender) ||
+    Boolean(filters.clicksMin || filters.leadsMin || filters.salesMin);
   const [showFilters, setShowFilters] = useState(filtersActive);
   const [deleting, setDeleting] = useState<CampaignSummaryView | null>(null);
 
@@ -238,6 +261,31 @@ export function CampaignsTable({
               className={cn(inputClass, "w-24")}
             />
           </label>
+          <select
+            name="offer"
+            defaultValue={filters.offer}
+            aria-label="Offer"
+            className={cn(inputClass, "w-48")}
+          >
+            <option value="">All offers</option>
+            {offers.map((o) => (
+              <option key={o.id} value={o.id}>
+                {o.name}
+              </option>
+            ))}
+          </select>
+          <input
+            type="text"
+            name="sender"
+            defaultValue={filters.sender}
+            aria-label="Sender ID"
+            placeholder="Sender ID"
+            maxLength={20}
+            className={cn(inputClass, "w-32")}
+          />
+          <AtLeast name="clicksMin" label="Clicks" value={filters.clicksMin} />
+          <AtLeast name="leadsMin" label="Leads" value={filters.leadsMin} />
+          <AtLeast name="salesMin" label="Sales" value={filters.salesMin} />
           <Button type="submit">Apply</Button>
           <Link href="/campaigns" className="text-sm text-muted underline-offset-2 hover:underline">
             Clear
@@ -324,8 +372,15 @@ export function CampaignsTable({
                 <td className="px-3 py-2.5 text-right font-mono tabular-nums">
                   {c.sales > 0 ? c.sales : <Dash />}
                 </td>
-                <td className="whitespace-nowrap px-3 py-2.5 font-mono text-xs text-muted">
+                <td
+                  className="whitespace-nowrap px-3 py-2.5 font-mono text-xs text-muted"
+                  title={
+                    c.firstLapAt ? `Times in ${c.timezone}, the campaign's time zone` : undefined
+                  }
+                  data-testid="campaign-period"
+                >
                   {formatPeriod(c.firstLapAt, c.lastLapAt, c.timezone)}
+                  {c.firstLapAt ? ` ${zoneAbbreviation(c.firstLapAt, c.timezone)}` : ""}
                 </td>
                 <td className="whitespace-nowrap px-3 py-2.5 text-right">
                   <div className="inline-flex items-center">

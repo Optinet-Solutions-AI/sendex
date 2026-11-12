@@ -28,6 +28,19 @@ export function formatDateTime(iso: string | Date, timezone: string): string {
   return formatInTimeZone(iso, timezone, "d MMM yyyy HH:mm");
 }
 
+/**
+ * The short name of the time zone at that moment ("CET", "CEST", "GMT+8"), so a time shown
+ * in the campaign's zone says which zone it is (D4-13). Empty without a date.
+ */
+export function zoneAbbreviation(at: string | Date | null, timezone: string): string {
+  if (!at) return "";
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: timezone,
+    timeZoneName: "short",
+  }).formatToParts(new Date(at));
+  return parts.find((p) => p.type === "timeZoneName")?.value ?? "";
+}
+
 /** "14 Sep 2026 12:00 – 14:30" (same day) or two full stamps; "–" when nothing happened yet. */
 export function formatPeriod(
   start: string | Date | null,

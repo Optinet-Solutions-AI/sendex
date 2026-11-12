@@ -1,4 +1,9 @@
-import { type ConversionRates, conversionRates, type PostbackType } from "@sendex/core";
+import {
+  type ConversionRates,
+  type ConversionTiming,
+  conversionRates,
+  type PostbackType,
+} from "@sendex/core";
 import { and, asc, desc, eq, gte, ilike, isNotNull, lte, ne, or, sql } from "drizzle-orm";
 import { adTexts, campaigns, laps } from "../schema/campaigns.js";
 import { routes } from "../schema/routes.js";
@@ -149,12 +154,20 @@ export interface ListPostbacksInput {
   to?: Date | undefined;
   /** Matches the event key or the dynamic id, case-insensitively. */
   search?: string | undefined;
+  /** Only conversions that came the same UTC day as their SMS, or only later ones (D4-12). */
+  timing?: ConversionTiming | undefined;
   page: number;
   pageSize: number;
 }
 
 export interface PostbackListRow extends PostbackRow {
   campaignName: string | null;
+  /** When the attributed SMS went out; null for a postback that matched no message. */
+  messageSentAt: Date | null;
+  /** Same UTC day as the SMS or later; null when unattributed. */
+  timing: ConversionTiming | null;
+  /** Whole UTC days between the SMS and the conversion; null when unattributed. */
+  daysLater: number | null;
 }
 
 export interface PostbackPage {
@@ -182,15 +195,29 @@ export async function listPostbacks(
     const match = or(ilike(postbacks.eventKey, pattern), ilike(postbacks.dynamicId, pattern));
     if (match) conditions.push(match);
   }
+  // The SMS's own time; a message that was never stamped falls back to its creation.
+  const sentAt = sql<Date | null>`coalesce(${messages.sentAt}, ${messages.createdAt})`;
+  const daysLater = sql<number>`greatest(0, (${postbacks.receivedAt} at time zone 'UTC')::date - (${sentAt} at time zone 'UTC')::date)`;
+  if (input.timing === "late") conditions.push(sql`${daysLater} > 0`);
+  if (input.timing === "same_day") {
+    conditions.push(sql`${messages.id} is not null and ${daysLater} = 0`);
+  }
   const where = and(...conditions);
   const pageSize = Math.max(1, input.pageSize);
   const offset = Math.max(0, input.page - 1) * pageSize;
 
   const [rows, [count]] = await Promise.all([
     db
-      .select({ postback: postbacks, campaignName: campaigns.name })
+      .select({
+        postback: postbacks,
+        campaignName: campaigns.name,
+        messageId: messages.id,
+        messageSentAt: sentAt.mapWith((v: unknown) => (v === null ? null : new Date(String(v)))),
+        daysLater: daysLater.mapWith(Number),
+      })
       .from(postbacks)
       .leftJoin(campaigns, eq(campaigns.id, postbacks.campaignId))
+      .leftJoin(messages, eq(messages.id, postbacks.messageId))
       .where(where)
       .orderBy(desc(postbacks.receivedAt), desc(postbacks.id))
       .limit(pageSize)
@@ -198,10 +225,20 @@ export async function listPostbacks(
     db
       .select({ total: sql<number>`count(*)`.mapWith(Number) })
       .from(postbacks)
+      .leftJoin(messages, eq(messages.id, postbacks.messageId))
       .where(where),
   ]);
   return {
-    rows: rows.map((r) => ({ ...r.postback, campaignName: r.campaignName })),
+    rows: rows.map((r) => {
+      const attributed = r.messageId !== null;
+      return {
+        ...r.postback,
+        campaignName: r.campaignName,
+        messageSentAt: attributed ? r.messageSentAt : null,
+        timing: attributed ? (r.daysLater > 0 ? "late" : "same_day") : null,
+        daysLater: attributed ? r.daysLater : null,
+      };
+    }),
     total: count?.total ?? 0,
   };
 }
@@ -220,6 +257,11 @@ export interface ConversionRow extends ConversionRates {
 }
 
 export interface ConversionStats {
+  /**
+   * How many of the campaign's leads and sales came on a later UTC day than their SMS
+   * (D4-12); the rest came the same day. Sales are first deposits, as everywhere.
+   */
+  timing: { lateLeads: number; lateSales: number };
   campaign: ConversionRow;
   laps: ConversionRow[];
   senderIds: ConversionRow[];
@@ -362,7 +404,30 @@ export async function conversionStats(
     totals.revenueMicro += lap.revenueMicro;
   }
 
+  const lateResult: unknown = await db.execute(sql`
+    select
+      count(*) filter (where x.type = 'lead' and x.days > 0)::int as late_leads,
+      count(*) filter (where x.type = 'sale' and x.rn = 1 and x.days > 0)::int as late_sales
+    from (
+      select p.type,
+        row_number() over (partition by p.message_id, p.type order by p.received_at, p.id) as rn,
+        (p.received_at at time zone 'UTC')::date
+          - (coalesce(m.sent_at, m.created_at) at time zone 'UTC')::date as days
+      from postbacks p
+      join messages m on m.id = p.message_id
+      where p.organisation_id = ${organisationId} and p.campaign_id = ${campaignId}
+    ) x`);
+  // `db.execute` returns a row list on postgres-js and `{ rows }` on PGlite.
+  const lateRows = Array.isArray(lateResult)
+    ? (lateResult as Record<string, unknown>[])
+    : ((lateResult as { rows?: Record<string, unknown>[] }).rows ?? []);
+  const late = lateRows[0];
+
   return {
+    timing: {
+      lateLeads: Number(late?.late_leads ?? 0),
+      lateSales: Number(late?.late_sales ?? 0),
+    },
     campaign: toRow(totals),
     laps: lapStats,
     senderIds: senderRows.map((r) => toRow({ ...pick(r), key: r.senderId, label: r.senderId })),

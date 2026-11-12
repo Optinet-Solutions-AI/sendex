@@ -1,6 +1,6 @@
 ---
 title: Track conversions
-description: Give the brand a signed postback URL so registrations and sales come back to the campaign that produced them.
+description: Give the brand a postback URL, simple or signed, so registrations and sales come back to the campaign that produced them.
 ---
 
 A click tells you someone opened your link. A conversion tells you they registered or paid. Sendex counts registrations as **leads** and deposits as **sales**, shows them on each campaign (leads, sales, CPL, CPS, per route, per sender id, per ad text) and lists every event in **Reports → Postback Logs**.
@@ -17,9 +17,26 @@ https://trk.brand.example/click?o=75&a=35&sub_id1={{dynamic}}
 
 When a contact clicks, Sendex fills in the id and the brand stores it with the click. When that contact converts, the brand sends the same id back; that is how the conversion finds its message, campaign, lap, sender id and ad text.
 
-## 2. Give the brand the postback URL and the secret
+## 2. Give the brand a postback URL
 
-Open **Settings → Postbacks**. It shows your organisation's URL and secret:
+Open **Settings → Postbacks**. It shows two kinds of URL; use whichever the brand's tracker can call.
+
+### Simple URL (most affiliate platforms)
+
+For trackers that can only call a plain address with placeholders, the way SMS Edge's conversion postback works. Nothing to compute:
+
+```
+https://<worker>/postback/<your-organisation>/<code>?type=lead&key={{dynamic}}
+https://<worker>/postback/<your-organisation>/<code>?type=sale&key={{dynamic}}&value={{amount}}
+```
+
+Paste it as the postback (S2S) URL in the affiliate network or tracker, replacing `{{dynamic}}` with its macro for the id you passed in step 1 (for example `{sub1}` or `{clickid}`) and `{{amount}}` with its payout macro. `key` is the same thing as `dynamic_id` below; a postback already set up for SMS Edge only needs its address changed.
+
+The long `<code>` in the address is your organisation's key. Anyone who has the full address can report conversions, so share it only with the brand or its tracker; **Rotate secret** changes the code and stops the old address at once. A wrong code is answered `401 { "error": "invalid token" }`.
+
+### Signed URL (trackers that can sign)
+
+A signature on every call means a tampered or guessed call is rejected. It needs the secret shown in Settings → Postbacks:
 
 ```
 https://<worker>/postback/<your-organisation>?type=lead&dynamic_id={{dynamic}}&sig=<signature>
@@ -33,18 +50,18 @@ Parameters:
 | Parameter    | Required | Meaning                                                                                          |
 | ------------ | -------- | ------------------------------------------------------------------------------------------------ |
 | `type`       | yes      | `lead` (also `registration`) or `sale` (also `deposit`, `ftd`)                                   |
-| `dynamic_id` | yes      | the `{{dynamic}}` value from the link                                                             |
+| `dynamic_id` | yes      | the `{{dynamic}}` value from the link; may also be sent as `key`                                  |
 | `value`      | no       | amount in EUR, e.g. `12.50`; shown as revenue and used for sales                                  |
 | `event_key`  | no       | the tracker's own event id, when one contact can convert several times of the same type           |
-| `sig`        | yes      | the signature (below)                                                                            |
+| `sig`        | signed URL only | the signature (below)                                                                     |
 
 Anything else the brand adds (sub ids, offer ids) is kept and shown in the log.
 
 `GET` and `POST` both work; a `POST` may carry the parameters as a JSON object or a form body.
 
-## 3. The signature
+## 3. The signature (signed URL only)
 
-The call must be signed so nobody can count conversions you did not earn. The brand computes it per call:
+A signed call proves it came from the brand, so nobody can count conversions you did not earn. The brand computes it per call:
 
 1. Take every parameter except `sig`, sort them by name and join them as `name=value` with `&`, percent-encoding names and values (`encodeURIComponent`).
 2. HMAC-SHA256 that string with the secret from Settings → Postbacks, hex-encoded in lower case.
@@ -76,7 +93,7 @@ A conversion is identified by your organisation, its type, the dynamic id and, w
 
 ## Rotating the secret
 
-An owner can press **Rotate secret** in Settings → Postbacks (it asks for a recent sign-in and is written to the audit log). Calls signed with the old secret are rejected immediately, so give the brand the new secret first and rotate at a quiet moment.
+An owner can press **Rotate secret** in Settings → Postbacks (it asks for a recent sign-in and is written to the audit log). Calls signed with the old secret are rejected immediately, and the code in the simple URL changes with it, so give the brand the new secret or the new simple URL first and rotate at a quiet moment.
 
 ## Reading the results
 

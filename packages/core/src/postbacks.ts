@@ -103,6 +103,9 @@ export interface IncomingPostback {
 /** `sig` is the signature itself; it is never part of what is signed or stored. */
 export const SIGNATURE_PARAM = "sig";
 
+/** Another name for `dynamic_id`, as in SMS Edge's `postback.php?type=lead&key=…` (D4-11). */
+export const DYNAMIC_ID_ALIAS = "key";
+
 const scalar = z.union([z.string(), z.number(), z.boolean()]);
 
 const incomingPostbackShape = z.looseObject({
@@ -121,7 +124,13 @@ export type PostbackParseResult =
   | { success: false; error: z.ZodError };
 
 export function parseIncomingPostback(raw: Record<string, unknown>): PostbackParseResult {
-  const parsed = incomingPostbackShape.safeParse(raw);
+  // SMS Edge's postback names the id `key`; accept it so a tracker set up for SMS Edge only
+  // needs its address changed. `dynamic_id` wins when both are sent.
+  const withId =
+    raw.dynamic_id === undefined && raw[DYNAMIC_ID_ALIAS] !== undefined
+      ? { ...raw, dynamic_id: raw[DYNAMIC_ID_ALIAS] }
+      : raw;
+  const parsed = incomingPostbackShape.safeParse(withId);
   if (!parsed.success) return { success: false, error: parsed.error };
   const params: PostbackParams = {};
   for (const [key, value] of Object.entries(raw)) {
@@ -237,6 +246,54 @@ export async function buildPostbackUrl(
   query.set(SIGNATURE_PARAM, await signPostbackQuery(params, secret));
   const encoded = query.toString().replace(TEMPLATE_PLACEHOLDER, "{{$1}}");
   return `${baseUrl.replace(/\/+$/, "")}/postback/${encodeURIComponent(orgKey)}?${encoded}`;
+}
+
+// ---------------------------------------------------------------------------
+// Simple postback URL (D4-11, ADR 0010)
+// ---------------------------------------------------------------------------
+
+/** What the token is an HMAC of; changing it would invalidate every simple postback URL. */
+const TOKEN_CONTEXT = "sendex:postback-token:v1";
+
+/**
+ * The token of the simple postback URL, for trackers that can only call a plain address with
+ * placeholders and cannot sign: `<base>/postback/<orgKey>/<token>?type=lead&key=<id>`. It is
+ * derived from the organisation's postback secret, so it needs no storage, changes when the
+ * secret is rotated, and never reveals the secret that signs the other URL.
+ */
+export async function derivePostbackToken(secret: string): Promise<string> {
+  const key = await hmacKey(secret, "sign");
+  return hex(await crypto.subtle.sign("HMAC", key, encoder.encode(TOKEN_CONTEXT)));
+}
+
+/** Check a token from the URL path in constant time; false for anything malformed. */
+export async function verifyPostbackToken(
+  token: string | undefined,
+  secret: string,
+): Promise<boolean> {
+  if (secret === "" || token === undefined || !HEX_SIGNATURE.test(token)) return false;
+  const key = await hmacKey(secret, "verify");
+  return crypto.subtle.verify(
+    "HMAC",
+    key,
+    fromHex(token.toLowerCase()),
+    encoder.encode(TOKEN_CONTEXT),
+  );
+}
+
+/**
+ * The simple URL to paste into a tracker, `{{dynamic}}` and `{{amount}}` standing for the
+ * tracker's own macros. A sale carries the optional `value`.
+ */
+export function buildSimplePostbackUrl(
+  baseUrl: string,
+  orgKey: string,
+  token: string,
+  type: PostbackType,
+): string {
+  const base = `${baseUrl.replace(/\/+$/, "")}/postback/${encodeURIComponent(orgKey)}/${token}`;
+  const query = `type=${type}&${DYNAMIC_ID_ALIAS}={{dynamic}}`;
+  return `${base}?${query}${type === "sale" ? "&value={{amount}}" : ""}`;
 }
 
 // ---------------------------------------------------------------------------

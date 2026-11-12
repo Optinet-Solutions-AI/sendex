@@ -3,6 +3,7 @@ import {
   parseIncomingPostback,
   SIGNATURE_PARAM,
   verifyPostbackSignature,
+  verifyPostbackToken,
 } from "@sendex/core";
 import {
   type Db,
@@ -63,21 +64,51 @@ function stringMap(raw: Record<string, unknown>): Record<string, string> {
 }
 
 /**
- * The public conversion endpoint a brand's tracker calls: `GET|POST /postback/:orgKey`
- * where `orgKey` is the organisation id or slug. Parameters come from the query and, for
- * POST, a JSON or form body. The request must carry `sig`, an HMAC-SHA256 of the other
- * parameters under the organisation's postback secret (see docs/using/track-conversions.md).
+ * The public conversion endpoints a brand's tracker calls, `orgKey` being the organisation id
+ * or slug. Parameters come from the query and, for POST, a JSON or form body.
+ *
+ * - `GET|POST /postback/:orgKey` must carry `sig`, an HMAC-SHA256 of the other parameters
+ *   under the organisation's postback secret.
+ * - `GET|POST /postback/:orgKey/:token` (D4-11, ADR 0010) is the simple URL for trackers
+ *   that can only call a plain address with placeholders: the token in the path, derived from
+ *   the same secret, stands in for the signature.
+ *
  * Valid events are queued for ingest and answered 202; a known event key answers 200
- * `{ duplicate: true }` at once. Mount with `app.route("/", createPostbackRoutes(deps))`.
+ * `{ duplicate: true }` at once. See docs/using/track-conversions.md. Mount with
+ * `app.route("/", createPostbackRoutes(deps))`.
  */
 export function createPostbackRoutes(deps: PostbackRoutesDeps) {
   const log = deps.log ?? defaultLog;
   const app = new Hono();
   const rejectedByOrg = new Map<string, number>();
 
-  app.on(["GET", "POST"], "/postback/:orgKey", async (c) => {
-    const orgKey = c.req.param("orgKey");
-    const organisation = await findOrganisationByKey(deps.db, orgKey);
+  /** Count and log a call that failed its signature or token check, then answer 401. */
+  function reject(
+    c: Context,
+    organisationId: string,
+    msg: string,
+    error: string,
+    fields: Record<string, unknown> = {},
+  ) {
+    const rejected = (rejectedByOrg.get(organisationId) ?? 0) + 1;
+    rejectedByOrg.set(organisationId, rejected);
+    log("warn", msg, { organisationId, rejected, ...fields });
+    return c.json({ error }, 401);
+  }
+
+  /**
+   * The part both URLs share: find the organisation, apply the rate limit, read the
+   * parameters, let `authorise` check the caller, then validate, deduplicate and enqueue.
+   */
+  async function handle(
+    c: Context,
+    authorise: (
+      organisationId: string,
+      params: Record<string, string>,
+      secret: string,
+    ) => Promise<Response | null>,
+  ) {
+    const organisation = await findOrganisationByKey(deps.db, c.req.param("orgKey") ?? "");
     if (organisation === null) return c.json({ error: "unknown organisation" }, 404);
     const organisationId = organisation.id;
 
@@ -87,19 +118,9 @@ export function createPostbackRoutes(deps: PostbackRoutesDeps) {
 
     const raw = await readParams(c);
     if (raw === null) return c.json({ error: "body must be a JSON object" }, 400);
-    const params = stringMap(raw);
-    const sig = params[SIGNATURE_PARAM];
     const key = await getOrCreatePostbackKey(deps.db, organisationId);
-    if (!(await verifyPostbackSignature(params, sig, key.secret))) {
-      const rejected = (rejectedByOrg.get(organisationId) ?? 0) + 1;
-      rejectedByOrg.set(organisationId, rejected);
-      log("warn", "postback signature rejected", {
-        organisationId,
-        rejected,
-        hasSignature: sig !== undefined,
-      });
-      return c.json({ error: "invalid signature" }, 401);
-    }
+    const refused = await authorise(organisationId, stringMap(raw), key.secret);
+    if (refused !== null) return refused;
 
     const parsed = parseIncomingPostback(raw);
     if (!parsed.success) {
@@ -133,7 +154,24 @@ export function createPostbackRoutes(deps: PostbackRoutesDeps) {
     }
     log("info", "postback accepted", { organisationId, eventKey, type: event.type });
     return c.json({ accepted: true, eventKey }, 202);
-  });
+  }
+
+  app.on(["GET", "POST"], "/postback/:orgKey", (c) =>
+    handle(c, async (organisationId, params, secret) => {
+      const sig = params[SIGNATURE_PARAM];
+      if (await verifyPostbackSignature(params, sig, secret)) return null;
+      return reject(c, organisationId, "postback signature rejected", "invalid signature", {
+        hasSignature: sig !== undefined,
+      });
+    }),
+  );
+
+  app.on(["GET", "POST"], "/postback/:orgKey/:token", (c) =>
+    handle(c, async (organisationId, _params, secret) => {
+      if (await verifyPostbackToken(c.req.param("token"), secret)) return null;
+      return reject(c, organisationId, "postback token rejected", "invalid token");
+    }),
+  );
 
   return app;
 }

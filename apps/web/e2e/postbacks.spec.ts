@@ -87,4 +87,19 @@ test.describe("postbacks", () => {
     ).toBeVisible();
     await expect(page.getByTestId("rotate-secret")).toBeVisible();
   });
+
+  // D4-11: the plain URL for trackers that cannot sign, like SMS Edge's postback.
+  test("the postback settings page shows the simple URLs with a token and no signature", async ({
+    page,
+  }) => {
+    await page.goto("/settings/postbacks");
+    const lead = page.getByTestId("simple-postback-lead");
+    await expect(lead).toHaveText(
+      /\/postback\/external\/[0-9a-f]{64}\?type=lead&key=\{\{dynamic\}\}$/,
+    );
+    await expect(page.getByTestId("simple-postback-sale")).toHaveText(
+      /\/postback\/external\/[0-9a-f]{64}\?type=sale&key=\{\{dynamic\}\}&value=\{\{amount\}\}$/,
+    );
+    await expect(lead).not.toContainText("sig=");
+  });
 });

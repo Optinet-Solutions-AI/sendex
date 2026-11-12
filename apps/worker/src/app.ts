@@ -20,7 +20,7 @@ export interface AppDeps extends HealthDeps {
   internal?: InternalApiDeps;
   /** Optional: mounts `/internal/links/:code` and `/internal/clicks` for the links service. */
   links?: InternalLinksDeps;
-  /** Optional: mounts the public `/postback/:orgKey` endpoint (signed conversion events). */
+  /** Optional: mounts the public `/postback/:orgKey` endpoints (signed, or simple with a token). */
   postbacks?: PostbackRoutesDeps;
   /** Optional: mounts the public `/api/v1/*` routes, `/api/openapi.json` and `/api/docs`. */
   publicApi?: PublicApiDeps;

@@ -1,14 +1,17 @@
 import { describe, expect, it } from "vitest";
 import {
   buildPostbackUrl,
+  buildSimplePostbackUrl,
   canonicalPostbackQuery,
   conversionRates,
   deriveEventKey,
+  derivePostbackToken,
   parseIncomingPostback,
   parsePostbackValue,
   postbackTypeSchema,
   signPostbackQuery,
   verifyPostbackSignature,
+  verifyPostbackToken,
 } from "./postbacks.js";
 
 const SECRET = "top-secret";
@@ -198,5 +201,54 @@ describe("conversionRates", () => {
       cplMicro: null,
       cpsMicro: null,
     });
+  });
+});
+
+// D4-11: a plain postback URL for trackers that cannot sign, like SMS Edge's
+// `postback.php?type=lead&key=…`.
+describe("simple postback token", () => {
+  it("is a stable 64-hex value derived from the secret, not the secret itself", async () => {
+    const token = await derivePostbackToken("s3cret");
+    expect(token).toMatch(/^[0-9a-f]{64}$/);
+    expect(token).toBe(await derivePostbackToken("s3cret"));
+    expect(token).not.toBe(await derivePostbackToken("other"));
+    expect(token).not.toContain("s3cret");
+    // Not the signature of an empty query either, so a token never doubles as a `sig`.
+    expect(token).not.toBe(await signPostbackQuery({}, "s3cret"));
+  });
+
+  it("verifies only the token of the same secret", async () => {
+    const token = await derivePostbackToken("s3cret");
+    expect(await verifyPostbackToken(token, "s3cret")).toBe(true);
+    expect(await verifyPostbackToken(token.toUpperCase(), "s3cret")).toBe(true);
+    expect(await verifyPostbackToken(token, "rotated")).toBe(false);
+    expect(await verifyPostbackToken("abc", "s3cret")).toBe(false);
+    expect(await verifyPostbackToken(undefined, "s3cret")).toBe(false);
+    expect(await verifyPostbackToken(token, "")).toBe(false);
+  });
+
+  it("builds the URL with the token in the path and placeholders left readable", async () => {
+    const token = await derivePostbackToken("s3cret");
+    expect(buildSimplePostbackUrl("https://w.example/", "org-a", token, "lead")).toBe(
+      `https://w.example/postback/org-a/${token}?type=lead&key={{dynamic}}`,
+    );
+    expect(buildSimplePostbackUrl("https://w.example", "org-a", token, "sale")).toBe(
+      `https://w.example/postback/org-a/${token}?type=sale&key={{dynamic}}&value={{amount}}`,
+    );
+  });
+});
+
+describe("parseIncomingPostback with SMS Edge's `key`", () => {
+  it("reads `key` as the dynamic id and keeps the parameter as sent", () => {
+    const parsed = parseIncomingPostback({ type: "lead", key: "abcd24732" });
+    expect(parsed.success && parsed.data.dynamicId).toBe("abcd24732");
+    expect(parsed.success && parsed.data.params).toEqual({ type: "lead", key: "abcd24732" });
+  });
+
+  it("prefers `dynamic_id` when both are sent, and still requires one of them", () => {
+    const both = parseIncomingPostback({ type: "sale", dynamic_id: "d-1", key: "k-1" });
+    expect(both.success && both.data.dynamicId).toBe("d-1");
+    expect(parseIncomingPostback({ type: "lead" }).success).toBe(false);
+    expect(parseIncomingPostback({ type: "lead", key: "bad id!" }).success).toBe(false);
   });
 });

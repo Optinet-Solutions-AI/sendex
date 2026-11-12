@@ -1,4 +1,11 @@
-import { buildPostbackUrl, can, canonicalPostbackQuery, signPostbackQuery } from "@sendex/core";
+import {
+  buildPostbackUrl,
+  buildSimplePostbackUrl,
+  can,
+  canonicalPostbackQuery,
+  derivePostbackToken,
+  signPostbackQuery,
+} from "@sendex/core";
 import { db, findOrganisationByKey, getOrCreatePostbackKey } from "@sendex/db";
 import { PageHeader } from "@sendex/ui";
 import Link from "next/link";
@@ -13,17 +20,21 @@ const EXAMPLE_DYNAMIC = "7b1c3e2a-5d4f-4c6b-8a9e-0f1d2c3b4a59";
 /** Stands in for the worker's address in the templates until it is deployed. */
 const WORKER_PLACEHOLDER = "https://<worker-address>";
 
-function Code({ children }: { children: string }) {
+function Code({ children, testId }: { children: string; testId?: string }) {
   return (
-    <code className="block overflow-x-auto whitespace-pre rounded bg-neutral-100 px-3 py-2 font-mono text-xs">
+    <code
+      data-testid={testId}
+      className="block overflow-x-auto whitespace-pre rounded bg-neutral-100 px-3 py-2 font-mono text-xs"
+    >
       {children}
     </code>
   );
 }
 
 /**
- * The organisation's postback URL and secret for the brand's tracker, with the signature
- * explained step by step. Owners can rotate the secret.
+ * The organisation's postback URLs for the brand's tracker: the simple one with a token in
+ * the address (D4-11, for trackers that can only call a plain URL) and the signed one, with
+ * the secret and the signature explained step by step. Owners can rotate the secret.
  */
 export default function PostbackSettingsPage() {
   return (
@@ -53,6 +64,9 @@ export default function PostbackSettingsPage() {
             key.secret,
           )
         ).replace(/sig=[0-9a-f]+$/, "sig=<signature>");
+        const token = await derivePostbackToken(key.secret);
+        const simpleLead = buildSimplePostbackUrl(base, orgKey, token, "lead");
+        const simpleSale = buildSimplePostbackUrl(base, orgKey, token, "sale");
         const exampleParams = { type: "lead", dynamic_id: EXAMPLE_DYNAMIC };
         const exampleUrl = await buildPostbackUrl(base, orgKey, exampleParams, key.secret);
         return (
@@ -85,9 +99,31 @@ export default function PostbackSettingsPage() {
             )}
 
             <div className="space-y-3 rounded border border-neutral-200 bg-white p-4">
-              <h2 className="text-sm font-semibold">Postback URL</h2>
+              <h2 className="text-sm font-semibold">Simple postback URL</h2>
               <p className="text-sm text-neutral-600">
-                Call it with <code>GET</code> or <code>POST</code> once per conversion.{" "}
+                For affiliate platforms and trackers that can only call a plain address with
+                placeholders. Paste it as the postback (S2S) URL and replace{" "}
+                <code>{"{{dynamic}}"}</code> with the tracker's macro for the click id the tracked
+                link passed (for example <code>{"{sub1}"}</code> or <code>{"{clickid}"}</code>), and{" "}
+                <code>{"{{amount}}"}</code> with its payout macro. No signature is needed.
+              </p>
+              <p className="text-xs font-medium uppercase text-neutral-500">Lead / registration</p>
+              <Code testId="simple-postback-lead">{simpleLead}</Code>
+              <p className="text-xs font-medium uppercase text-neutral-500">Sale / deposit</p>
+              <Code testId="simple-postback-sale">{simpleSale}</Code>
+              <p className="text-sm text-neutral-600">
+                The long code in the address is your organisation's key: anyone who has the full
+                address can report conversions, so share it only with the brand or its tracker.
+                Rotating the secret below changes the code and stops the old address at once.{" "}
+                <code>key</code> may also be sent as <code>dynamic_id</code>.
+              </p>
+            </div>
+
+            <div className="space-y-3 rounded border border-neutral-200 bg-white p-4">
+              <h2 className="text-sm font-semibold">Signed postback URL</h2>
+              <p className="text-sm text-neutral-600">
+                For trackers that can sign each call: a tampered or guessed call is rejected. Call
+                it with <code>GET</code> or <code>POST</code> once per conversion.{" "}
                 <code>{"{{dynamic}}"}</code> is the value the tracked link passed to the brand (the{" "}
                 <code>dynamic</code> placeholder); it ties the conversion back to the message.
               </p>

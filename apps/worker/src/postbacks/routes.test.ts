@@ -1,4 +1,4 @@
-import { deriveEventKey, signPostbackQuery } from "@sendex/core";
+import { deriveEventKey, derivePostbackToken, signPostbackQuery } from "@sendex/core";
 import { getOrCreatePostbackKey, insertPostback } from "@sendex/db";
 import { createTestDb, type TestDb } from "@sendex/db/test";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -199,5 +199,92 @@ describe("POST /postback/:orgKey", () => {
       body: "{",
     });
     expect(res.status).toBe(400);
+  });
+});
+
+// D4-11: the plain URL for trackers that cannot sign, like SMS Edge's `postback.php`.
+describe("GET /postback/:orgKey/:token (simple URL)", () => {
+  it("accepts a lead with SMS Edge's `key` and no signature", async () => {
+    const { app, enqueued } = build();
+    const token = await derivePostbackToken(secret);
+    const res = await app.request(
+      `/postback/org-abcdefgh/${token}?type=lead&key=${seed.dynamicId}`,
+    );
+    expect(res.status).toBe(202);
+    const eventKey = await deriveEventKey({
+      organisationId: seed.organisationId,
+      type: "lead",
+      dynamicId: seed.dynamicId,
+    });
+    expect(await res.json()).toEqual({ accepted: true, eventKey });
+    expect(enqueued).toEqual([
+      {
+        organisationId: seed.organisationId,
+        eventKey,
+        type: "registration",
+        dynamicId: seed.dynamicId,
+        params: { type: "lead", key: seed.dynamicId },
+      },
+    ]);
+  });
+
+  it("accepts a sale with a value, by organisation id and with `dynamic_id`", async () => {
+    const { app, enqueued } = build();
+    const token = await derivePostbackToken(secret);
+    const res = await app.request(
+      `/postback/${seed.organisationId}/${token}?type=ftd&dynamic_id=${seed.dynamicId}&value=200`,
+    );
+    expect(res.status).toBe(202);
+    expect(enqueued[0]).toMatchObject({ type: "sale", valueMicro: 200_000_000 });
+  });
+
+  it("gives the same event key as the signed URL, so a conversion never counts twice", async () => {
+    const { app } = build();
+    const token = await derivePostbackToken(secret);
+    const simple = await app.request(`/postback/org-abcdefgh/${token}?type=lead&key=same-1`);
+    const signed = await app.request(
+      `/postback/org-abcdefgh?${await signedQuery({ type: "lead", dynamic_id: "same-1" })}`,
+    );
+    expect(((await simple.json()) as { eventKey: string }).eventKey).toBe(
+      ((await signed.json()) as { eventKey: string }).eventKey,
+    );
+  });
+
+  it("rejects a wrong, malformed or other organisation's token with 401", async () => {
+    const { app, enqueued, lines } = build();
+    const query = `type=lead&key=${seed.dynamicId}`;
+    const other = await derivePostbackToken("another-secret");
+    expect((await app.request(`/postback/org-abcdefgh/${other}?${query}`)).status).toBe(401);
+    expect((await app.request(`/postback/org-abcdefgh/nope?${query}`)).status).toBe(401);
+    // The secret itself is not a token.
+    expect((await app.request(`/postback/org-abcdefgh/${secret}?${query}`)).status).toBe(401);
+    expect(enqueued).toHaveLength(0);
+    expect(lines.filter((l) => l.msg === "postback token rejected")).toHaveLength(3);
+  });
+
+  it("answers 400 for bad parameters, 404 for an unknown organisation and 429 when limited", async () => {
+    const { app } = build();
+    const token = await derivePostbackToken(secret);
+    expect((await app.request(`/postback/org-abcdefgh/${token}?type=click&key=x`)).status).toBe(
+      400,
+    );
+    expect((await app.request(`/postback/org-abcdefgh/${token}?type=lead`)).status).toBe(400);
+    expect((await app.request(`/postback/nobody/${token}?type=lead&key=x`)).status).toBe(404);
+    const limited = build({ rateLimit: async () => false });
+    expect(
+      (await limited.app.request(`/postback/org-abcdefgh/${token}?type=lead&key=x`)).status,
+    ).toBe(429);
+  });
+
+  it("reads a POST form body too", async () => {
+    const { app, enqueued } = build();
+    const token = await derivePostbackToken(secret);
+    const res = await app.request(`/postback/org-abcdefgh/${token}`, {
+      method: "POST",
+      headers: { "content-type": "application/x-www-form-urlencoded" },
+      body: `type=sale&key=${seed.dynamicId}`,
+    });
+    expect(res.status).toBe(202);
+    expect(enqueued[0]).toMatchObject({ type: "sale", dynamicId: seed.dynamicId });
   });
 });

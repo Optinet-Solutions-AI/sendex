@@ -17,6 +17,11 @@ describe("parseCampaignsQuery", () => {
       page: 1,
       sort: "",
       dir: "desc",
+      offer: "",
+      sender: "",
+      clicksMin: "",
+      leadsMin: "",
+      salesMin: "",
     });
   });
 
@@ -49,6 +54,11 @@ describe("parseCampaignsQuery", () => {
       page: 3,
       sort: "",
       dir: "desc",
+      offer: "",
+      sender: "",
+      clicksMin: "",
+      leadsMin: "",
+      salesMin: "",
     });
     expect(parseCampaignsQuery({ status: "bogus", country: "ESP", page: "-2" })).toMatchObject({
       status: "",
@@ -101,6 +111,49 @@ describe("campaignsListInput", () => {
 
   it("leaves unset filters out so the old query path is unchanged", () => {
     expect(campaignsListInput(parseCampaignsQuery({}))).toEqual({ page: 1 });
+  });
+});
+
+describe("offer, sender id and minimum results (D4-13)", () => {
+  const OFFER = "0d4d9d2e-3a5f-4b3c-8e9f-6a7b8c9d0e1f";
+
+  it("reads the new filters and drops malformed ones", () => {
+    const q = parseCampaignsQuery({
+      offer: OFFER,
+      sender: "  LUCKY ",
+      clicksMin: "5",
+      leadsMin: "2",
+      salesMin: "1",
+    });
+    expect(q).toMatchObject({
+      offer: OFFER,
+      sender: "LUCKY",
+      clicksMin: "5",
+      leadsMin: "2",
+      salesMin: "1",
+    });
+    const bad = parseCampaignsQuery({
+      offer: "nope",
+      clicksMin: "-3",
+      leadsMin: "x",
+      salesMin: "1.5",
+    });
+    expect(bad).toMatchObject({ offer: "", clicksMin: "", leadsMin: "", salesMin: "" });
+  });
+
+  it("keeps them in the URL and passes them to the list query", () => {
+    const q = parseCampaignsQuery({ offer: OFFER, sender: "LUCKY", clicksMin: "5", salesMin: "1" });
+    expect(campaignsQueryString(q)).toBe(`?offer=${OFFER}&sender=LUCKY&clicksMin=5&salesMin=1`);
+    expect(campaignsListInput(q)).toMatchObject({
+      linkId: OFFER,
+      senderId: "LUCKY",
+      clicksMin: 5,
+      salesMin: 1,
+    });
+    const none = campaignsListInput(parseCampaignsQuery({}));
+    for (const key of ["linkId", "senderId", "clicksMin", "leadsMin", "salesMin"]) {
+      expect(none).not.toHaveProperty(key);
+    }
   });
 });
 

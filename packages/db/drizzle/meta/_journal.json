@@ -155,6 +155,13 @@
       "when": 1794474404724,
       "tag": "0021_campaign_routes",
       "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1794485847731,
+      "tag": "0022_sending_hours",
+      "breakpoints": true
     }
   ]
 }

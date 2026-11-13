@@ -43,9 +43,10 @@ PGlite in `ledger.test.ts`.
 
 `apps/web/app/(dashboard)/billing/actions.ts` → `recordDepositAction`:
 
-1. `requireAction("balance.deposit")` (owners) and `assertRecentAuth()` (sign-in within
-   five minutes; the dev stub passes). A stale session returns the `reauth_required`
-   message, which the form shows inline.
+1. `requireAction("balance.deposit")` (owners) and `requireRecentAuth()` (sign-in within
+   five minutes; the dev stub passes). A stale session returns Clerk's reverification hint;
+   the form calls the action through `useReauthAction`, so Clerk asks for the password in a
+   dialog and the deposit is then recorded (D4-15, `docs/engineering/auth.md`).
 2. `depositSchema` from `packages/core` validates the form (`amountEur` as a decimal string
    with at most two decimals, `method`, `reference` 1–100 chars, optional `note`) and parses
    the amount to micro-EUR.

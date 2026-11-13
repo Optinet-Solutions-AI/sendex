@@ -105,6 +105,14 @@ export interface ListCampaignsInput {
   /** Spend bounds in micro-EUR, both inclusive. */
   spendMinMicro?: bigint;
   spendMaxMicro?: bigint;
+  /** Only campaigns with this offer (tracked link) attached (D4-13). */
+  linkId?: string;
+  /** Only campaigns whose sender id group has a sender id containing this text. */
+  senderId?: string;
+  /** At least so many clicks, leads or sales over all laps. */
+  clicksMin?: number;
+  leadsMin?: number;
+  salesMin?: number;
   page: number;
   /** Defaults to `CAMPAIGN_PAGE_SIZE`; the CSV export walks larger pages. */
   pageSize?: number;
@@ -157,6 +165,24 @@ export async function listCampaigns(
     );
   }
   if (input.status) conditions.push(eq(campaigns.status, input.status));
+  if (input.linkId) {
+    conditions.push(
+      sql`exists (select 1 from ${campaignLinks}
+        where ${campaignLinks.campaignId} = ${campaigns.id}
+          and ${campaignLinks.linkId} = ${input.linkId})`,
+    );
+  }
+  const sender = input.senderId?.trim();
+  if (sender) {
+    // Escape LIKE wildcards so "%" or "_" in the box match themselves.
+    const pattern = `%${sender.replace(/[\\%_]/g, (ch) => `\\${ch}`)}%`;
+    conditions.push(
+      sql`exists (select 1 from ${campaignSidGroup}
+        join ${senderIds} on ${senderIds.sidGroupId} = ${campaignSidGroup.sidGroupId}
+        where ${campaignSidGroup.campaignId} = ${campaigns.id}
+          and ${senderIds.value} ilike ${pattern})`,
+    );
+  }
 
   const agg = db
     .select({
@@ -190,6 +216,14 @@ export async function listCampaigns(
   if (input.hasLeads) conditions.push(sql`${leadsSum} > 0`);
   if (input.hasSales) conditions.push(sql`${salesSum} > 0`);
   if (input.noClicks) conditions.push(sql`${clicksSum} = 0`);
+  const atLeast = (value: number | undefined): number | null =>
+    value !== undefined && Number.isFinite(value) && value > 0 ? Math.floor(value) : null;
+  const clicksMin = atLeast(input.clicksMin);
+  const leadsMin = atLeast(input.leadsMin);
+  const salesMin = atLeast(input.salesMin);
+  if (clicksMin !== null) conditions.push(sql`${clicksSum} >= ${clicksMin}`);
+  if (leadsMin !== null) conditions.push(sql`${leadsSum} >= ${leadsMin}`);
+  if (salesMin !== null) conditions.push(sql`${salesSum} >= ${salesMin}`);
   if (input.spendMinMicro !== undefined)
     conditions.push(sql`${costSum} >= ${input.spendMinMicro.toString()}::bigint`);
   if (input.spendMaxMicro !== undefined)

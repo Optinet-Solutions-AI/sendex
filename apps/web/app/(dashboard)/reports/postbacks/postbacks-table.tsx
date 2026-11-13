@@ -24,6 +24,7 @@ import { formatMicro } from "../../../../components/campaigns/format";
 import {
   type PostbackRange,
   type PostbacksQuery,
+  type PostbackTimingFilter,
   type PostbackTypeFilter,
   postbacksQueryString,
 } from "../../../../lib/postbacks-params";
@@ -38,6 +39,10 @@ export interface PostbackTableRow {
   valueMicro: number | null;
   params: Record<string, unknown>;
   receivedAt: string;
+  /** When the attributed SMS went out; null when the postback matched no message. */
+  messageSentAt: string | null;
+  timing: "same_day" | "late" | null;
+  daysLater: number | null;
 }
 
 interface PostbacksTableProps {
@@ -53,6 +58,12 @@ const TYPE_OPTIONS: ReadonlyArray<{ value: PostbackTypeFilter; label: string }> 
   { value: "sale", label: "Sales" },
 ];
 
+const TIMING_OPTIONS: ReadonlyArray<{ value: PostbackTimingFilter; label: string }> = [
+  { value: "all", label: "Any timing" },
+  { value: "same_day", label: "Same day" },
+  { value: "late", label: "Late" },
+];
+
 const RANGE_OPTIONS: ReadonlyArray<{ value: Exclude<PostbackRange, "custom">; label: string }> = [
   { value: "all", label: "All time" },
   { value: "today", label: "Today" },
@@ -64,7 +75,7 @@ const RANGE_OPTIONS: ReadonlyArray<{ value: Exclude<PostbackRange, "custom">; la
 /** Parameters other than the ones shown in their own columns, as `key=value` pairs. */
 export function summariseParams(params: Record<string, unknown>): string {
   return Object.entries(params)
-    .filter(([key]) => key !== "type" && key !== "dynamic_id")
+    .filter(([key]) => key !== "type" && key !== "dynamic_id" && key !== "key")
     .map(([key, value]) => `${key}=${String(value)}`)
     .join(" ");
 }
@@ -75,6 +86,17 @@ export function splitReceived(iso: string): { date: string; time: string } {
   if (Number.isNaN(d.getTime())) return { date: "—", time: "" };
   const s = d.toISOString();
   return { date: s.slice(0, 10), time: s.slice(11, 19) };
+}
+
+/**
+ * "Same day" when the conversion came on the UTC day its SMS was sent, "Late · 3 days"
+ * after that (D4-12); empty for a postback that matched no message.
+ */
+export function timingLabel(timing: "same_day" | "late" | null, daysLater: number | null): string {
+  if (timing === null) return "";
+  if (timing === "same_day") return "Same day";
+  const days = daysLater ?? 0;
+  return `Late · ${days} day${days === 1 ? "" : "s"}`;
 }
 
 /**
@@ -103,7 +125,12 @@ export function PostbacksTable({ rows, total, pageSize, query }: PostbacksTableP
     else navigate({ range: "custom", from, to });
   };
   const filtersActive =
-    query.type !== "all" || query.range !== "all" || query.search !== "" || !!from || !!to;
+    query.type !== "all" ||
+    query.timing !== "all" ||
+    query.range !== "all" ||
+    query.search !== "" ||
+    !!from ||
+    !!to;
   const reset = () => {
     setSearch("");
     setFrom("");
@@ -166,6 +193,14 @@ export function PostbacksTable({ rows, total, pageSize, query }: PostbacksTableP
           onChange={(type) => navigate({ type })}
         />
         <SegmentedControl
+          label="Timing"
+          size="sm"
+          testIdPrefix="timing-filter"
+          value={query.timing}
+          options={TIMING_OPTIONS}
+          onChange={(timing) => navigate({ timing })}
+        />
+        <SegmentedControl
           label="Period"
           size="sm"
           testIdPrefix="range-filter"
@@ -213,13 +248,14 @@ export function PostbacksTable({ rows, total, pageSize, query }: PostbacksTableP
             <TableHead>Campaign</TableHead>
             <TableHead>Parameters</TableHead>
             <TableHead>Received</TableHead>
+            <TableHead>Timing</TableHead>
             <TableHead className="w-10" />
           </TableRow>
         </TableHeader>
         <TableBody>
           {rows.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={6} className="py-10 text-center text-muted">
+              <TableCell colSpan={7} className="py-10 text-center text-muted">
                 No postbacks match.
               </TableCell>
             </TableRow>
@@ -227,6 +263,7 @@ export function PostbacksTable({ rows, total, pageSize, query }: PostbacksTableP
             rows.map((row) => {
               const open = expanded.has(row.id);
               const received = splitReceived(row.receivedAt);
+              const timing = timingLabel(row.timing, row.daysLater);
               const extra = summariseParams(row.params);
               return (
                 <Fragment key={row.id}>
@@ -270,6 +307,23 @@ export function PostbacksTable({ rows, total, pageSize, query }: PostbacksTableP
                     <TableCell className="tabular-nums">
                       {received.date} <span className="text-muted">{received.time}</span>
                     </TableCell>
+                    <TableCell data-testid="postback-timing">
+                      {row.timing === null ? (
+                        <span className="text-muted">—</span>
+                      ) : (
+                        <Badge
+                          variant={row.timing === "late" ? "amber" : "secondary"}
+                          data-timing={row.timing}
+                          title={
+                            row.messageSentAt
+                              ? `SMS sent ${row.messageSentAt.slice(0, 10)} (UTC)`
+                              : undefined
+                          }
+                        >
+                          {timing}
+                        </Badge>
+                      )}
+                    </TableCell>
                     <TableCell>
                       <button
                         type="button"
@@ -288,7 +342,7 @@ export function PostbacksTable({ rows, total, pageSize, query }: PostbacksTableP
                   </TableRow>
                   {open ? (
                     <TableRow className="bg-page hover:bg-page" data-testid="postback-details">
-                      <TableCell colSpan={6} className="whitespace-normal">
+                      <TableCell colSpan={7} className="whitespace-normal">
                         <dl className="grid gap-x-6 gap-y-1 text-xs sm:grid-cols-[auto_1fr]">
                           <dt className="font-mono uppercase tracking-[0.06em] text-muted">
                             Dynamic id
@@ -304,6 +358,13 @@ export function PostbacksTable({ rows, total, pageSize, query }: PostbacksTableP
                             Received
                           </dt>
                           <dd className="tabular-nums">{row.receivedAt}</dd>
+                          <dt className="font-mono uppercase tracking-[0.06em] text-muted">
+                            SMS sent
+                          </dt>
+                          <dd className="tabular-nums">
+                            {row.messageSentAt ?? "—"}
+                            {timing ? ` (${timing.toLowerCase()})` : ""}
+                          </dd>
                           {Object.entries(row.params).map(([key, value]) => (
                             <Fragment key={key}>
                               <dt className="font-mono text-muted">{key}</dt>

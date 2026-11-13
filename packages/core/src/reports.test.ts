@@ -3,6 +3,7 @@ import {
   addMonths,
   type CountryDayStats,
   calendarKpis,
+  conversionTiming,
   dayCells,
   formatCpc,
   formatLogDay,
@@ -18,8 +19,8 @@ import {
 describe("logKpis", () => {
   it("sums the rows and derives CTR and CPC", () => {
     const kpis = logKpis([
-      { sent: 1000, clicks: 20, spendMicro: 40_000_000n, leads: 2, sales: 1 },
-      { sent: 500, clicks: 10, spendMicro: 20_000_000n, leads: 1, sales: 0 },
+      { sent: 1000, clicks: 20, spendMicro: 40_000_000n, leads: 2, sales: 1, lateSales: 0 },
+      { sent: 500, clicks: 10, spendMicro: 20_000_000n, leads: 1, sales: 2, lateSales: 1 },
     ]);
     expect(kpis).toEqual({
       sent: 1500,
@@ -28,14 +29,45 @@ describe("logKpis", () => {
       spendMicro: 60_000_000n,
       cpcMicro: 2_000_000n,
       leads: 3,
-      sales: 1,
+      sales: 3,
+      lateSales: 1,
     });
   });
 
   it("has no CPC or CTR without clicks or sends", () => {
-    const kpis = logKpis([{ sent: 0, clicks: 0, spendMicro: 0n, leads: 0, sales: 0 }]);
+    const kpis = logKpis([
+      { sent: 0, clicks: 0, spendMicro: 0n, leads: 0, sales: 0, lateSales: 0 },
+    ]);
     expect(kpis.ctr).toBe(0);
     expect(kpis.cpcMicro).toBeNull();
+  });
+});
+
+// D4-12: same day means the same UTC day as the SMS; anything on a later UTC day is late.
+describe("conversionTiming", () => {
+  const sent = new Date("2026-11-06T10:00:00Z");
+
+  it("is same day up to the end of the SMS's UTC day", () => {
+    expect(conversionTiming(sent, new Date("2026-11-06T10:05:00Z"))).toEqual({
+      timing: "same_day",
+      daysLater: 0,
+    });
+    expect(conversionTiming(sent, new Date("2026-11-06T23:59:59Z")).timing).toBe("same_day");
+  });
+
+  it("is late from the next UTC day on, counted in whole UTC days", () => {
+    expect(conversionTiming(sent, new Date("2026-11-07T00:00:00Z"))).toEqual({
+      timing: "late",
+      daysLater: 1,
+    });
+    expect(conversionTiming(sent, new Date("2026-11-20T08:00:00Z")).daysLater).toBe(14);
+  });
+
+  it("treats a postback stamped before its SMS as same day", () => {
+    expect(conversionTiming(sent, new Date("2026-11-05T23:00:00Z"))).toEqual({
+      timing: "same_day",
+      daysLater: 0,
+    });
   });
 });
 

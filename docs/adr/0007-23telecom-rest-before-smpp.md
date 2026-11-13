@@ -1,6 +1,6 @@
 # ADR 0007: 23Telecom through its REST API first, SMPP when the account is whitelisted
 
-Date: 2026-11-06. Status: accepted.
+Date: 2026-11-06. Status: accepted. Update 2026-11-09: 23Telecom stays on the REST API only; SMPP for it is dropped (Christian's decision), so nothing below about a later SMPP move is planned. `SmppProvider` remains for custom routes.
 
 ## Context
 

@@ -1,6 +1,6 @@
 # SMPP provider
 
-`SmppProvider` (`packages/providers/src/smpp/`) is the `Provider` implementation for carriers reached over SMPP 3.4. 23Telecom is the first account (see [23telecom.md](./23telecom.md)). Only the worker instantiates it; the web app never talks to a carrier (AGENTS.md rule 10).
+`SmppProvider` (`packages/providers/src/smpp/`) is the `Provider` implementation for carriers reached over SMPP 3.4. 23Telecom was planned as the first SMPP account but is reached over its REST API instead (see [23telecom.md](./23telecom.md)); SMPP stays for carriers and custom routes that need it. Only the worker instantiates it; the web app never talks to a carrier (AGENTS.md rule 10).
 
 Built on [node-smpp](https://github.com/farhadi/node-smpp) (`smpp` 0.6.0-rc.4). The package ships no types; `packages/providers/src/smpp-types.d.ts` declares the parts we use.
 

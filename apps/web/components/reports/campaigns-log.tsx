@@ -54,7 +54,10 @@ export interface LogRowView {
   clicks: number;
   cpcMicro: string | null;
   leads: number;
+  /** First deposits made that day. */
   sales: number;
+  /** The part of `sales` whose SMS went out on an earlier day (D4-12). */
+  lateSales: number;
 }
 
 export interface LogKpisView extends Omit<LogKpis, "spendMicro" | "cpcMicro"> {
@@ -177,6 +180,11 @@ export function CampaignsLog({
             value: `${formatNumber(kpis.leads)} / ${formatNumber(kpis.sales)}`,
             testId: "kpi-leads-sales",
           },
+          {
+            label: "Late sales",
+            value: formatNumber(kpis.lateSales),
+            testId: "kpi-late-sales",
+          },
         ]}
       />
 
@@ -258,7 +266,18 @@ export function CampaignsLog({
                   {formatCpc(row.cpcMicro === null ? null : BigInt(row.cpcMicro))}
                 </TableCell>
                 <TableCell className="text-right tabular-nums">{formatNumber(row.leads)}</TableCell>
-                <TableCell className="text-right tabular-nums">{formatNumber(row.sales)}</TableCell>
+                <TableCell className="text-right tabular-nums" data-testid="log-sales">
+                  {formatNumber(row.sales)}
+                  {row.lateSales > 0 ? (
+                    <span
+                      className="ml-1 text-xs text-amber-700"
+                      data-testid="log-late-sales"
+                      title="First deposits made this day from an SMS sent on an earlier day"
+                    >
+                      ({formatNumber(row.lateSales)} late)
+                    </span>
+                  ) : null}
+                </TableCell>
               </TableRow>
             ))
           )}

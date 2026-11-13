@@ -1,8 +1,9 @@
-import type { PostbackType } from "@sendex/core";
+import type { ConversionTiming, PostbackType } from "@sendex/core";
 
 /**
  * Query-string state of the postback log:
- * `/reports/postbacks?type=lead&range=7d&search=abc&page=2` or `range=custom&from=…&to=…`.
+ * `/reports/postbacks?type=lead&timing=late&range=7d&search=abc&page=2` or
+ * `range=custom&from=…&to=…`.
  */
 export const POSTBACK_RANGES = ["all", "today", "7d", "30d", "90d", "custom"] as const;
 export type PostbackRange = (typeof POSTBACK_RANGES)[number];
@@ -10,8 +11,13 @@ export type PostbackRange = (typeof POSTBACK_RANGES)[number];
 export const POSTBACK_TYPE_FILTERS = ["all", "lead", "sale"] as const;
 export type PostbackTypeFilter = (typeof POSTBACK_TYPE_FILTERS)[number];
 
+/** Same UTC day as the SMS, or a later day (D4-12). */
+export const POSTBACK_TIMING_FILTERS = ["all", "same_day", "late"] as const;
+export type PostbackTimingFilter = (typeof POSTBACK_TIMING_FILTERS)[number];
+
 export interface PostbacksQuery {
   type: PostbackTypeFilter;
+  timing: PostbackTimingFilter;
   range: PostbackRange;
   /** ISO date (yyyy-mm-dd) bounds, only used when `range` is `custom`. */
   from: string;
@@ -38,14 +44,20 @@ function isTypeFilter(value: string): value is PostbackTypeFilter {
   return (POSTBACK_TYPE_FILTERS as readonly string[]).includes(value);
 }
 
+function isTimingFilter(value: string): value is PostbackTimingFilter {
+  return (POSTBACK_TIMING_FILTERS as readonly string[]).includes(value);
+}
+
 export function parsePostbacksQuery(params: SearchParams): PostbacksQuery {
   const typeRaw = first(params.type);
+  const timingRaw = first(params.timing);
   const rangeRaw = first(params.range);
   const pageRaw = Number.parseInt(first(params.page), 10);
   const from = first(params.from);
   const to = first(params.to);
   return {
     type: isTypeFilter(typeRaw) ? typeRaw : "all",
+    timing: isTimingFilter(timingRaw) ? timingRaw : "all",
     range: isRange(rangeRaw) ? rangeRaw : "all",
     from: ISO_DATE.test(from) ? from : "",
     to: ISO_DATE.test(to) ? to : "",
@@ -57,6 +69,7 @@ export function parsePostbacksQuery(params: SearchParams): PostbacksQuery {
 export function postbacksQueryString(query: Partial<PostbacksQuery>): string {
   const params = new URLSearchParams();
   if (query.type && query.type !== "all") params.set("type", query.type);
+  if (query.timing && query.timing !== "all") params.set("timing", query.timing);
   if (query.range && query.range !== "all") params.set("range", query.range);
   if (query.range === "custom") {
     if (query.from) params.set("from", query.from);
@@ -104,6 +117,11 @@ export function postbackDateBounds(query: PostbacksQuery, now = new Date()): Dat
       return bounds;
     }
   }
+}
+
+/** The `timing` argument for `listPostbacks`: undefined for "all". */
+export function postbackTimingFilter(query: PostbacksQuery): ConversionTiming | undefined {
+  return query.timing === "all" ? undefined : query.timing;
 }
 
 /** The `type` argument for `listPostbacks`: undefined for "all". */

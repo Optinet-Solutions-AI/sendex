@@ -23,6 +23,14 @@ export interface CampaignsQuery {
   /** EUR with up to two decimals, or blank. */
   spendMin: string;
   spendMax: string;
+  /** The id of an offer (tracked link), or blank (D4-13). */
+  offer: string;
+  /** Part of a sender id, or blank. */
+  sender: string;
+  /** Whole numbers as text, or blank: at least so many clicks, leads or sales. */
+  clicksMin: string;
+  leadsMin: string;
+  salesMin: string;
   page: number;
   /** Sort column, or blank for newest first (D4-10). */
   sort: CampaignSort | "";
@@ -39,6 +47,13 @@ const STATUSES: readonly CampaignStatus[] = [
 ];
 
 const EUR = /^\d+(?:\.\d{1,2})?$/;
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const WHOLE = /^\d{1,9}$/;
+
+function whole(value: string | string[] | undefined): string {
+  const text = first(value).trim();
+  return WHOLE.test(text) ? String(Number(text)) : "";
+}
 
 function first(value: string | string[] | undefined): string {
   return (Array.isArray(value) ? value[0] : value) ?? "";
@@ -72,6 +87,7 @@ export function isCampaignStatus(value: string): value is CampaignStatus {
 export function parseCampaignsQuery(params: SearchParams): CampaignsQuery {
   const status = first(params.status).trim();
   const sort = first(params.sort).trim();
+  const offer = first(params.offer).trim();
   return {
     search: first(params.search).trim(),
     countries: countries(params.country),
@@ -83,6 +99,11 @@ export function parseCampaignsQuery(params: SearchParams): CampaignsQuery {
     noClicks: flag(params.noClicks),
     spendMin: eur(params.spendMin),
     spendMax: eur(params.spendMax),
+    offer: UUID.test(offer) ? offer.toLowerCase() : "",
+    sender: first(params.sender).trim().slice(0, 20),
+    clicksMin: whole(params.clicksMin),
+    leadsMin: whole(params.leadsMin),
+    salesMin: whole(params.salesMin),
     page: parsePage(params.page),
     sort: isCampaignSort(sort) ? sort : "",
     dir: first(params.dir).trim() === "asc" ? "asc" : "desc",
@@ -102,6 +123,11 @@ export function campaignsQueryString(query: Partial<CampaignsQuery>): string {
   if (query.noClicks) params.set("noClicks", "1");
   if (query.spendMin) params.set("spendMin", query.spendMin);
   if (query.spendMax) params.set("spendMax", query.spendMax);
+  if (query.offer) params.set("offer", query.offer);
+  if (query.sender) params.set("sender", query.sender);
+  if (query.clicksMin) params.set("clicksMin", query.clicksMin);
+  if (query.leadsMin) params.set("leadsMin", query.leadsMin);
+  if (query.salesMin) params.set("salesMin", query.salesMin);
   if (query.page && query.page > 1) params.set("page", String(query.page));
   if (query.sort) params.set("sort", query.sort);
   if (query.sort && query.dir === "asc") params.set("dir", "asc");
@@ -124,6 +150,11 @@ export function campaignsListInput(query: CampaignsQuery): ListCampaignsInput {
     ...(query.noClicks ? { noClicks: true } : {}),
     ...(query.spendMin ? { spendMinMicro: eurToMicro(query.spendMin) } : {}),
     ...(query.spendMax ? { spendMaxMicro: eurToMicro(query.spendMax) } : {}),
+    ...(query.offer ? { linkId: query.offer } : {}),
+    ...(query.sender ? { senderId: query.sender } : {}),
+    ...(query.clicksMin ? { clicksMin: Number(query.clicksMin) } : {}),
+    ...(query.leadsMin ? { leadsMin: Number(query.leadsMin) } : {}),
+    ...(query.salesMin ? { salesMin: Number(query.salesMin) } : {}),
     ...(query.sort ? { sort: query.sort, dir: query.dir } : {}),
   };
 }

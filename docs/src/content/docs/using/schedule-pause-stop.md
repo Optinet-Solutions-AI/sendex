@@ -13,6 +13,22 @@ A campaign can start now or at a chosen time in the **campaign country's timezon
 
 The start time is stored in UTC together with the campaign timezone, so a campaign for Spain set to 10:00 goes out at 10:00 in Madrid whatever your own clock says. The worker checks every few seconds for scheduled campaigns whose time has come.
 
+## Suggested sending hours
+
+Your organisation can keep the hours it prefers to send in, per country, under **Settings ›
+Suggested sending hours** (an owner edits them; everyone can read them):
+
+- **Default hours**: a From and a To time, for every country without its own line. Leave
+  both empty for no default.
+- **Per country**: one line per country, the 2-letter code and the hours, for example
+  `ES 10:00-21:00`. A country's own line wins over the default.
+
+Hours are local time in the campaign's country. When a campaign is about to send (Send Now)
+or is scheduled outside its country's hours, the send form shows a yellow notice: "Outside
+the suggested sending hours for Spain (10:00–21:00): it is 21:15 there now. You can still
+send." It is only a suggestion and never stops a send. With nothing entered, no notice is
+shown. Every change is written to the audit log.
+
 ## Change or cancel a schedule
 
 On a scheduled campaign the page shows **Scheduled for &lt;time&gt;** with two actions:

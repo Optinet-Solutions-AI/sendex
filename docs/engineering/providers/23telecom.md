@@ -1,8 +1,8 @@
 # 23Telecom
 
-Account runbook for the first carrier. 23Telecom offers two ways in: a REST API (what we use first, provider key `23telecom`) and SMPP (provider key `smpp`, section below, pending account details and IP whitelisting).
+Account runbook for the first carrier. 23Telecom offers two ways in: a REST API (what we use, provider key `23telecom`) and SMPP (provider key `smpp`), which we dropped for 23Telecom on 2026-11-09; the SMPP section below is kept for reference only.
 
-Status: **REST API live with a production key** (2026-11-06 evening; sandbox QA passed the same day), but **connections from the worker are refused** since 2026-11-06 (see "Connection refused from the worker"). SMPP: dropped on 2026-11-09 in favour of the REST API; the section below is kept for reference.
+Status: **REST API live with a production key** (2026-11-06 evening; sandbox QA passed the same day). Connections from the worker were refused from 2026-11-06 until 23Telecom lifted it on 2026-11-12 (see "Connection refused from the worker"). SMPP: dropped on 2026-11-09 in favour of the REST API.
 
 ## REST API (provider `23telecom`)
 
@@ -29,7 +29,7 @@ Status: **REST API live with a production key** (2026-11-06 evening; sandbox QA 
 
 ### Connection refused from the worker
 
-23Telecom refuses TCP connections from the worker's outbound address while answering everyone else. Test from the worker, with no key and no SMS (run in WSL Ubuntu if Windows blocks `flyctl`):
+From 2026-11-06 to 2026-11-12 23Telecom refused TCP connections from the worker's outbound address while answering everyone else. If sends fail with `NETWORK_…` again, test from the worker, with no key and no SMS (run in WSL Ubuntu if Windows blocks `flyctl`):
 
 ```bash
 flyctl ssh console -a sendex-worker -C "node -e \"fetch('https://restlink23telecom.com/api/v1/user/balance').then(r=>console.log(r.status)).catch(e=>console.log('ERR',e.cause?.code||e.message))\""
@@ -42,8 +42,10 @@ flyctl ssh console -a sendex-worker -C "node -e \"fetch('https://api.ipify.org')
 | --- | --- | --- | --- |
 | 2026-11-06 | `ECONNREFUSED` (worker logs) | not checked | `209.71.97.132` |
 | 2026-11-11 16:40 | `ERR ECONNREFUSED` | `401` from `135.181.225.187` | `209.71.97.132` (ipify) |
+| 2026-11-12 11:17 | `ECONNREFUSED` on ports 443 and 80, for the API and for `docs.23telecom.co.uk` (same server), after about 315 ms | not checked | `209.71.97.132` |
+| 2026-11-12 12:32 | Connected on 443 and 80; `401` on `/user/balance`, `200` on the docs site | not checked | `209.71.97.132` |
 
-None of their documented limits behaves like this, so it looks like a firewall in front of the API. Send 23Telecom the table above (address, time, endpoint, the `401` from elsewhere) and record here when they answer and when the first test returns `401`.
+None of their documented limits behaves like this. On 2026-11-12 Christian sent 23Telecom the exact error with a screenshot (address, time, endpoint, the `401` from elsewhere); about an hour later the worker connected again. They did not say what had refused it. The other reachable hosts in the same test (SMS Edge, Cloudflare) connected throughout, and the refusal took about 315 ms to come back against 1 ms for a nearby host, so it came from their side of the path.
 
 Code: `packages/providers/src/http/telecom23-provider.ts` (adapter), `apps/worker/src/webhooks/telecom23.ts` (webhook), `apps/worker/src/send/providers.ts` (registration). Decision record: ADR 0007.
 

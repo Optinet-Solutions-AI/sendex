@@ -1,6 +1,6 @@
 "use client";
 
-import { countryName } from "@sendex/core";
+import { countryName, type RouteResult } from "@sendex/core";
 import { Badge, Button, EmptyState, SegmentedControl, Tooltip } from "@sendex/ui";
 import { Radio, Zap } from "lucide-react";
 import { useState } from "react";
@@ -18,13 +18,28 @@ const TH =
 const TD = "whitespace-nowrap px-3 py-1.5 text-sm";
 const NUM = `${TD} text-right font-mono tabular-nums`;
 
+/** "100 sent · 0 clicks" for a route that has sent in this campaign; nothing before that. */
+function RouteResultNote({ name, result }: { name: string; result: RouteResult | undefined }) {
+  if (!result || result.sent === 0) return null;
+  const count = (n: number, word: string) =>
+    `${n.toLocaleString("en-GB")} ${word}${n === 1 ? "" : "s"}`;
+  return (
+    <span className="text-xs text-muted" data-testid={`route-result-${name}`}>
+      {result.sent.toLocaleString("en-GB")} sent · {count(result.clicks, "click")}
+      {result.running ? " · still sending" : ""}
+    </span>
+  );
+}
+
 function rank(value: number | null): string {
   return value === null ? "–" : String(value);
 }
 
 /**
  * The Routes context tab of the spec: the route picker (a checkbox row per route priced for
- * the campaign country with "Route 405 €0.0250"), then "{Country} Routes Performance" with
+ * the campaign country with "Route 405 €0.0250", and what the route did in this campaign once
+ * it has sent), "Remove n routes with no clicks" after a test (D4-18), then
+ * "{Country} Routes Performance" with
  * Connect New SMS Route, Platform Statistics (CTR, CPC and overall ranks, Daily | Weekly |
  * Monthly) and Account Statistics (the organisation's own cost, sent, clicks, CTR, CPC).
  */
@@ -33,13 +48,24 @@ export function RoutesPanel({
   selected,
   onChange,
   performance,
+  results = [],
+  zeroClick = [],
 }: {
   routes: RouteView[];
   selected: readonly string[];
   onChange: (routeIds: string[]) => void;
   performance?: RoutePerformanceView;
+  /** What each route sent and got in this campaign (`routeResults` over its laps). */
+  results?: readonly RouteResult[];
+  /** Picked routes that sent, finished and got no click (`zeroClickRouteIds`). */
+  zeroClick?: readonly string[];
 }) {
   const picked = new Set(selected);
+  const resultOf = new Map(results.map((r) => [r.routeId, r]));
+  const drop = new Set(zeroClick);
+  const dropNames = routes
+    .filter((r) => drop.has(r.id))
+    .map((r) => (r.platform ? `Route ${r.name}` : r.name));
   const [platformPeriod, setPlatformPeriod] = useState<PerformancePeriodView>("daily");
   const [accountPeriod, setAccountPeriod] = useState<PerformancePeriodView>("daily");
   function toggle(id: string, checked: boolean) {
@@ -52,6 +78,21 @@ export function RoutesPanel({
     <div className="space-y-5" data-testid="routes-panel">
       <div className="space-y-3">
         <h4 className="font-mono text-[11px] uppercase tracking-[0.06em] text-muted">Routes</h4>
+        {dropNames.length > 0 ? (
+          <div className="flex flex-wrap items-center gap-2 rounded-md border border-amber/30 bg-amber-soft px-3 py-2 text-sm text-amber">
+            <span className="min-w-0 flex-1">
+              No clicks in this campaign: {dropNames.join(", ")}.
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              data-testid="drop-zero-click"
+              onClick={() => onChange(selected.filter((id) => !drop.has(id)))}
+            >
+              Remove {dropNames.length} route{dropNames.length === 1 ? "" : "s"} with no clicks
+            </Button>
+          </div>
+        ) : null}
         {routes.length === 0 ? (
           <EmptyState
             icon={<Radio />}
@@ -74,6 +115,7 @@ export function RoutesPanel({
                     {route.platform ? `Route ${route.name}` : route.name}
                   </span>
                   {!route.platform ? <Badge variant="code">{route.provider}</Badge> : null}
+                  <RouteResultNote name={route.name} result={resultOf.get(route.id)} />
                   <span className="ml-auto font-mono text-xs text-muted">
                     {route.priceMicro === null ? (
                       <Badge variant="amber">No pricing</Badge>

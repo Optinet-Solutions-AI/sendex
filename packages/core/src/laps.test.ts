@@ -1,5 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { budgetPlan, finishListPlan, planLaps, rankLaps, topUpPlan, topUpTooltip } from "./laps.js";
+import {
+  budgetPlan,
+  finishListPlan,
+  planLaps,
+  rankLaps,
+  routeResults,
+  topUpPlan,
+  topUpTooltip,
+  zeroClickRouteIds,
+} from "./laps.js";
 
 const route = (routeId: string, priceMicro = 25_000) => ({ routeId, priceMicro });
 
@@ -263,5 +272,40 @@ describe("topUpPlan", () => {
 
   it("rejects a non-positive amount", () => {
     expect(() => topUpPlan({ amountMicro: 0, laps: [] })).toThrow(RangeError);
+  });
+});
+
+describe("routes that brought no clicks (D4-18)", () => {
+  const laps = [
+    { routeId: "a", status: "done", sent: 100, clicks: 0 },
+    { routeId: "a", status: "done", sent: 100, clicks: 0 },
+    { routeId: "b", status: "done", sent: 100, clicks: 3 },
+    { routeId: "c", status: "sending", sent: 40, clicks: 0 },
+    { routeId: "e", status: "done", sent: 100, clicks: 0 },
+    { routeId: "f", status: "done", sent: 100, clicks: 0 },
+    { routeId: "f", status: "cancelled", sent: 20, clicks: 2 },
+    { routeId: "g", status: "queued", sent: 0, clicks: 0 },
+  ] as const;
+
+  it("sums each route's sends and clicks over its laps and says whether it is still running", () => {
+    expect(routeResults(laps)).toEqual([
+      { routeId: "a", sent: 200, clicks: 0, running: false },
+      { routeId: "b", sent: 100, clicks: 3, running: false },
+      { routeId: "c", sent: 40, clicks: 0, running: true },
+      { routeId: "e", sent: 100, clicks: 0, running: false },
+      { routeId: "f", sent: 120, clicks: 2, running: false },
+      { routeId: "g", sent: 0, clicks: 0, running: true },
+    ]);
+  });
+
+  it("names the picked routes that sent, finished and got no click", () => {
+    // a: 200 sent, no click. b and f clicked. c is still sending. d never sent. e is not picked.
+    expect(zeroClickRouteIds(laps, ["a", "b", "c", "d", "f", "g"])).toEqual(["a"]);
+    expect(zeroClickRouteIds(laps, ["e", "a"])).toEqual(["e", "a"]);
+  });
+
+  it("names nothing when there are no laps or nothing is picked", () => {
+    expect(zeroClickRouteIds([], ["a"])).toEqual([]);
+    expect(zeroClickRouteIds(laps, [])).toEqual([]);
   });
 });

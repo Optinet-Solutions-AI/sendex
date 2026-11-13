@@ -610,3 +610,50 @@ export async function resetE2eSendingHours(): Promise<void> {
     await sql.end();
   }
 }
+
+export interface SeededRouteTest {
+  campaignId: string;
+  campaignName: string;
+}
+
+/**
+ * A finished test of the seeded "external" organisation (D4-18): routes 405 and 403 both
+ * picked on the campaign, one done lap each on the seeded ES list. 405 sent 5 and got 2
+ * clicks; 403 sent 5 and got none. Clean up with `cleanupE2eControlCampaigns`. Test-only.
+ */
+export async function seedE2eRouteTest(namePrefix: string): Promise<SeededRouteTest> {
+  const url = process.env.DATABASE_URL;
+  if (!url) throw new Error("DATABASE_URL must be set to run the zero-click routes e2e spec");
+  const sql = postgres(url, { max: 1 });
+  try {
+    const [org] = await sql<{ id: string }[]>`select id from organisations where slug = 'external'`;
+    const [list] = await sql<{ id: string }[]>`
+      select id from lists where organisation_id = ${org?.id ?? ""} and country = 'ES'
+        and name like 'Roy Boy_ES%' order by name limit 1`;
+    const [r405] = await sql<{ id: string }[]>`select id from routes where name = '405' limit 1`;
+    const [r403] = await sql<{ id: string }[]>`select id from routes where name = '403' limit 1`;
+    if (!org || !list || !r405 || !r403) throw new Error("demo seed missing: run pnpm db:seed");
+    const campaignName = `${namePrefix} ${Date.now()}`;
+    const [campaign] = await sql<{ id: string }[]>`
+      insert into campaigns (organisation_id, name, country, timezone, status, test_size)
+      values (${org.id}, ${campaignName}, 'ES', 'Europe/Madrid', 'completed', 5) returning id`;
+    if (!campaign) throw new Error("campaign insert failed");
+    const started = new Date("2026-09-14T10:00:00Z");
+    const finished = new Date("2026-09-14T10:30:00Z");
+    for (const [position, lap] of [
+      { routeId: r405.id, clicks: 2 },
+      { routeId: r403.id, clicks: 0 },
+    ].entries()) {
+      await sql`insert into campaign_routes (campaign_id, route_id, organisation_id, position)
+        values (${campaign.id}, ${lap.routeId}, ${org.id}, ${position})`;
+      await sql`
+        insert into laps (organisation_id, campaign_id, list_id, route_id, test_size, status,
+          sent, delivered, clicks, cost_micro, started_at, finished_at)
+        values (${org.id}, ${campaign.id}, ${list.id}, ${lap.routeId}, 5, 'done',
+          5, 5, ${lap.clicks}, 125000, ${started}, ${finished})`;
+    }
+    return { campaignId: campaign.id, campaignName };
+  } finally {
+    await sql.end();
+  }
+}

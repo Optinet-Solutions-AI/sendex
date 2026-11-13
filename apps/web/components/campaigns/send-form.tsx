@@ -1,6 +1,6 @@
 "use client";
 
-import type { SendingHours } from "@sendex/core";
+import { routeResults, type SendingHours, zeroClickRouteIds } from "@sendex/core";
 import { Button, Card, Toggle } from "@sendex/ui";
 import { ChevronRight, RefreshCw, Send, Tag, X } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -398,6 +398,8 @@ export function SendForm({
                   routes={routes}
                   selected={routeIds}
                   onChange={pickRoutes}
+                  results={routeResults(campaign.laps)}
+                  zeroClick={zeroClickRouteIds(campaign.laps, routeIds)}
                   {...(performance ? { performance } : {})}
                 />
               ),

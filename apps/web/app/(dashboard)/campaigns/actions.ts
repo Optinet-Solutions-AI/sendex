@@ -29,6 +29,7 @@ import {
   duplicateCampaign,
   estimateSend,
   flushLap,
+  getCampaign,
   listSidGroups,
   recordAudit,
   rescheduleLap,
@@ -57,6 +58,7 @@ import type {
 } from "../../../components/campaigns/types";
 import { AuthError, type OrgContext, requireAction } from "../../../lib/auth";
 import { toEstimateView, toLapView, toSidGroupView } from "../../../lib/campaign-views";
+import { assertCountryOpen } from "../../../lib/open-countries";
 
 /**
  * Every mutation of the campaign screens: validated with the Zod schemas from `@sendex/core`,
@@ -96,6 +98,7 @@ function revalidateCampaign(campaignId: string): void {
 export async function createCampaignAction(input: unknown): Promise<ActionResult<{ id: string }>> {
   return run("campaign.create", async (ctx) => {
     const data = newCampaignSchema.parse(input);
+    assertCountryOpen(data.country);
     const database = db();
     const campaign = await createCampaign(database, ctx.organisationId, {
       ...data,
@@ -119,6 +122,10 @@ export async function duplicateCampaignAction(
   return run("campaign.create", async (ctx) => {
     const { campaignId } = campaignRef.parse(input);
     const database = db();
+    // A copy is a new campaign in the same country, so a closed country is refused here too.
+    const source = await getCampaign(database, ctx.organisationId, campaignId);
+    if (!source) throw new Error("Campaign not found");
+    assertCountryOpen(source.country);
     const copy = await duplicateCampaign(database, ctx.organisationId, campaignId, ctx.userId);
     await recordAudit(database, ctx.organisationId, {
       actorUserId: ctx.userId,

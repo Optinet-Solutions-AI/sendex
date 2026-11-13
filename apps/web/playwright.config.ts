@@ -41,6 +41,9 @@ export default defineConfig({
       // Force the stub even when the developer's shell has Clerk keys set.
       NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: "",
       CLERK_SECRET_KEY: "",
+      // The specs create Spanish, German and Maltese data through the UI; every other
+      // country stays closed so e2e/open-countries.spec.ts has one to check (D4-19).
+      NEXT_PUBLIC_OPEN_COUNTRIES: "GB,ES,DE,MT",
     },
   },
 });

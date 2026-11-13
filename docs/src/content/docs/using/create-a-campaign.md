@@ -7,7 +7,7 @@ A campaign is **one country, one or more lists from that country, one sender ID 
 
 ## The four parts
 
-- **Country.** Fixes which lists you can pick, which routes can carry the campaign, which sender IDs are allowed, and the timezone used for scheduling.
+- **Country.** Fixes which lists you can pick, which routes can carry the campaign, which sender IDs are allowed, and the timezone used for scheduling. Only the countries that are open can be picked: for now that is the **United Kingdom**. The other countries stay in the list, greyed out, and cannot be selected; copying a campaign of a closed country, or starting one from a list of a closed country, is refused with the same message.
 - **Lists.** Any number of lists from the campaign country. Numbers that appear in more than one list are sent once.
 - **Sender ID group.** A named set of sender IDs (alphanumeric or numeric). Sendex rotates through the group and only keeps the ones each route and country accept.
 - **Text.** The message body. Write `{{domain}}` where the link should go; the counter under the text box shows the GSM-7 or UCS-2 character count and how many SMS parts the message will cost, taking the length of the short link into account.

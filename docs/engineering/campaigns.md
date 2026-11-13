@@ -53,6 +53,33 @@ app talks to a carrier.
 Checkbox panels that are driven by server props (lists) keep an optimistic local copy so the
 click shows at once and is re-synced when the refreshed props arrive.
 
+## Open countries (D4-19)
+
+Only some countries can be picked for a new campaign, a single SMS or a new list. The rule is
+pure (`packages/core/src/open-countries.ts`) and the web app reads it once, when it is built,
+from `NEXT_PUBLIC_OPEN_COUNTRIES` (`apps/web/lib/open-countries.ts`):
+
+| Value | What is open |
+| --- | --- |
+| blank or not set | the United Kingdom only (the default) |
+| `GB,DE` | the listed 2-letter codes |
+| `all` or `*` | every country |
+
+A value with no valid code falls back to the default, so a typo never opens everything.
+
+- **Browser.** The New Campaign dialog, Send Single SMS and the upload form's Fixed Country
+  keep every country in the dropdown and mark the closed ones `disabled`, with one line under
+  the field saying which are open. Filters (dashboard, reports, routes) are not affected.
+- **Server.** `assertCountryOpen` runs in `createCampaignAction`, `duplicateCampaignAction`,
+  `createCampaignFromListAction`, `createSmsTestAction` and `startUpload` (new list), so a
+  closed country is refused even if the browser is bypassed.
+- **Not covered.** Campaigns and lists that already exist in a closed country are left as they
+  are, and so are the route, enrichment and exception settings.
+
+To open more countries, set the variable on Vercel and redeploy (it is read at build time). The
+Playwright server runs with `GB,ES,DE,MT` because the specs create Spanish, German and Maltese
+data through the UI; `e2e/open-countries.spec.ts` uses France as the closed country.
+
 ## Permissions and audit
 
 | Action                                                              | Permission        |

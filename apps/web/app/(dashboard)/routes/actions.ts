@@ -26,6 +26,7 @@ import {
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { AuthError, requireAction } from "../../../lib/auth";
+import { assertCountryOpen } from "../../../lib/open-countries";
 import { routeSecretKey } from "../../../lib/route-secret";
 
 export type ActionResult<T> = { ok: true; data: T } | { ok: false; error: string };
@@ -256,6 +257,7 @@ export async function createSmsTestAction(input: unknown): Promise<ActionResult<
   return run(async () => {
     const ctx = await requireAction("test.send");
     const data = smsTestSchema.parse(input);
+    assertCountryOpen(data.country);
     const row = await createSmsTest(db(), ctx.organisationId, data, ctx.userId);
     await recordAudit(db(), ctx.organisationId, {
       actorUserId: ctx.userId,

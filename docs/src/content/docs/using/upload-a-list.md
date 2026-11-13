@@ -41,7 +41,9 @@ A list is a set of phone numbers for one country. Campaigns pick one or more lis
      proposed from the file name (`test-20261107-batch2.csv` becomes `Test 20261107 batch2`).
    - **Fixed Country** (required for a new list): the list's country. **Auto-detect from
      file** takes the most common country of the file's **Country** column; without one, pick
-     the country yourself. An existing list keeps its own country.
+     the country yourself. An existing list keeps its own country. Only the countries that
+     are open can be picked (for now the **United Kingdom**); the others are shown greyed out,
+     and a file whose detected country is closed is not imported into a new list.
    - **Logical Check**, **Duplicates** (**Allow duplicates** by default, or **Skip numbers
      already in my contacts**) and **Flush after import**.
    - **File Details**: filename, rows, size, whether the **Number Column** is set, and **First

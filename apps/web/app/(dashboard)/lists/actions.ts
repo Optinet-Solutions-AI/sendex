@@ -34,6 +34,7 @@ import {
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { AuthError, requireAction } from "../../../lib/auth";
+import { assertCountryOpen, ClosedCountryError } from "../../../lib/open-countries";
 
 /**
  * Server actions for the lists screens. Every one resolves the tenant with `requireAction`,
@@ -47,6 +48,7 @@ async function run<T>(fn: () => Promise<T>): Promise<ActionResult<T>> {
     return { ok: true, data: await fn() };
   } catch (error) {
     if (error instanceof AuthError) return { ok: false, error: error.message };
+    if (error instanceof ClosedCountryError) return { ok: false, error: error.message };
     if (error instanceof z.ZodError) {
       const first = error.issues[0];
       return {
@@ -112,6 +114,7 @@ export async function startUpload(
     const ctx = await requireAction("list.upload");
     const settings = UploadSettingsSchema.parse(input);
     if (settings.target.kind === "new") {
+      assertCountryOpen(settings.target.country);
       const list = await createList(db(), ctx.organisationId, settings.target);
       return { listId: list.id, name: list.name, country: settings.target.country };
     }
@@ -252,6 +255,7 @@ export async function createCampaignFromListAction(
     const id = z.uuid().parse(listId);
     const list = await getList(db(), ctx.organisationId, id);
     if (!list) throw new Error("List not found");
+    assertCountryOpen(list.country);
     const campaign = await createCampaign(db(), ctx.organisationId, {
       name: list.name,
       country: list.country,

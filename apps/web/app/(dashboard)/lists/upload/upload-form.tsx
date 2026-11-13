@@ -8,6 +8,7 @@ import {
   type ColumnMapping,
   ColumnMappingSchema,
   type ColumnType,
+  closedCountryMessage,
   countriesList,
   countryByCode,
   countSpreadsheetDamaged,
@@ -19,7 +20,9 @@ import {
   detectListCountry,
   emptyUploadSummary,
   importedGood,
+  isCountryOpen,
   type ListCountry,
+  openCountriesHint,
   totalDropped,
   UPLOAD_CHUNK_SIZE,
   type UploadRow,
@@ -46,6 +49,7 @@ import Papa from "papaparse";
 import { type ChangeEvent, type DragEvent, useId, useRef, useState } from "react";
 import * as XLSX from "xlsx";
 import { formatNumber } from "../../../../lib/format";
+import { OPEN_COUNTRIES } from "../../../../lib/open-countries";
 import { finishUpload, importChunk, startUpload } from "../actions";
 
 const MAX_FILE_BYTES = 10 * 1024 * 1024;
@@ -70,10 +74,16 @@ const AUTO_COUNTRY = "auto";
 const PASTED_NAME = "pasted text";
 type CountryChoice = ListCountry | typeof AUTO_COUNTRY;
 
+// Countries that are not open stay in the list, greyed out and not selectable (D4-19).
 const countryOptions = [
   { value: AUTO_COUNTRY, label: "Auto-detect from file" },
-  ...countriesList.map((c) => ({ value: c.code, label: `${c.flag} ${c.name}` })),
+  ...countriesList.map((c) => ({
+    value: c.code,
+    label: `${c.flag} ${c.name}`,
+    disabled: !isCountryOpen(c.code, OPEN_COUNTRIES),
+  })),
 ];
+const COUNTRY_HINT = openCountriesHint(OPEN_COUNTRIES);
 const duplicateOptions: ReadonlyArray<{ value: DuplicateMode; label: string }> = [
   { value: "allow", label: "Allow duplicates" },
   { value: "skip_existing", label: "Skip numbers already in my contacts" },
@@ -324,7 +334,9 @@ export function UploadForm({
         ? 'Pick a country — "Auto-detect from file" only works when the file has a country column.'
         : detectedCountry === undefined
           ? "No country in the file's country column could be read — pick one."
-          : null
+          : OPEN_COUNTRIES !== null && !isCountryOpen(detectedCountry, OPEN_COUNTRIES)
+            ? closedCountryMessage(detectedCountry, OPEN_COUNTRIES)
+            : null
       : null;
   const listCountry: ListCountry | undefined = fixedCountry ?? detectedCountry;
 
@@ -626,6 +638,11 @@ export function UploadForm({
                   </p>
                 ) : !isNew ? (
                   <p className="text-xs text-muted">The list's country.</p>
+                ) : null}
+                {isNew && COUNTRY_HINT ? (
+                  <p className="text-xs text-muted" data-testid="open-countries-hint">
+                    {COUNTRY_HINT}
+                  </p>
                 ) : null}
               </div>
               <div className="space-y-4 py-4">

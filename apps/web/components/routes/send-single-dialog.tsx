@@ -4,6 +4,8 @@ import {
   countryName,
   countryOptions,
   expandTestCombos,
+  isCountryOpen,
+  openCountriesHint,
   SENDER_MODES,
   type SenderMode,
   TEXT_PRESETS,
@@ -31,8 +33,11 @@ import {
   type RouteChoice,
   routesForCountryAction,
 } from "../../app/(dashboard)/routes/actions";
+import { OPEN_COUNTRIES } from "../../lib/open-countries";
 import { ErrorText, inputClass } from "../campaigns/ui";
 import { eur } from "../dashboard/format";
+
+const COUNTRY_HINT = openCountriesHint(OPEN_COUNTRIES);
 
 const DOT = ["bg-[#2a78d6]", "bg-[#eb6834]", "bg-[#1baf7a]", "bg-[#6250d6]"];
 
@@ -157,11 +162,16 @@ export function SendSingleForm({
         >
           <option value="">Search country…</option>
           {countryOptions.map((c) => (
-            <option key={c.code} value={c.code}>
+            <option key={c.code} value={c.code} disabled={!isCountryOpen(c.code, OPEN_COUNTRIES)}>
               {c.name}
             </option>
           ))}
         </select>
+        {COUNTRY_HINT ? (
+          <span className="text-xs text-muted" data-testid="open-countries-hint">
+            {COUNTRY_HINT}
+          </span>
+        ) : null}
       </label>
       {mode === "single" ? (
         <label className="block text-sm">

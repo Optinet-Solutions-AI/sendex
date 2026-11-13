@@ -25,6 +25,13 @@ The routes you pick are saved on the campaign straight away, in the order you pi
 they are still picked when you come back to it, and **Duplicate** copies them. Only routes
 your organisation can use for the campaign's country are kept.
 
+**After a test.** Once a route has sent in this campaign, its line shows what it did here,
+for example "100 sent · 0 clicks" ("still sending" while a lap on it is queued or running).
+When one or more picked routes have finished sending and got no click, a notice names them
+and **Remove n routes with no clicks** unticks them in one go, so the next send only uses
+the routes that worked. A route that is still sending, or that has not sent yet, is never
+removed, and you can tick a removed route again at any time.
+
 Under the route picker, **{Country} Routes Performance** shows two tables, each switchable
 between Daily, Weekly and Monthly: **Platform Statistics** ranks every platform route for the
 country by CTR, by cost per click and overall, pooled across all accounts on the platform

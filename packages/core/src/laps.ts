@@ -243,3 +243,59 @@ export function topUpTooltip(plan: TopUpPlan, amountMicro: number): string {
   const sends = plan.activeLaps === 1 ? "1 active send" : `${plan.activeLaps} active sends`;
   return `${sends} × ${eurShort(amountMicro)} = ${eurShort(plan.totalMicro)} · New SMS sent: ~${plan.newSms.toLocaleString("en-GB")} · Will spend an additional ${eurShort(amountMicro)} per each highlighted lap`;
 }
+
+// ---------------------------------------------------------------------------
+// Routes that brought no clicks (D4-18)
+// ---------------------------------------------------------------------------
+
+/** What `routeResults` needs from a lap of the campaign. */
+export interface RouteLapStats {
+  routeId: string;
+  status: "queued" | "sending" | "done" | "cancelled";
+  sent: number;
+  clicks: number;
+}
+
+/** One route's result in a campaign, summed over its laps. */
+export interface RouteResult {
+  routeId: string;
+  sent: number;
+  clicks: number;
+  /** A lap on this route is still queued or sending, so its numbers can still move. */
+  running: boolean;
+}
+
+/** Each route's sends and clicks in the campaign, in the order the routes first appear. */
+export function routeResults(laps: readonly RouteLapStats[]): RouteResult[] {
+  const byRoute = new Map<string, RouteResult>();
+  for (const lap of laps) {
+    const result = byRoute.get(lap.routeId) ?? {
+      routeId: lap.routeId,
+      sent: 0,
+      clicks: 0,
+      running: false,
+    };
+    result.sent += lap.sent;
+    result.clicks += lap.clicks;
+    if (lap.status === "queued" || lap.status === "sending") result.running = true;
+    byRoute.set(lap.routeId, result);
+  }
+  return [...byRoute.values()];
+}
+
+/**
+ * The picked routes to drop after a test, the way the team works a campaign: send a test on
+ * several routes, then remove "the routes that brought in zero clicks". A route qualifies
+ * when it sent at least one message in this campaign, none of its laps is still queued or
+ * sending, and it got no click. Returned in the order of `pickedRouteIds`.
+ */
+export function zeroClickRouteIds(
+  laps: readonly RouteLapStats[],
+  pickedRouteIds: readonly string[],
+): string[] {
+  const results = new Map(routeResults(laps).map((r) => [r.routeId, r]));
+  return pickedRouteIds.filter((id) => {
+    const r = results.get(id);
+    return r !== undefined && r.sent > 0 && r.clicks === 0 && !r.running;
+  });
+}

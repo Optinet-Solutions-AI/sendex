@@ -37,9 +37,13 @@ app talks to a carrier.
    `updateSendSettingsAction`, ...). Actions call `revalidatePath` for the campaign page, so
    the server component re-renders and the panels receive fresh props; the panel also calls
    `onChanged()`, which bumps a counter in `SendForm`.
-3. The picked **routes** and the **send all** switch are not persisted (there is no
-   campaign_routes table in v1); they live in `SendForm` state and travel with each
-   estimate and with the send.
+3. The picked **routes** are saved on the campaign as they are picked (`campaign_routes`,
+   `setCampaignRoutesAction`, D4-09); the **send all** switch is not persisted and lives in
+   `SendForm` state. Both travel with each estimate and with the send. The Routes panel also
+   gets `routeResults(campaign.laps)` (each route's sends and clicks in this campaign) and
+   `zeroClickRouteIds(campaign.laps, routeIds)` from `packages/core/src/laps.ts`: the picked
+   routes that sent, have no lap queued or sending, and got no click. "Remove n routes with
+   no clicks" (D4-18) passes the remaining ids to the same `pickRoutes` save.
 4. `SendForm` calls `estimateSendAction({ campaignId, routeIds, sendAll })` whenever the
    routes, the mode or the saved campaign change; the result feeds the footer (CONTACTS,
    SIDS, TEXTS, LINKS, TEST SIZE, SMS, COST).

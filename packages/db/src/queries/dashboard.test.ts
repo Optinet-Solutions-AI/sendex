@@ -85,6 +85,8 @@ async function seedMessage(input: {
   leads?: number;
   sales?: number;
   saleValue?: bigint | null;
+  /** When the sale postbacks arrive; two hours after the send by default. */
+  saleAt?: Date;
   costMicro?: bigint;
 }): Promise<Seeded> {
   seq += 1;
@@ -140,7 +142,7 @@ async function seedMessage(input: {
       campaignId: input.campaignId,
       lapId: input.lapId,
       valueMicro: input.saleValue === undefined ? 50_000_000n : input.saleValue,
-      receivedAt: new Date(input.at.getTime() + 7_200_000),
+      receivedAt: input.saleAt ?? new Date(input.at.getTime() + 7_200_000),
     });
   }
   await t.db.insert(ledgerEntries).values({
@@ -473,5 +475,84 @@ describe("apiUsage", () => {
     expect(usage.log).toHaveLength(2);
     expect(usage.log[0]).toMatchObject({ from: "SID1", country: "GB", costMicro: 38_000n });
     expect(usage.log.every((l) => l.text === "hello")).toBe(true);
+  });
+});
+
+describe("a sale counts on the day it was made (D4-17)", () => {
+  const NOV = new Date("2026-11-05T09:00:00Z");
+  const november = { from: new Date("2026-11-01T00:00:00Z"), to: new Date("2026-12-01T00:00:00Z") };
+  const september = {
+    from: new Date("2026-09-01T00:00:00Z"),
+    to: new Date("2026-10-01T00:00:00Z"),
+  };
+
+  // Seeded last, so the tests above keep their numbers: one more ES message sent in September
+  // whose first deposit only arrives in November, a month without any send.
+  beforeAll(async () => {
+    const [lap] = await t.db.select().from(laps).where(sql`campaign_id = ${campaignEs}`);
+    const [link] = await t.db.select().from(links).where(sql`organisation_id = ${org}`);
+    if (!lap || !link) throw new Error("seed failed");
+    const late = await seedContact(org, "ES", SEP);
+    await seedMessage({
+      campaignId: campaignEs,
+      lapId: lap.id,
+      linkId: link.id,
+      contactId: late,
+      at: SEP,
+      sales: 1,
+      saleAt: NOV,
+      costMicro: 30_000n,
+    });
+  });
+
+  it("puts the sale in the window it was made in, not the window of its SMS", async () => {
+    const nov = await dashboardKpis(t.db, org, november);
+    expect(nov).toMatchObject({ sent: 0, clicks: 0, spendMicro: 0n, leads: 0, sales: 1 });
+    // September still has its own same-day sale, and now two sends.
+    const sep = await dashboardKpis(t.db, org, september);
+    expect(sep).toMatchObject({ sent: 2, sales: 1, spendMicro: 70_000n });
+    // Account-wide every first deposit is counted once.
+    expect((await dashboardKpis(t.db, org)).sales).toBe(3);
+  });
+
+  it("charts the sale in the month it was made", async () => {
+    expect(await costPerSaleByMonth(t.db, org)).toEqual([
+      { month: "2026-09", cost: 70_000n, sales: 1 },
+      { month: "2026-10", cost: 216_000n, sales: 1 },
+      { month: "2026-11", cost: 0n, sales: 1 },
+    ]);
+    const roi = await roiRows(t.db, org, november);
+    expect(roi).toEqual([
+      {
+        country: "ES",
+        link: "Trixino",
+        list: "ES list",
+        month: "2026-11",
+        cost: 0n,
+        clicks: 0,
+        leads: 0,
+        sales: 1,
+        revenue: 50_000_000n,
+      },
+    ]);
+  });
+
+  it("counts it for its country, its offer and its buyer in that window", async () => {
+    const es = (await countryBreakdown(t.db, org, november)).find((r) => r.country === "ES");
+    expect(es).toMatchObject({
+      sent: 0,
+      sales: 1,
+      uniqueBuyers: 1,
+      costMicro: 0n,
+      lastSentAt: null,
+    });
+    const offers = await assetPerformance(t.db, org, { kind: "offer", ...november });
+    expect(offers.rows).toHaveLength(1);
+    expect(offers.rows[0]).toMatchObject({ label: "Trixino", sent: 0, sales: 1 });
+    expect((await conversionsByMonth(t.db, org, november)).buyers).toEqual([
+      { period: "2026-11", key: "ES", value: 1 },
+    ]);
+    // No send in November, so the sent series stays empty.
+    expect(await sentByPeriod(t.db, org, november)).toEqual([]);
   });
 });

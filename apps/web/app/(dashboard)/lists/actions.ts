@@ -155,6 +155,7 @@ export async function importChunk(input: ImportChunkInput): Promise<ActionResult
     // Bad rows that were skipped as already known do not count as added bad.
     const summary: UploadSummary = {
       ...cleaned.summary,
+      addedBad: result.importedBad,
       imported: result.imported,
       skippedExisting: result.skippedExisting,
       samples: { ...cleaned.summary.samples, skipped: result.skippedSamples },

@@ -345,6 +345,8 @@ export interface ImportContactsResult {
   listId: string;
   /** Members actually added to the list. */
   imported: number;
+  /** Of those, the ones added flagged Bad, by reason. Rows that were skipped are not counted. */
+  importedBad: { landline: number; suspicious: number };
   /** Rows not added: known contacts under `skip_existing`, or already members of the list. */
   skippedExisting: number;
   /** Up to 50 of the skipped numbers, for the import summary. */
@@ -385,6 +387,7 @@ export async function importContacts(
 ): Promise<ImportContactsResult> {
   const listId = await resolveTargetList(db, organisationId, input);
   let imported = 0;
+  const importedBad = { landline: 0, suspicious: 0 };
   const skippedSamples: string[] = [];
   const noteSkipped = (e164: string) => {
     if (skippedSamples.length < 50) skippedSamples.push(e164);
@@ -469,7 +472,16 @@ export async function importContacts(
       .returning({ id: listMembers.id, contactId: listMembers.contactId });
     imported += inserted.length;
     const insertedContacts = new Set(inserted.map((m) => m.contactId));
-    for (const c of upserted) if (!insertedContacts.has(c.id)) noteSkipped(c.e164);
+    for (const c of upserted) {
+      if (!insertedContacts.has(c.id)) {
+        noteSkipped(c.e164);
+        continue;
+      }
+      const row = flagsByNumber.get(c.e164);
+      if (row?.bad !== true) continue;
+      if (row.badReason === "landline") importedBad.landline += 1;
+      else importedBad.suspicious += 1;
+    }
   }
 
   await db
@@ -482,7 +494,13 @@ export async function importContacts(
 
   if (input.flushAfterImport) await flushList(db, organisationId, listId);
 
-  return { listId, imported, skippedExisting: input.rows.length - imported, skippedSamples };
+  return {
+    listId,
+    imported,
+    importedBad,
+    skippedExisting: input.rows.length - imported,
+    skippedSamples,
+  };
 }
 
 /** Reset the sent flags of every member of the list, keeping bad flags. Returns members touched. */

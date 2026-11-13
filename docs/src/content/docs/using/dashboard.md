@@ -12,6 +12,13 @@ Every figure is read live from the message, click, postback and ledger rows: "se
 message the carrier accepted, "spend" is the ledger debit of those messages, and leads and
 sales are the postbacks matched to them. Nothing is cached overnight.
 
+**Which date a figure belongs to.** Sends, clicks, leads and spend belong to the day the SMS
+was sent. A **sale** is a first deposit and belongs to the day it was **made**, as in the
+[Campaigns Log](/using/reports/). So with a date range set, Sales counts the deposits made in
+that range, including ones from an SMS sent before it, and a month on the cost-per-sale chart
+can show sales with little or no spend. With **All time** nothing changes: every first
+deposit is counted once.
+
 ## Getting Started
 
 Four tiles (Contacts on file, Messages sent, Spend, Sales), the **Start here** strip with
@@ -46,7 +53,7 @@ monthly (navy) cost per sale, account-wide.
 - **Utilisation map**: one dot per country, x = contacts on file, y = sends ÷ contacts with
   a dashed line at 100%, coloured by cost per FTD (grey = no sales).
 - **Unique signups** and **Unique buyers — accumulated over time**: stacked by country; a
-  contact counts once, in the month of its first lead or sale.
+  contact counts once, in the month of its first lead or its first deposit.
 - The **per-country table**: contacts, sent, CTR, utilisation, signups, sales, cost per
   sale, last sent and a status badge: **Healthy** from 50% utilisation, **Under-worked**
   below.

@@ -10,6 +10,7 @@ import {
   type ColumnType,
   countriesList,
   countryByCode,
+  countSpreadsheetDamaged,
   DROP_REASON_LABELS,
   type DropReason,
   type DuplicateMode,
@@ -55,6 +56,7 @@ const ACCEPTED_EXTENSIONS = ["csv", "txt", "xls", "xlsx"];
 /** Reasons a row is rejected, in the order the summary lists them. VoIP is never produced today. */
 const SHOWN_DROP_REASONS: readonly DropReason[] = [
   "invalid",
+  "damaged",
   "unparseable",
   "no_country",
   "premium",
@@ -298,6 +300,18 @@ export function UploadForm({
   const totalBytes = files.reduce((sum, f) => sum + f.bytes, 0);
   const previewRows = first ? dataRowsOf(first).slice(0, PREVIEW_ROWS) : [];
   const phoneSet = mapping.includes("phone");
+  // Numbers a spreadsheet program cut short (4.91516E+12): counted here so the user hears about
+  // it before importing, not from the rejects afterwards.
+  const phoneIndex = mapping.indexOf("phone");
+  const damagedNumbers =
+    phoneIndex < 0
+      ? 0
+      : files.reduce(
+          (sum, f) =>
+            sum +
+            countSpreadsheetDamaged(dataRowsOf(f).map((row) => String(row[phoneIndex] ?? ""))),
+          0,
+        );
 
   // "Auto-detect from file" needs a country column with something readable in it.
   const autoCountry = isNew && countryChoice === AUTO_COUNTRY;
@@ -815,6 +829,21 @@ export function UploadForm({
           ) : null}
 
           <div className="mt-5 space-y-3">
+            {damagedNumbers > 0 ? (
+              <p
+                role="status"
+                data-testid="damaged-warning"
+                className="rounded-md border border-amber/30 bg-amber-soft px-3 py-2 text-sm text-amber"
+              >
+                <strong className="font-semibold">
+                  {formatNumber(damagedNumbers)} of {formatNumber(totalRows)} numbers were cut short
+                  by a spreadsheet program.
+                </strong>{" "}
+                They look like 4.91516E+12, the missing digits cannot be recovered, and they will be
+                rejected. Use the original file, or export it again with the phone column formatted
+                as text.
+              </p>
+            ) : null}
             {errorBox}
             {phase.kind === "uploading" ? (
               <div aria-live="polite">

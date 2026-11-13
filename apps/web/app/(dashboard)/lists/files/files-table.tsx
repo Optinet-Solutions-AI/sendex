@@ -63,6 +63,9 @@ function ImportResult({ job }: { job: ImportJobRow }) {
     ["Duplicate in file", job.duplicates],
     ["Successfully Imported", job.addedGood],
   ];
+  // Only shown when it happened: the box otherwise keeps SMS Edge's lines.
+  const damaged = s?.dropped.damaged ?? 0;
+  if (damaged > 0) lines.splice(2, 0, ["Damaged by a spreadsheet", damaged]);
   return (
     <div className="rounded-md border border-rule bg-surface p-3">
       <h4 className="font-mono text-[11px] uppercase tracking-[0.06em] text-muted">

@@ -56,6 +56,37 @@ Code: `packages/providers/src/http/telecom23-provider.ts` (adapter), `apps/worke
 3. Fill `route_prices` for every country the account is sold for (the portal's Pricing page or `GET /user/pricing` with the live key lists rates per network).
 4. Send D2-18's first real message to a test phone and watch `fly logs` for `receipt applied`.
 
+### First live messages (2026-11-12)
+
+Two single messages were sent straight to `POST /sms/send-individual` from the worker machine
+with the live key, outside the app (no campaign, no ledger entry, no row in `messages`), to
+check the carrier, the key and the connection once the refusals had ended. Both numbers were
+on `SEND_ALLOWLIST_E164`. Numbers and prices are not recorded here.
+
+| Time (UTC) | To | Their answer to the send | Status afterwards (`GET /sms/status/{id}`) |
+| --- | --- | --- | --- |
+| 14:40:57 | a UK mobile | `200`, `results[0].status: "accepted"`, 1 segment, GSM-7 | `delivered_at` set 14 s later; a cost is charged |
+| 14:45:11 | a Philippine mobile | `200`, accepted with a `message_id` | `status: "failed"` within 6 s, `status_code: null`, `telecom_message_id: null`, cost 0 |
+
+What this showed:
+
+- **The account is priced for the United Kingdom only.** `GET /user/pricing` returns one row per
+  network (`mcc`, `mccmnc`, `country`, `network`, `rate`, `rate_start_date`, `rate_end_date`); on
+  2026-11-12 all 33 rows were UK networks. The Philippine message failed without a reason from
+  their side; that there is no Philippine price is the one fact that fits. A country has to be
+  added to the account by 23Telecom before it can be sent to.
+- **An unpriced country is not refused at the send.** The send answered `accepted`, not
+  `unpriced`; the failure only shows in the status (or the delivery webhook). The adapter
+  already treats a later `failed` as failed, so the message would be refunded by the receipt.
+- **The balance is a credit limit.** `GET /user/balance` returns `available_balance`, `balance`,
+  `credit_limit`, `currency` and `updated`.
+- **The status answer carries click fields** (`clicked`, `human_click_events`,
+  `bot_click_events`, first and last click times). We do not use them: clicks come from our own
+  short links.
+
+Still to do for D2-18: the same message as a campaign from the app (a list with one allowed
+number, the 23Telecom route, test size 1), which also needs UK rows in `route_prices` (step 3).
+
 ## SMPP (provider `smpp`)
 
 Fill every `TODO` from the 23Telecom onboarding e-mail / portal before going live; until then the worker runs against the simulator (see [smpp.md](./smpp.md)).

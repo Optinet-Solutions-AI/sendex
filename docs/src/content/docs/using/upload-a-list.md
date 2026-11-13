@@ -20,6 +20,15 @@ A list is a set of phone numbers for one country. Campaigns pick one or more lis
   list so you can see them, but are never sent to. Duplicates within the file and numbers
   already in your contacts (with "Skip numbers already in my contacts") are **skipped**.
   Switching the check off keeps landlines as Good members.
+- **How a number may be written.** With a plus (`+49 151 5550 1234`), with `00`
+  (`0049 151…`), with the country code and no plus (`4915155501234`, the way SMS Edge exports
+  write them) or as a local number of the list country (`0151 5550 1234`). All four give the
+  same number.
+- **Numbers damaged by a spreadsheet.** A spreadsheet program that opens a CSV and saves it
+  again can cut long numbers short: `4915161234567` becomes `4.91516E+12` and the missing
+  digits are gone. The import step warns you how many numbers in the file look like that, and
+  they are **rejected** as "Damaged by a spreadsheet". Upload the original file, or export it
+  again with the phone column formatted as text.
 
 ## Steps
 

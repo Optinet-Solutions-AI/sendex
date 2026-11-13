@@ -79,6 +79,19 @@ summary screen
   fields carried along: `normalisePhone` (against the row's own country cell when it reads,
   else `defaultCountry`) → `logicalCheck` → in-chunk dedupe. Returns the kept
   rows and an `UploadSummary` with `dropped` counted by `DropReason`.
+- `normalisePhone(raw, defaultCountry)` and a number without a plus: it can be a local number
+  of `defaultCountry` or an international one missing its plus (`4915155501234`). Both readings
+  are tried. When both are valid the mobile one wins; when neither or both are mobile the
+  international one wins if it is in `defaultCountry`, else the local one. Before 2026-11-12
+  the local reading always won, and Germany's loose plan accepts almost anything as a landline,
+  so a whole SMS Edge export of German mobiles was flagged Bad (landline).
+- `isSpreadsheetDamaged(raw)`: scientific notation (`4.91516E+12`), what a spreadsheet
+  program leaves of a long number when it re-saves a CSV. `normalisePhone` reports it as
+  `damaged` and never reads its digits; `countSpreadsheetDamaged` feeds the warning on the
+  import step. `dropped.damaged` defaults to 0 when a stored summary predates it.
+- `importContacts` returns `importedBad` (landline, suspicious): the Bad members it actually
+  inserted. `importChunk` puts that in the summary's `addedBad`, so a Bad number skipped as
+  already in the list is not counted as added.
 - `countriesList`: the eighteen supported countries (`LIST_COUNTRY_CODES`) with name and flag.
   The UK is `GB` in the database and "United Kingdom" on screen; the seed names lists `_UK_`.
 
@@ -131,3 +144,6 @@ actions check again on the server.
   `e2e/fixtures/es-numbers.csv` (17 mobiles, 2 landlines, 1 invalid), summary, flush from the
   row menu, detail counts. The spec names its list `E2E ES <timestamp>` and deletes the list
   and its contacts before and after through `e2e/helpers/db.ts`, so it can run repeatedly.
+- `apps/web/e2e/lists-upload-numbers.spec.ts`: a pasted German list with two country-code
+  numbers (Good) and two spreadsheet-damaged cells (warning before the import, rejected as
+  damaged, named on the Files page).

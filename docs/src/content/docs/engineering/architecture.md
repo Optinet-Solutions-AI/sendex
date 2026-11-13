@@ -31,7 +31,7 @@ flowchart LR
     redis[(Redis / BullMQ)]
   end
 
-  providers[[Providers<br/>23Telecom SMPP, HTTP]]
+  providers[[Providers<br/>23Telecom REST, SMPP, HTTP]]
 
   user --> web
   web --> pg

@@ -4,8 +4,12 @@ import type { Db } from "../types.js";
 
 /**
  * The read models of the dashboard tabs (D4-05). Everything is scoped by organisation and
- * by the global filter (a UTC window on the send time and a country list) and read live
- * from the message, click, postback and ledger rows through one "message facts" CTE.
+ * by the global filter (a UTC window and a country list) and read live from the message,
+ * click, postback and ledger rows through one "message facts" CTE.
+ *
+ * The window is on the send time for sends, clicks, leads and spend, and on the time the
+ * deposit was made for sales and revenue (D4-17), as in the Campaigns Log (D4-12): a sale
+ * counts on the day it was made, even when its SMS went out before the window.
  */
 
 export interface DashboardFilter {
@@ -54,11 +58,11 @@ function inWindow(column: SQL, filter: DashboardFilter): SQL {
 }
 
 /**
- * One row per submitted message in the window: its day and month, dimensions, whether a
- * human clicked it, how many bot previews it drew, its leads, sales, revenue (postback value
- * or the offer's profit per sale) and ledger cost.
+ * One row per submitted message sent in the window (`sent` = 1): its day and month,
+ * dimensions, whether a human clicked it, how many bot previews it drew, its leads and its
+ * ledger cost. Sales and revenue are zero here; they come from {@link depositFacts}.
  */
-function messageFacts(organisationId: string, filter: DashboardFilter, onlyApi = false): SQL {
+function sendFacts(organisationId: string, filter: DashboardFilter, onlyApi = false): SQL {
   return sql`
     select m.id, m.contact_id, m.e164, m.sender_id, m.text, m.ad_text_id, m.link_id, m.status,
       m.sent_at,
@@ -69,12 +73,12 @@ function messageFacts(organisationId: string, filter: DashboardFilter, onlyApi =
       coalesce(li.country, c.country) as country,
       l.list_id, li.name as list_name, m.route_id,
       coalesce(lk.name, '(no link)') as link_name,
+      1 as sent,
       exists (select 1 from clicks ck where ck.message_id = m.id and ck.device is distinct from 'bot') as clicked,
       (select count(*) from clicks ck where ck.message_id = m.id and ck.device = 'bot') as previews,
       (select count(*) from postbacks p where p.message_id = m.id and p.type = 'lead') as leads,
-      (exists (select 1 from postbacks p where p.message_id = m.id and p.type = 'sale'))::int as sales,
-      (select coalesce(sum(coalesce(p.value_micro, lk.profit_micro, 0)), 0) from postbacks p
-         where p.message_id = m.id and p.type = 'sale') as revenue,
+      0 as sales,
+      0::numeric as revenue,
       (select coalesce(-sum(le.amount_micro), 0) from ledger_entries le
          where le.reference_type = 'message' and le.reference_id = m.id::text) as cost
     from messages m
@@ -84,6 +88,56 @@ function messageFacts(organisationId: string, filter: DashboardFilter, onlyApi =
     left join links lk on lk.id = m.link_id
     where m.organisation_id = ${organisationId}
       and m.status in ('sent', 'delivered', 'expired')${inWindow(sql`m.sent_at`, filter)}${inCountries(sql`coalesce(li.country, c.country)`, filter.countries)}${onlyApi ? sql` and c.source = 'api'` : sql``}`;
+}
+
+/**
+ * One row per first deposit made in the window (`sent` = 0, `sales` = 1): the dimensions of
+ * its message, the day and month the deposit was made, and the revenue of the message's sale
+ * postbacks (postback value or the offer's profit per sale). Only the first sale postback of
+ * a message counts as a sale, as on the campaign page ("Sales (FTD)"). Same columns as
+ * {@link sendFacts}, so the two stack.
+ */
+function depositFacts(organisationId: string, filter: DashboardFilter, onlyApi = false): SQL {
+  return sql`
+    select m.id, m.contact_id, m.e164, m.sender_id, m.text, m.ad_text_id, m.link_id, m.status,
+      null::timestamptz as sent_at,
+      (fd.first_at at time zone 'UTC')::date as day,
+      to_char(fd.first_at at time zone 'UTC', 'YYYY-MM') as month,
+      to_char(date_trunc('week', fd.first_at at time zone 'UTC'), 'YYYY-MM-DD') as week,
+      m.campaign_id, c.name as campaign_name, c.source as campaign_source,
+      coalesce(li.country, c.country) as country,
+      l.list_id, li.name as list_name, m.route_id,
+      coalesce(lk.name, '(no link)') as link_name,
+      0 as sent,
+      false as clicked,
+      0::bigint as previews,
+      0::bigint as leads,
+      1 as sales,
+      (select coalesce(sum(coalesce(p.value_micro, lk.profit_micro, 0)), 0) from postbacks p
+         where p.message_id = m.id and p.type = 'sale') as revenue,
+      0::numeric as cost
+    from (
+      select p.message_id, min(p.received_at) as first_at
+      from postbacks p
+      where p.organisation_id = ${organisationId} and p.type = 'sale' and p.message_id is not null
+      group by p.message_id
+    ) fd
+    join messages m on m.id = fd.message_id
+    join laps l on l.id = m.lap_id
+    left join lists li on li.id = l.list_id
+    left join campaigns c on c.id = m.campaign_id
+    left join links lk on lk.id = m.link_id
+    where m.organisation_id = ${organisationId}
+      and m.status in ('sent', 'delivered', 'expired')${inWindow(sql`fd.first_at`, filter)}${inCountries(sql`coalesce(li.country, c.country)`, filter.countries)}${onlyApi ? sql` and c.source = 'api'` : sql``}`;
+}
+
+/**
+ * Sends and first deposits stacked: sum `sent`, `leads`, `cost` and `sales`, `revenue` over
+ * it. `count(*)` would count the deposit rows as sends, so read models use `sum(f.sent)`.
+ */
+function messageFacts(organisationId: string, filter: DashboardFilter, onlyApi = false): SQL {
+  return sql`${sendFacts(organisationId, filter, onlyApi)}
+    union all ${depositFacts(organisationId, filter, onlyApi)}`;
 }
 
 // ---------------------------------------------------------------------------
@@ -112,7 +166,7 @@ export async function dashboardKpis(
       select count(*)::int as n from contacts ct
       where ct.organisation_id = ${organisationId}${inWindow(sql`ct.created_at`, filter)}${inCountries(sql`ct.country`, filter.countries)}`),
     db.execute(sql`
-      select count(*)::int as sent, count(*) filter (where f.clicked)::int as clicks,
+      select coalesce(sum(f.sent), 0)::int as sent, count(*) filter (where f.clicked)::int as clicks,
         coalesce(sum(f.cost), 0)::bigint as spend, coalesce(sum(f.leads), 0)::int as leads,
         coalesce(sum(f.sales), 0)::int as sales
       from (${messageFacts(organisationId, filter)}) f`),
@@ -167,7 +221,7 @@ export async function sentByPeriod(
   const rows = rowsOf(
     await db.execute(sql`
       select ${column} as period, f.country as key, count(*)::int as value
-      from (${messageFacts(organisationId, filter, onlyApi)}) f
+      from (${sendFacts(organisationId, filter, onlyApi)}) f
       group by 1, 2 order by 1, 2`),
   );
   return rows.map((r) => ({ period: String(r.period), key: String(r.key), value: num(r.value) }));
@@ -253,7 +307,8 @@ export async function countryBreakdown(
         group by country
       ), f as (${messageFacts(organisationId, filter)}),
       agg as (
-        select f.country, count(*)::int as sent, count(*) filter (where f.clicked)::int as clicks,
+        select f.country, coalesce(sum(f.sent), 0)::int as sent,
+          count(*) filter (where f.clicked)::int as clicks,
           coalesce(sum(f.leads), 0)::int as leads, coalesce(sum(f.sales), 0)::int as sales,
           coalesce(sum(f.cost), 0)::bigint as cost, max(f.sent_at) as last_sent_at,
           count(distinct f.contact_id) filter (where f.leads > 0)::int as signups,
@@ -288,7 +343,8 @@ export interface ConversionSeries {
 
 /**
  * New unique signups and buyers per month and country: a contact counts once, in the month
- * of its first lead (or sale) on a message sent in the window.
+ * of its first lead on a message sent in the window, and in the month of its first deposit
+ * made in the window.
  */
 export async function conversionsByMonth(
   db: Db,
@@ -297,14 +353,19 @@ export async function conversionsByMonth(
 ): Promise<ConversionSeries> {
   const rows = rowsOf(
     await db.execute(sql`
-      with f as (${messageFacts(organisationId, filter)}),
+      with s as (${sendFacts(organisationId, filter)}),
+      d as (${depositFacts(organisationId, filter)}),
       firsts as (
-        select p.type, f.contact_id, f.country, min(p.received_at) as first_at
-        from postbacks p join f on f.id = p.message_id
-        group by p.type, f.contact_id, f.country
+        select 'lead' as type, s.contact_id, s.country,
+          to_char(min(p.received_at) at time zone 'UTC', 'YYYY-MM') as period
+        from postbacks p join s on s.id = p.message_id
+        where p.type = 'lead'
+        group by s.contact_id, s.country
+        union all
+        select 'sale' as type, d.contact_id, d.country, min(d.month) as period
+        from d group by d.contact_id, d.country
       )
-      select type, to_char(first_at at time zone 'UTC', 'YYYY-MM') as period, country as key,
-        count(*)::int as value
+      select type, period, country as key, count(*)::int as value
       from firsts group by 1, 2, 3 order by 2, 3`),
   );
   const signups: SeriesPoint[] = [];
@@ -486,7 +547,8 @@ export async function assetPerformance(
   if (input.kind === "text") {
     query = sql`
       select coalesce(f.ad_text_id::text, md5(f.text)) as key, f.text as label, null as sublabel,
-        count(*)::int as sent, count(*) filter (where f.status = 'delivered')::int as delivered,
+        coalesce(sum(f.sent), 0)::int as sent,
+        count(*) filter (where f.sent = 1 and f.status = 'delivered')::int as delivered,
         count(*) filter (where f.clicked)::int as clicks, coalesce(sum(f.leads), 0)::int as leads,
         coalesce(sum(f.sales), 0)::int as sales, coalesce(sum(f.cost), 0)::bigint as spend,
         max(f.sent_at) as last_sent_at, count(*) over () as total
@@ -496,7 +558,8 @@ export async function assetPerformance(
   } else if (input.kind === "offer") {
     query = sql`
       select coalesce(f.link_id::text, 'none') as key, f.link_name as label, lk.url as sublabel,
-        count(*)::int as sent, count(*) filter (where f.status = 'delivered')::int as delivered,
+        coalesce(sum(f.sent), 0)::int as sent,
+        count(*) filter (where f.sent = 1 and f.status = 'delivered')::int as delivered,
         count(*) filter (where f.clicked)::int as clicks, coalesce(sum(f.leads), 0)::int as leads,
         coalesce(sum(f.sales), 0)::int as sales, coalesce(sum(f.cost), 0)::bigint as spend,
         max(f.sent_at) as last_sent_at, count(*) over () as total
@@ -508,7 +571,8 @@ export async function assetPerformance(
       select f.sender_id as key, f.sender_id as label,
         (select 'SID ' || sg.country from sender_ids si join sid_groups sg on sg.id = si.sid_group_id
            where si.organisation_id = ${organisationId} and si.value = f.sender_id limit 1) as sublabel,
-        count(*)::int as sent, count(*) filter (where f.status = 'delivered')::int as delivered,
+        coalesce(sum(f.sent), 0)::int as sent,
+        count(*) filter (where f.sent = 1 and f.status = 'delivered')::int as delivered,
         count(*) filter (where f.clicked)::int as clicks, coalesce(sum(f.leads), 0)::int as leads,
         coalesce(sum(f.sales), 0)::int as sales, coalesce(sum(f.cost), 0)::bigint as spend,
         max(f.sent_at) as last_sent_at, count(*) over () as total
@@ -575,7 +639,8 @@ export async function apiUsage(
 ): Promise<ApiUsage> {
   const [countryRows, logRows, series] = await Promise.all([
     db.execute(sql`
-      select f.country, count(*)::int as sent, coalesce(sum(f.previews), 0)::int as previews,
+      select f.country, coalesce(sum(f.sent), 0)::int as sent,
+        coalesce(sum(f.previews), 0)::int as previews,
         count(*) filter (where f.clicked)::int as clicks, coalesce(sum(f.leads), 0)::int as leads,
         coalesce(sum(f.sales), 0)::int as sales, coalesce(sum(f.cost), 0)::bigint as spend,
         max(f.sent_at) as last_sent_at
@@ -583,7 +648,7 @@ export async function apiUsage(
       group by f.country order by sent desc, f.country`),
     db.execute(sql`
       select f.id, f.sender_id, f.e164, f.country, f.text, f.cost, f.status, f.sent_at
-      from (${messageFacts(organisationId, filter, true)}) f
+      from (${sendFacts(organisationId, filter, true)}) f
       order by f.sent_at desc limit 50`),
     sentByPeriod(db, organisationId, filter, "month", true),
   ]);

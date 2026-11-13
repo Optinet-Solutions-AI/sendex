@@ -6,7 +6,7 @@ import {
 
 export type { CountryCode, NumberType };
 
-export type NormaliseFailure = "invalid" | "unparseable" | "no_country";
+export type NormaliseFailure = "invalid" | "unparseable" | "no_country" | "damaged";
 
 export type NormaliseResult =
   | { ok: true; e164: string; country: CountryCode; type: NumberType }
@@ -18,6 +18,27 @@ export type LogicalCheckResult = { keep: true } | { keep: false; reason: DropRea
 
 export interface LogicalCheckOptions {
   removeLandlines: boolean;
+}
+
+/**
+ * A phone number a spreadsheet program has cut short: `4.91516E+12` is what Excel writes for
+ * 4915161234567 when it re-saves a CSV. The missing digits are gone, so the cell cannot be
+ * read as a number; stripping it to its digits would invent a different, wrong one.
+ */
+export function isSpreadsheetDamaged(raw: string): boolean {
+  return /^\s*\d+(?:[.,]\d+)?\s*e\s*\+?\s*\d+\s*$/i.test(raw);
+}
+
+/** How many cells of a column are {@link isSpreadsheetDamaged}; the upload form warns with it. */
+export function countSpreadsheetDamaged(values: readonly string[]): number {
+  let count = 0;
+  for (const value of values) if (isSpreadsheetDamaged(value)) count += 1;
+  return count;
+}
+
+/** Number types an SMS can be sent to as a mobile. */
+function isMobileType(type: NumberType): boolean {
+  return type === "MOBILE" || type === "FIXED_LINE_OR_MOBILE";
 }
 
 /** Strip everything that is not a digit or a leading plus sign. */
@@ -48,8 +69,19 @@ function classify(e164: string, defaultCountry?: CountryCode): NormaliseResult |
  * Accepts `+`, a leading `00` or a bare country code, with any mix of spaces, dots, dashes and
  * parentheses. A number without a country code is parsed against `defaultCountry`; without
  * one it is reported as `no_country`.
+ *
+ * A number without a plus can often be read two ways: as a local number of `defaultCountry`,
+ * or as an international one whose plus is missing (`4915123456789`, the way SMS Edge exports
+ * write them). Loose numbering plans (Germany, Austria) accept the first reading of almost
+ * anything as a landline, so when both readings are valid the mobile one wins, and when
+ * neither or both are mobile the international one wins if it is in `defaultCountry`.
+ *
+ * Scientific notation (`4.91516E+12`) is reported as `damaged`, never read.
  */
 export function normalisePhone(raw: string, defaultCountry?: CountryCode): NormaliseResult {
+  if (isSpreadsheetDamaged(raw)) {
+    return { ok: false, reason: "damaged" };
+  }
   const compact = digitsOnly(raw);
   if (compact.replace("+", "").length === 0) {
     return { ok: false, reason: "unparseable" };
@@ -64,11 +96,19 @@ export function normalisePhone(raw: string, defaultCountry?: CountryCode): Norma
 
   if (defaultCountry !== undefined) {
     const national = classify(compact, defaultCountry);
+    const international = classify(`+${compact}`, defaultCountry);
+    if (national?.ok === true && international?.ok === true) {
+      const nationalMobile = isMobileType(national.type);
+      const internationalMobile = isMobileType(international.type);
+      if (internationalMobile !== nationalMobile) {
+        return internationalMobile ? international : national;
+      }
+      return international.country === defaultCountry ? international : national;
+    }
     if (national?.ok === true) {
       return national;
     }
     // Not a valid national number: perhaps it is an international one missing its plus sign.
-    const international = classify(`+${compact}`, defaultCountry);
     if (international?.ok === true) {
       return international;
     }

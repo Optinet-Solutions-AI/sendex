@@ -1,14 +1,26 @@
 "use client";
 
-import { countryOptions, timezoneForCountry, timezoneOptions } from "@sendex/core";
+import {
+  countryOptions,
+  defaultOpenCountry,
+  isCountryOpen,
+  openCountriesHint,
+  timezoneForCountry,
+  timezoneOptions,
+} from "@sendex/core";
 import { useRouter } from "next/navigation";
 import { useId, useState, useTransition } from "react";
 import { createCampaignAction } from "../../app/(dashboard)/campaigns/actions";
+import { OPEN_COUNTRIES } from "../../lib/open-countries";
 import { Button, ErrorText, Field, inputClass, Modal } from "./ui";
 
-const DEFAULT_COUNTRY = "ES";
+const DEFAULT_COUNTRY = defaultOpenCountry("ES", OPEN_COUNTRIES);
+const COUNTRY_HINT = openCountriesHint(OPEN_COUNTRIES);
 
-/** "New Campaign": name, country (flags) and the timezone derived from it, still editable. */
+/**
+ * "New Campaign": name, country (flags) and the timezone derived from it, still editable.
+ * Countries that are not open stay in the list, greyed out and not selectable (D4-19).
+ */
 export function NewCampaignModal() {
   const router = useRouter();
   const id = useId();
@@ -70,11 +82,20 @@ export function NewCampaignModal() {
               onChange={(e) => pickCountry(e.target.value)}
             >
               {countryOptions.map((c) => (
-                <option key={c.code} value={c.code}>
+                <option
+                  key={c.code}
+                  value={c.code}
+                  disabled={!isCountryOpen(c.code, OPEN_COUNTRIES)}
+                >
                   {c.flag} {c.name} ({c.code})
                 </option>
               ))}
             </select>
+            {COUNTRY_HINT ? (
+              <p className="text-xs text-neutral-500" data-testid="open-countries-hint">
+                {COUNTRY_HINT}
+              </p>
+            ) : null}
           </Field>
           <Field
             label="Timezone"

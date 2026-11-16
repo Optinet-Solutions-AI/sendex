@@ -16,6 +16,7 @@ import { AdvancedSettings } from "./advanced-settings";
 import { ContextPanel, type ContextTab, SendSummary } from "./context-panel";
 import { formatPricePerSms } from "./format";
 import { LapsTable } from "./laps-table";
+import { ListPicker } from "./list-picker";
 import { ListsPanel } from "./lists-panel";
 import { OffersPanel } from "./offers-panel";
 import { RoutesPanel } from "./routes-panel";
@@ -258,28 +259,13 @@ export function SendForm({
               />
             </FormRow>
             <FormRow label="Lists">
-              <button
-                type="button"
+              <ListPicker
+                campaign={campaign}
+                lists={lists}
                 className={rowButton}
-                onClick={() => setTab("lists")}
-                aria-label="Lists"
-              >
-                <span
-                  className={
-                    campaign.lists.length + campaign.segments.length === 0
-                      ? "text-muted"
-                      : "truncate"
-                  }
-                >
-                  {campaign.lists.length + campaign.segments.length === 0
-                    ? "Select lists or segments…"
-                    : [
-                        ...campaign.segments.map((seg) => `${seg.name} (segment)`),
-                        ...campaign.lists.map((l) => l.name),
-                      ].join(", ")}
-                </span>
-                <ChevronRight className="h-4 w-4 shrink-0 text-muted" aria-hidden="true" />
-              </button>
+                onOpen={() => setTab("lists")}
+                onChanged={onChanged}
+              />
             </FormRow>
             <FormRow label="Offers">
               <button

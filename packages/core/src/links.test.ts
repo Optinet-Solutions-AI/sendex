@@ -182,6 +182,23 @@ describe("renderLinkUrl", () => {
     expect(renderLinkUrl("{{geo}}-{{geo}}", vars)).toBe("ES-ES");
   });
 
+  it("takes three braces, the way SMS Edge writes them, with no brace left behind (D4-21)", () => {
+    expect(renderLinkUrl("https://t.example/click?o=125&a=35&sub_id1={{{dynamic}}}", vars)).toBe(
+      "https://t.example/click?o=125&a=35&sub_id1=dyn-42",
+    );
+    expect(renderLinkUrl("https://x.example/?d={{{ dynamic }}}&g={{geo}}", vars)).toBe(
+      "https://x.example/?d=dyn-42&g=ES",
+    );
+    // An unknown name in three braces is emptied whole as well.
+    expect(renderLinkUrl("https://x.example/?a={{{nope}}}", vars)).toBe("https://x.example/?a=");
+  });
+
+  it("leaves single braces alone", () => {
+    expect(renderLinkUrl("https://x.example/{dynamic}/{{geo}}", vars)).toBe(
+      "https://x.example/{dynamic}/ES",
+    );
+  });
+
   it("returns a template without placeholders unchanged", () => {
     expect(renderLinkUrl("https://x.example/plain?q=1", vars)).toBe("https://x.example/plain?q=1");
   });

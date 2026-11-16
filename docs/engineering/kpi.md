@@ -109,6 +109,20 @@ A dialog on List Follow-Up (`components/kpi/campaign-creator.tsx`), for `campaig
   is a plan only: the scheduler reads `scheduled_at` and never this column, so a planned
   campaign stays a draft until someone sends it.
 
+## Daily plan (D5-08)
+
+`/kpi/daily-plan?day=YYYY-MM-DD&by=country|offer|route`
+
+- `dailyPlan(db, organisationId, day)` returns the campaigns whose `planned_for` is that day
+  with their offer, lists, picked routes, the numbers in their lists and what they have sent.
+- `planGroups(rows, by)` and `planTotals(rows, target)` (core) make the group table and the
+  tiles; the difference is contacts minus target.
+- `organisation_settings.daily_send_target` (integer, null for none; migration
+  `0026_daily_send_target`) with `getDailySendTarget` / `setDailySendTarget`. It is a goal the
+  plan is compared with and is never read by the sending engine; the caps are separate.
+- `setDailyTargetAction` needs `settings.manage` (owner) and is audited as
+  `settings.daily_target`; `dailyTargetSchema` takes a whole number or blank.
+
 ## Tests
 
 - `packages/core/src/kpi.test.ts`: the ratios and the grouping.
@@ -118,6 +132,7 @@ A dialog on List Follow-Up (`components/kpi/campaign-creator.tsx`), for `campaig
 - `apps/web/lib/kpi-params.test.ts`: parsing, the query string round trip, the window.
 - `apps/web/e2e/list-follow-up.spec.ts`, `insight.spec.ts`, `sales-results.spec.ts` and
   `trends.spec.ts` (which asks `latestDemoMonth()` for the month to open) and
-  `campaign-creator.spec.ts` (which deletes the drafts it makes): on the demo
+  `campaign-creator.spec.ts` (which deletes the drafts it makes) and `daily-plan.spec.ts`
+  (which plans two campaigns for a far-off day and removes them): on the demo
   activity (`e2e/helpers/demo.ts` runs `pnpm db:seed:activity` first). The Insight spec uses
   the all-time view because the demo sends are dated relative to the day they were seeded.

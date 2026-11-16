@@ -53,6 +53,7 @@ export const NAV_TREE: readonly NavGroup[] = [
       { label: "Sales Results", href: "/kpi/sales-results", action: "campaign.view" },
       { label: "Trends", href: "/kpi/trends", action: "campaign.view" },
       { label: "List Follow-Up", href: "/kpi/list-follow-up", action: "campaign.view" },
+      { label: "Daily Plan", href: "/kpi/daily-plan", action: "campaign.view" },
     ],
   },
   {

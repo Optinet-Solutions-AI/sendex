@@ -44,3 +44,65 @@ export async function deletePlannedCampaigns(): Promise<void> {
     await sql.end();
   }
 }
+
+/**
+ * Two draft campaigns planned for `day` in the demo organisation, for the daily plan spec
+ * (D5-08): Trixino to UK_ZEN_3 on route 724 and Rolling Slots to ES_DIM_1 on route 400. Their
+ * names start with `namePrefix`. Needs the demo activity.
+ */
+export async function seedE2ePlan(namePrefix: string, day: string): Promise<void> {
+  const url = process.env.DATABASE_URL;
+  if (!url) throw new Error("DATABASE_URL must be set to run the KPI e2e specs");
+  const sql = postgres(url, { max: 1 });
+  try {
+    const [org] = await sql`select id from organisations where slug = 'external'`;
+    if (!org) throw new Error("The demo organisation is missing");
+    const plans = [
+      { offer: "Trixino", list: "UK_ZEN_3", route: "724", country: "GB", zone: "Europe/London" },
+      {
+        offer: "Rolling Slots",
+        list: "ES_DIM_1",
+        route: "400",
+        country: "ES",
+        zone: "Europe/Madrid",
+      },
+    ];
+    for (const plan of plans) {
+      const [campaign] = await sql`
+        insert into campaigns (organisation_id, name, country, timezone, planned_for)
+        values (${org.id}, ${`${namePrefix} ${plan.offer} to ${plan.list}`}, ${plan.country},
+                ${plan.zone}, ${day}::date)
+        returning id`;
+      if (!campaign) throw new Error("seedE2ePlan: no campaign row");
+      await sql`
+        insert into campaign_lists (campaign_id, list_id, organisation_id)
+        select ${campaign.id}, id, ${org.id} from lists
+        where organisation_id = ${org.id} and name = ${plan.list}`;
+      await sql`
+        insert into campaign_links (campaign_id, link_id, organisation_id)
+        select ${campaign.id}, id, ${org.id} from links
+        where organisation_id = ${org.id} and name = ${plan.offer}`;
+      await sql`
+        insert into campaign_routes (campaign_id, route_id, organisation_id, position)
+        select ${campaign.id}, id, ${org.id}, 0 from routes
+        where organisation_id is null and name = ${plan.route}`;
+    }
+  } finally {
+    await sql.end();
+  }
+}
+
+/** Remove the campaigns `seedE2ePlan` made and put the daily target back to "not set". */
+export async function cleanupE2ePlan(namePrefix: string): Promise<void> {
+  const url = process.env.DATABASE_URL;
+  if (!url) throw new Error("DATABASE_URL must be set to run the KPI e2e specs");
+  const sql = postgres(url, { max: 1 });
+  try {
+    await sql`delete from campaigns where name like ${`${namePrefix}%`}`;
+    await sql`
+      update organisation_settings set daily_send_target = null
+      where organisation_id = (select id from organisations where slug = 'external')`;
+  } finally {
+    await sql.end();
+  }
+}

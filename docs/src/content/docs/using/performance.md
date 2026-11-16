@@ -120,3 +120,21 @@ scheduled.** Open it from Campaigns, add the sender IDs and the text, and send i
 
 "Never sent" always looks at the whole history, not only the data period: a list sent to an
 offer a year ago is not offered as fresh.
+
+## Daily Plan
+
+**Performance → Daily Plan** shows what is planned for a day: every campaign whose planned
+day (set in **Create Campaign**) is that day.
+
+- **The day**: today to start with. The arrows step a day back or forward and the date field
+  jumps to any day, so yesterday's plan stays on record.
+- **Tiles**: campaigns, contacts (the numbers in the campaigns' lists), the **daily target**
+  and the **difference** between the contacts planned and the target. Red means the day is
+  short of the target.
+- **Group by** country, offer or route: campaigns and contacts per group.
+- **Campaigns of the day**: each campaign with its country, offer, list, route, contacts, what
+  it has sent so far and its status. The name opens the campaign.
+
+The **daily target** is how many SMS you mean to send per day. The owner sets or changes it
+with the link under the tiles; leave it blank for no target. It is a goal to plan against, not
+a cap: it never blocks a send. (The caps are in Settings → Billing.)

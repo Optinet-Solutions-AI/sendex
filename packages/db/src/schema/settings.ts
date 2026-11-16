@@ -37,6 +37,11 @@ export const organisationSettings = pgTable("organisation_settings", {
     .$type<SendingHours>()
     .notNull()
     .default({ default: null, countries: {} }),
+  /**
+   * How many SMS the organisation means to send per day (D5-08); the daily plan compares the
+   * contacts planned for a day with it. A goal, not a cap: nothing is blocked by it.
+   */
+  dailySendTarget: integer("daily_send_target"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });

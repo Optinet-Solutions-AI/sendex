@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
+  dailyPlanQueryString,
   followUpFilter,
   insightLabel,
   insightQueryString,
   insightWindow,
   listFollowUpQueryString,
+  parseDailyPlanQuery,
   parseInsightQuery,
   parseListFollowUpQuery,
   parseSalesResultsQuery,
@@ -206,5 +208,23 @@ describe("trends query", () => {
     expect(windows.current.to.toISOString()).toBe("2026-02-01T00:00:00.000Z");
     expect(windows.previous.from.toISOString()).toBe("2025-12-01T00:00:00.000Z");
     expect(windows.previous.to.toISOString()).toBe("2026-01-01T00:00:00.000Z");
+  });
+});
+
+describe("daily plan query", () => {
+  const now = new Date("2026-11-16T22:30:00Z");
+
+  it("defaults to today in UTC, by country", () => {
+    expect(parseDailyPlanQuery({}, now)).toEqual({ day: "2026-11-16", by: "country" });
+  });
+
+  it("reads the day and the grouping and round-trips them", () => {
+    const query = parseDailyPlanQuery({ day: "2026-11-17", by: "route" }, now);
+    expect(query).toEqual({ day: "2026-11-17", by: "route" });
+    expect(dailyPlanQueryString(query)).toBe("?day=2026-11-17&by=route");
+    expect(parseDailyPlanQuery({ day: "17/11/2026", by: "list" }, now)).toEqual({
+      day: "2026-11-16",
+      by: "country",
+    });
   });
 });

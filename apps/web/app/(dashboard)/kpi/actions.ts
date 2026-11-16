@@ -4,6 +4,7 @@ import {
   CREATOR_PERIODS,
   type CreatorPeriod,
   creatorPeriod,
+  dailyTargetSchema,
   plannedCampaignSchema,
 } from "@sendex/core";
 import {
@@ -16,6 +17,7 @@ import {
   listOfferPairs,
   recordAudit,
   routesForCountry,
+  setDailySendTarget,
 } from "@sendex/db";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
@@ -147,5 +149,26 @@ export async function createPlannedCampaignAction(
     revalidatePath("/campaigns");
     revalidatePath("/kpi/list-follow-up");
     return { campaignId: campaign.id, name: campaign.name };
+  });
+}
+
+/** Set or clear the organisation's daily SMS target (D5-08). Owner only. */
+export async function setDailyTargetAction(
+  input: string | null,
+): Promise<ActionResult<{ target: number | null }>> {
+  return run(async () => {
+    const ctx = await requireAction("settings.manage");
+    const target = dailyTargetSchema.parse(input);
+    const database = db();
+    await setDailySendTarget(database, ctx.organisationId, target);
+    await recordAudit(database, ctx.organisationId, {
+      actorUserId: ctx.userId,
+      action: "settings.daily_target",
+      targetType: "organisation",
+      targetId: ctx.organisationId,
+      details: { target },
+    });
+    revalidatePath("/kpi/daily-plan");
+    return { target };
   });
 }

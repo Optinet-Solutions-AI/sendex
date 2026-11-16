@@ -17,6 +17,7 @@ import { createTestDb, type TestDb } from "../test/db.js";
 import { dashboardKpis } from "./dashboard.js";
 import {
   createPlannedCampaign,
+  dailyPlan,
   kpiByOfferCountry,
   kpiDaily,
   kpiFilterOptions,
@@ -24,6 +25,7 @@ import {
   listOfferPairs,
   salesResults,
 } from "./kpi.js";
+import { getDailySendTarget, setDailySendTarget } from "./settings.js";
 
 /**
  * The KPI read models run against the demo seed plus the demo activity (D5-02): eighteen
@@ -353,5 +355,59 @@ describe("createPlannedCampaign", () => {
     ).rejects.toThrow("Offer not found");
     // Nothing half-made is left behind.
     expect(await t.db.select({ n: count() }).from(campaigns)).toEqual(before);
+  });
+});
+
+describe("dailyPlan", () => {
+  const DAY = "2026-11-20";
+
+  it("lists the campaigns planned for a day with what is attached to them", async () => {
+    await createPlannedCampaign(t.db, org, {
+      offerId: await offerId("Rolling Slots"),
+      listId: await listId("UK_RIS_1"),
+      routeId: await routeId("724"),
+      plannedFor: DAY,
+    });
+    await createPlannedCampaign(t.db, org, {
+      offerId: await offerId("Lucky Reel"),
+      listId: await listId("ES_DIM_1"),
+      routeId: await routeId("400"),
+      plannedFor: DAY,
+    });
+    const rows = await dailyPlan(t.db, org, DAY);
+    expect(rows).toHaveLength(2);
+    const uk = rows.find((r) => r.country === "GB");
+    expect(uk).toMatchObject({
+      name: "Rolling Slots → UK_RIS_1",
+      status: "draft",
+      offer: "Rolling Slots",
+      lists: ["UK_RIS_1"],
+      routes: ["724"],
+      contacts: 320,
+      sent: 0,
+    });
+    expect(rows.find((r) => r.country === "ES")).toMatchObject({
+      offer: "Lucky Reel",
+      lists: ["ES_DIM_1"],
+      routes: ["400"],
+    });
+  });
+
+  it("is empty for another day and for another organisation", async () => {
+    expect(await dailyPlan(t.db, org, "2026-11-21")).toEqual([]);
+    expect(await dailyPlan(t.db, otherOrg, DAY)).toEqual([]);
+  });
+});
+
+describe("daily send target", () => {
+  it("is unset by default, saved, changed and cleared, per organisation", async () => {
+    expect(await getDailySendTarget(t.db, org)).toBeNull();
+    await setDailySendTarget(t.db, org, 100_000);
+    expect(await getDailySendTarget(t.db, org)).toBe(100_000);
+    expect(await getDailySendTarget(t.db, otherOrg)).toBeNull();
+    await setDailySendTarget(t.db, org, 60_000);
+    expect(await getDailySendTarget(t.db, org)).toBe(60_000);
+    await setDailySendTarget(t.db, org, null);
+    expect(await getDailySendTarget(t.db, org)).toBeNull();
   });
 });

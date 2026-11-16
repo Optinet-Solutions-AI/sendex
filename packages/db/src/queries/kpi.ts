@@ -5,6 +5,7 @@ import {
   type ListOfferPair,
   type OfferCountryRow,
   type PlannedCampaignInput,
+  type PlannedCampaignRow,
   plannedCampaignName,
   type SalesResultRow,
   type TrendDimension,
@@ -331,4 +332,47 @@ export async function createPlannedCampaign(
       .values({ campaignId: campaign.id, routeId: input.routeId, organisationId, position: 0 });
     return campaign;
   });
+}
+
+function names(value: unknown): string[] {
+  return Array.isArray(value) ? value.map((v) => String(v)) : [];
+}
+
+/**
+ * The campaigns planned for a day (D5-08): the ones whose `planned_for` is that day, oldest
+ * first, with their offer, lists, picked routes, the numbers in their lists and what they
+ * have sent so far.
+ */
+export async function dailyPlan(
+  db: Db,
+  organisationId: string,
+  day: string,
+): Promise<PlannedCampaignRow[]> {
+  const rows = rowsOf(
+    await db.execute(sql`
+      select c.id, c.name, c.country, c.status,
+        (select lk.name from campaign_links cl join links lk on lk.id = cl.link_id
+           where cl.campaign_id = c.id order by lk.name limit 1) as offer,
+        coalesce((select array_agg(li.name order by li.name) from campaign_lists cls
+           join lists li on li.id = cls.list_id where cls.campaign_id = c.id), '{}') as lists,
+        coalesce((select sum(li.numbers_count) from campaign_lists cls
+           join lists li on li.id = cls.list_id where cls.campaign_id = c.id), 0) as contacts,
+        coalesce((select array_agg(r.name order by cr.position, r.name) from campaign_routes cr
+           join routes r on r.id = cr.route_id where cr.campaign_id = c.id), '{}') as routes,
+        coalesce((select sum(l.sent) from laps l where l.campaign_id = c.id), 0) as sent
+      from campaigns c
+      where c.organisation_id = ${organisationId} and c.planned_for = ${day}::date
+      order by c.created_at, c.name`),
+  );
+  return rows.map((r) => ({
+    campaignId: String(r.id),
+    name: String(r.name),
+    country: String(r.country),
+    status: String(r.status),
+    offer: r.offer === null || r.offer === undefined ? null : String(r.offer),
+    lists: names(r.lists),
+    routes: names(r.routes),
+    contacts: num(r.contacts),
+    sent: num(r.sent),
+  }));
 }

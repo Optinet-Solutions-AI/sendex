@@ -183,6 +183,13 @@
       "when": 1794839431425,
       "tag": "0025_campaign_planned_for",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1794839974366,
+      "tag": "0026_daily_send_target",
+      "breakpoints": true
     }
   ]
 }

@@ -1,4 +1,10 @@
-import { type SalesResultSort, TREND_DIMENSIONS, type TrendDimension } from "@sendex/core";
+import {
+  PLAN_DIMENSIONS,
+  type PlanDimension,
+  type SalesResultSort,
+  TREND_DIMENSIONS,
+  type TrendDimension,
+} from "@sendex/core";
 import type { KpiFilter } from "@sendex/db";
 import { parseIsoDay } from "./billing-params";
 import { parseCountries } from "./campaigns-log-params";
@@ -241,4 +247,29 @@ export function trendsWindows(query: Pick<TrendsQuery, "year" | "month">): {
     current: { from: start(0), to: start(1) },
     previous: { from: start(-1), to: start(0) },
   };
+}
+
+// ---------------------------------------------------------------------------
+// Daily plan (D5-08): `/kpi/daily-plan?day=2026-11-17&by=offer`
+// ---------------------------------------------------------------------------
+
+export interface DailyPlanQuery {
+  /** The ISO day the plan is for; today (UTC) by default. */
+  day: string;
+  by: PlanDimension;
+}
+
+export function parseDailyPlanQuery(params: SearchParams, now = new Date()): DailyPlanQuery {
+  const by = first(params.by);
+  return {
+    day: parseIsoDay(params.day) || now.toISOString().slice(0, 10),
+    by: (PLAN_DIMENSIONS as readonly string[]).includes(by) ? (by as PlanDimension) : "country",
+  };
+}
+
+export function dailyPlanQueryString(query: DailyPlanQuery): string {
+  const params = new URLSearchParams();
+  params.set("day", query.day);
+  if (query.by !== "country") params.set("by", query.by);
+  return `?${params.toString()}`;
 }

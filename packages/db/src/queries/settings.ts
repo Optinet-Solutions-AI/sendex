@@ -127,3 +127,28 @@ export async function updateSendingHours(
     });
   return sendingHours;
 }
+
+/** The organisation's daily SMS target (D5-08); null when none is set. */
+export async function getDailySendTarget(db: Db, organisationId: string): Promise<number | null> {
+  const [row] = await db
+    .select({ target: organisationSettings.dailySendTarget })
+    .from(organisationSettings)
+    .where(eq(organisationSettings.organisationId, organisationId))
+    .limit(1);
+  return row?.target ?? null;
+}
+
+/** Set or clear the daily SMS target; the other settings are left alone. */
+export async function setDailySendTarget(
+  db: Db,
+  organisationId: string,
+  target: number | null,
+): Promise<void> {
+  await db
+    .insert(organisationSettings)
+    .values({ organisationId, dailySendTarget: target })
+    .onConflictDoUpdate({
+      target: organisationSettings.organisationId,
+      set: { dailySendTarget: target, updatedAt: new Date() },
+    });
+}

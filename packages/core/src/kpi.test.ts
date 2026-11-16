@@ -4,6 +4,7 @@ import {
   costPerSaleMicro,
   creatorPeriod,
   type DailyRow,
+  dailyTargetSchema,
   efficiencySnapshot,
   groupListFollowUp,
   insightTotals,
@@ -11,13 +12,17 @@ import {
   type ListFollowUpRow,
   leadToSale,
   type OfferCountryRow,
+  type PlannedCampaignRow,
+  planGroups,
   plannedCampaignName,
   plannedCampaignSchema,
+  planTotals,
   rankCountriesForOffer,
   rankListsForOffer,
   rankOffersForCountry,
   roi,
   rollUp,
+  shiftIsoDay,
   smsPerSale,
   sortSalesResults,
   throughDay,
@@ -469,5 +474,73 @@ describe("campaign creator (D5-07)", () => {
         plannedFor: "2026-11-17",
       }).success,
     ).toBe(false);
+  });
+});
+
+describe("daily plan (D5-08)", () => {
+  const plan = (over: Partial<PlannedCampaignRow> & { name: string }): PlannedCampaignRow => ({
+    campaignId: over.name,
+    country: "GB",
+    status: "draft",
+    offer: "Trixino",
+    lists: ["UK_ZEN_3"],
+    routes: ["724"],
+    contacts: 300,
+    sent: 0,
+    ...over,
+  });
+  const rows = [
+    plan({ name: "a", contacts: 4_000 }),
+    plan({ name: "b", contacts: 6_000, offer: "Rolling Slots", routes: ["137"] }),
+    plan({ name: "c", country: "ES", contacts: 3_000, offer: "Rolling Slots", routes: ["400"] }),
+    plan({ name: "d", country: "ES", contacts: 1_000, offer: null, routes: [] }),
+  ];
+
+  it("groups the day's campaigns by country, offer or route, most contacts first", () => {
+    expect(planGroups(rows, "country")).toEqual([
+      { key: "GB", campaigns: 2, contacts: 10_000 },
+      { key: "ES", campaigns: 2, contacts: 4_000 },
+    ]);
+    expect(planGroups(rows, "offer")).toEqual([
+      { key: "Rolling Slots", campaigns: 2, contacts: 9_000 },
+      { key: "Trixino", campaigns: 1, contacts: 4_000 },
+      { key: "(no offer)", campaigns: 1, contacts: 1_000 },
+    ]);
+    expect(planGroups(rows, "route").map((g) => g.key)).toEqual([
+      "137",
+      "724",
+      "400",
+      "(no route)",
+    ]);
+  });
+
+  it("totals the day and compares it with the target", () => {
+    expect(planTotals(rows, 12_000)).toEqual({
+      campaigns: 4,
+      contacts: 14_000,
+      target: 12_000,
+      difference: 2_000,
+    });
+    expect(planTotals(rows, null)).toMatchObject({ target: null, difference: null });
+    expect(planTotals([], 100_000)).toEqual({
+      campaigns: 0,
+      contacts: 0,
+      target: 100_000,
+      difference: -100_000,
+    });
+  });
+
+  it("accepts a whole number or nothing as the target", () => {
+    expect(dailyTargetSchema.parse("100000")).toBe(100_000);
+    expect(dailyTargetSchema.parse("")).toBeNull();
+    expect(dailyTargetSchema.parse(null)).toBeNull();
+    expect(dailyTargetSchema.safeParse("-5").success).toBe(false);
+    expect(dailyTargetSchema.safeParse("1.5").success).toBe(false);
+    expect(dailyTargetSchema.safeParse("many").success).toBe(false);
+  });
+
+  it("moves a day forwards and backwards across a month end", () => {
+    expect(shiftIsoDay("2026-11-30", 1)).toBe("2026-12-01");
+    expect(shiftIsoDay("2026-03-01", -1)).toBe("2026-02-28");
   });
 });

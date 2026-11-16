@@ -298,6 +298,7 @@ erDiagram
     timestamp_with_time_zone created_at
     bigint custom_route_fee_micro
     integer daily_message_cap
+    integer daily_send_target
     bigint daily_spend_cap_micro
     timestamp_with_time_zone low_balance_alerted_at
     text[] low_balance_emails

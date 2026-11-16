@@ -700,3 +700,90 @@ export const plannedCampaignSchema = z.object({
   plannedFor: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Pick a day"),
 });
 export type PlannedCampaignInput = z.infer<typeof plannedCampaignSchema>;
+
+// ---------------------------------------------------------------------------
+// Daily plan (D5-08)
+// ---------------------------------------------------------------------------
+
+/** A campaign planned for a day (`campaigns.planned_for`), with what is attached to it. */
+export interface PlannedCampaignRow {
+  campaignId: string;
+  name: string;
+  country: string;
+  status: string;
+  /** The campaign's offer (its link); null when none is attached. */
+  offer: string | null;
+  lists: string[];
+  routes: string[];
+  /** Numbers in the attached lists. */
+  contacts: number;
+  /** SMS the campaign has sent so far. */
+  sent: number;
+}
+
+export const PLAN_DIMENSIONS = ["country", "offer", "route"] as const;
+export type PlanDimension = (typeof PLAN_DIMENSIONS)[number];
+
+export interface PlanGroup {
+  key: string;
+  campaigns: number;
+  contacts: number;
+}
+
+/** The day's campaigns and contacts per country, offer or route, most contacts first. */
+export function planGroups(rows: readonly PlannedCampaignRow[], by: PlanDimension): PlanGroup[] {
+  const groups = new Map<string, PlanGroup>();
+  for (const row of rows) {
+    const key =
+      by === "country"
+        ? row.country
+        : by === "offer"
+          ? (row.offer ?? "(no offer)")
+          : row.routes.length > 0
+            ? row.routes.join(" + ")
+            : "(no route)";
+    const group = groups.get(key) ?? { key, campaigns: 0, contacts: 0 };
+    group.campaigns += 1;
+    group.contacts += row.contacts;
+    groups.set(key, group);
+  }
+  return [...groups.values()].sort((a, b) => b.contacts - a.contacts || a.key.localeCompare(b.key));
+}
+
+export interface PlanTotals {
+  campaigns: number;
+  contacts: number;
+  /** The organisation's daily SMS target; null when none is set. */
+  target: number | null;
+  /** Contacts planned minus the target: negative means the day is short. */
+  difference: number | null;
+}
+
+export function planTotals(rows: readonly PlannedCampaignRow[], target: number | null): PlanTotals {
+  const contacts = rows.reduce((n, r) => n + r.contacts, 0);
+  return {
+    campaigns: rows.length,
+    contacts,
+    target,
+    difference: target === null ? null : contacts - target,
+  };
+}
+
+/** The daily SMS target as typed: a whole number from 0 to ten million, or blank for none. */
+export const dailyTargetSchema = z
+  .union([z.string(), z.null()])
+  .transform((value) => (value === null ? "" : value.trim()))
+  .refine((value) => value === "" || /^\d{1,8}$/.test(value), {
+    message: "The daily target is a whole number of SMS, or blank for none.",
+  })
+  .transform((value) => (value === "" ? null : Number(value)))
+  .refine((value) => value === null || value <= 10_000_000, {
+    message: "The daily target is at most 10,000,000 SMS.",
+  });
+
+/** An ISO day moved by a number of days, in UTC. */
+export function shiftIsoDay(day: string, days: number): string {
+  const date = new Date(`${day}T00:00:00.000Z`);
+  date.setUTCDate(date.getUTCDate() + days);
+  return date.toISOString().slice(0, 10);
+}

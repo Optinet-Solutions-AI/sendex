@@ -1,6 +1,6 @@
 ---
 title: Performance
-description: The Performance screens. List Follow-Up shows which lists were used, what they produced and which are still untouched.
+description: The Performance screens. Insight gives the period's totals and where sales come from; List Follow-Up shows which lists were used, what they produced and which are still untouched.
 ---
 
 The **Performance** group in the sidebar holds the screens for deciding what to send next.
@@ -19,6 +19,24 @@ Words used on these screens:
 | Lead → sale | sales divided by leads |
 | ROI | profit divided by cost, as on the dashboard (profit is revenue minus cost) |
 | Data provider | who supplied a list, set on upload or on the list's page |
+
+## Insight
+
+**Performance → Insight** is the review of a period: a month (the current one to start with),
+a year or all time.
+
+- **Totals**: sales, revenue, cost and net profit.
+- **Per sale**: what one sale cost, what it brought, the profit on it, and **SMS per sale**:
+  how many SMS it took to get one sale. A low number is a good combination; it moves as new
+  results come in, so it shows what works now and not what worked a month ago.
+- **Revenue and cost**, **Top offers by ROI**, **ROI by country** and **Sales by country**:
+  ranked bars. A red bar is a loss.
+- **Offer performance by country**: each country opens to its five best offers, ranked by
+  ROI or by sales (the switch on the right), with sent, leads, sales, lead → sale, cost,
+  revenue and ROI.
+- **SMS per sale**: the six offers that need the fewest SMS to get one sale.
+
+A period with no sends and no sales says so instead of showing empty charts.
 
 ## List Follow-Up
 

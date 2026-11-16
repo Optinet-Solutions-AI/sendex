@@ -67,3 +67,87 @@ export function followUpFilter(query: ListFollowUpQuery): KpiFilter {
     ...(query.q ? { search: query.q } : {}),
   };
 }
+
+// ---------------------------------------------------------------------------
+// Performance Insight (D5-04): `/kpi/insight?period=month&year=2026&month=11&sort=sales`
+// ---------------------------------------------------------------------------
+
+export const INSIGHT_PERIODS = ["month", "year", "all"] as const;
+export type InsightPeriod = (typeof INSIGHT_PERIODS)[number];
+export type InsightSort = "roi" | "sales";
+
+export interface InsightQuery {
+  period: InsightPeriod;
+  year: number;
+  /** 1 to 12; only used when `period` is `month`. */
+  month: number;
+  /** How "Offer performance by country" ranks the offers. */
+  sort: InsightSort;
+}
+
+/** The first year the selects offer; nothing was sent before it. */
+export const INSIGHT_FIRST_YEAR = 2025;
+
+export function parseInsightQuery(params: SearchParams, now = new Date()): InsightQuery {
+  const period = first(params.period).trim();
+  const year = Number.parseInt(first(params.year), 10);
+  const month = Number.parseInt(first(params.month), 10);
+  const thisYear = now.getUTCFullYear();
+  return {
+    period: (INSIGHT_PERIODS as readonly string[]).includes(period)
+      ? (period as InsightPeriod)
+      : "month",
+    year: Number.isFinite(year) && year >= INSIGHT_FIRST_YEAR && year <= thisYear ? year : thisYear,
+    month: Number.isFinite(month) && month >= 1 && month <= 12 ? month : now.getUTCMonth() + 1,
+    sort: first(params.sort) === "sales" ? "sales" : "roi",
+  };
+}
+
+export function insightQueryString(query: InsightQuery): string {
+  const params = new URLSearchParams();
+  if (query.period !== "month") params.set("period", query.period);
+  if (query.period !== "all") params.set("year", String(query.year));
+  if (query.period === "month") params.set("month", String(query.month));
+  if (query.sort !== "roi") params.set("sort", query.sort);
+  const text = params.toString();
+  return text ? `?${text}` : "";
+}
+
+/** The UTC window of the period, end exclusive; empty for all time. */
+export function insightWindow(query: InsightQuery): { from?: Date; to?: Date } {
+  if (query.period === "month") {
+    return {
+      from: new Date(Date.UTC(query.year, query.month - 1, 1)),
+      to: new Date(Date.UTC(query.year, query.month, 1)),
+    };
+  }
+  if (query.period === "year") {
+    return {
+      from: new Date(Date.UTC(query.year, 0, 1)),
+      to: new Date(Date.UTC(query.year + 1, 0, 1)),
+    };
+  }
+  return {};
+}
+
+export const MONTH_NAMES = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+] as const;
+
+/** "November 2026", "2026" or "All time". */
+export function insightLabel(query: InsightQuery): string {
+  if (query.period === "month") return `${MONTH_NAMES[query.month - 1] ?? ""} ${query.year}`;
+  if (query.period === "year") return String(query.year);
+  return "All time";
+}

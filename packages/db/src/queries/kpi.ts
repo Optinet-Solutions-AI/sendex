@@ -1,4 +1,4 @@
-import type { ListFollowUpRow } from "@sendex/core";
+import type { ListFollowUpRow, OfferCountryRow } from "@sendex/core";
 import { type SQL, sql } from "drizzle-orm";
 import type { Db } from "../types.js";
 import { type DashboardFilter, inCountries, messageFacts, rowsOf } from "./dashboard.js";
@@ -119,4 +119,38 @@ export async function kpiFilterOptions(db: Db, organisationId: string): Promise<
     countries: rowsOf(countryRows).map((r) => String(r.country)),
     providers,
   };
+}
+
+/**
+ * Sends, leads, cost, sales and revenue per offer and country inside the filters: the grain
+ * of the Performance Insight page (D5-04). Messages without a tracked link come back under
+ * "(no link)" with a null offer id.
+ */
+export async function kpiByOfferCountry(
+  db: Db,
+  organisationId: string,
+  filter: KpiFilter,
+): Promise<OfferCountryRow[]> {
+  const rows = rowsOf(
+    await db.execute(sql`
+      with facts as (${messageFacts(organisationId, filter)})
+      select f.country, f.link_id, f.link_name,
+        coalesce(sum(f.sent), 0) as sent, coalesce(sum(f.leads), 0) as leads,
+        coalesce(sum(f.sales), 0) as sales, coalesce(sum(f.cost), 0) as cost,
+        coalesce(sum(f.revenue), 0) as revenue
+      from facts f
+      where true${factFilter(filter)}
+      group by f.country, f.link_id, f.link_name
+      order by f.country, f.link_name`),
+  );
+  return rows.map((r) => ({
+    country: String(r.country),
+    offerId: r.link_id === null || r.link_id === undefined ? null : String(r.link_id),
+    offer: String(r.link_name),
+    sent: num(r.sent),
+    leads: num(r.leads),
+    sales: num(r.sales),
+    costMicro: big(r.cost),
+    revenueMicro: big(r.revenue),
+  }));
 }

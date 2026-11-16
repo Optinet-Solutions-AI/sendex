@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { followUpFilter, listFollowUpQueryString, parseListFollowUpQuery } from "./kpi-params";
+import {
+  followUpFilter,
+  insightLabel,
+  insightQueryString,
+  insightWindow,
+  listFollowUpQueryString,
+  parseInsightQuery,
+  parseListFollowUpQuery,
+} from "./kpi-params";
 
 const UUID = "0b8f5a2e-3c1d-4e6f-9a7b-1c2d3e4f5a6b";
 
@@ -81,5 +89,57 @@ describe("followUpFilter", () => {
     expect(filter.from).toBeUndefined();
     expect(filter.to).toBeUndefined();
     expect(filter.countries).toEqual([]);
+  });
+});
+
+describe("performance insight query", () => {
+  const now = new Date("2026-11-16T12:00:00Z");
+
+  it("defaults to the current month, sorted by ROI", () => {
+    expect(parseInsightQuery({}, now)).toEqual({
+      period: "month",
+      year: 2026,
+      month: 11,
+      sort: "roi",
+    });
+  });
+
+  it("reads the period, year, month and sort, and ignores nonsense", () => {
+    expect(parseInsightQuery({ period: "year", year: "2025", sort: "sales" }, now)).toMatchObject({
+      period: "year",
+      year: 2025,
+      sort: "sales",
+    });
+    expect(
+      parseInsightQuery({ period: "week", year: "1999", month: "13", sort: "x" }, now),
+    ).toEqual({ period: "month", year: 2026, month: 11, sort: "roi" });
+  });
+
+  it("writes only what the period needs", () => {
+    expect(insightQueryString({ period: "month", year: 2026, month: 10, sort: "roi" })).toBe(
+      "?year=2026&month=10",
+    );
+    expect(insightQueryString({ period: "year", year: 2025, month: 3, sort: "sales" })).toBe(
+      "?period=year&year=2025&sort=sales",
+    );
+    expect(insightQueryString({ period: "all", year: 2026, month: 11, sort: "roi" })).toBe(
+      "?period=all",
+    );
+  });
+
+  it("turns the period into a UTC window and a label", () => {
+    const month = insightWindow({ period: "month", year: 2026, month: 12, sort: "roi" });
+    expect(month.from?.toISOString()).toBe("2026-12-01T00:00:00.000Z");
+    expect(month.to?.toISOString()).toBe("2027-01-01T00:00:00.000Z");
+    const year = insightWindow({ period: "year", year: 2026, month: 5, sort: "roi" });
+    expect(year.from?.toISOString()).toBe("2026-01-01T00:00:00.000Z");
+    expect(year.to?.toISOString()).toBe("2027-01-01T00:00:00.000Z");
+    expect(insightWindow({ period: "all", year: 2026, month: 5, sort: "roi" })).toEqual({});
+
+    expect(insightLabel({ period: "month", year: 2026, month: 11, sort: "roi" })).toBe(
+      "November 2026",
+    );
+    expect(insightLabel({ period: "year", year: 2026, month: 11, sort: "roi" })).toBe("2026");
+    expect(insightLabel({ period: "all", year: 2026, month: 11, sort: "roi" })).toBe("All time");
   });
 });

@@ -5,7 +5,7 @@ import { seedDemoActivity } from "../seed/demo-activity.js";
 import { seedDemo } from "../seed/demo-data.js";
 import { createTestDb, type TestDb } from "../test/db.js";
 import { dashboardKpis } from "./dashboard.js";
-import { kpiFilterOptions, listFollowUp } from "./kpi.js";
+import { kpiByOfferCountry, kpiFilterOptions, listFollowUp } from "./kpi.js";
 
 /**
  * The KPI read models run against the demo seed plus the demo activity (D5-02): eighteen
@@ -157,5 +157,32 @@ describe("kpiFilterOptions", () => {
   it("is scoped to the organisation", async () => {
     const options = await kpiFilterOptions(t.db, otherOrg);
     expect(options).toEqual({ routes: [], offers: [], countries: [], providers: [] });
+  });
+});
+
+describe("kpiByOfferCountry", () => {
+  it("returns one row per offer and country that adds up to the dashboard", async () => {
+    const rows = await kpiByOfferCountry(t.db, org, {});
+    const kpis = await dashboardKpis(t.db, org, {});
+    expect(rows.reduce((n, r) => n + r.sent, 0)).toBe(kpis.sent);
+    expect(rows.reduce((n, r) => n + r.sales, 0)).toBe(kpis.sales);
+    expect(rows.reduce((n, r) => n + r.costMicro, 0n)).toBe(kpis.spendMicro);
+    expect(new Set(rows.map((r) => `${r.country}:${r.offer}`)).size).toBe(rows.length);
+
+    // Trixino went to three UK lists and one Spanish list.
+    const trixino = rows.filter((r) => r.offer === "Trixino");
+    expect(trixino.map((r) => r.country).sort()).toEqual(["ES", "GB"]);
+    const followUp = await listFollowUp(t.db, org, { linkId: await offerId("Trixino") });
+    expect(trixino.reduce((n, r) => n + r.sent, 0)).toBe(followUp.reduce((n, r) => n + r.sent, 0));
+    expect(trixino.every((r) => r.offerId === trixino[0]?.offerId)).toBe(true);
+  });
+
+  it("follows the window and the organisation", async () => {
+    const window = { from: new Date(NOW.getTime() - 10 * DAY_MS), to: NOW };
+    const rows = await kpiByOfferCountry(t.db, org, window);
+    const kpis = await dashboardKpis(t.db, org, window);
+    expect(rows.reduce((n, r) => n + r.sent, 0)).toBe(kpis.sent);
+    expect(rows.reduce((n, r) => n + r.sales, 0)).toBe(kpis.sales);
+    expect(await kpiByOfferCountry(t.db, otherOrg, {})).toEqual([]);
   });
 });

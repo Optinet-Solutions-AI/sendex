@@ -2,12 +2,17 @@ import { describe, expect, it } from "vitest";
 import {
   addCounters,
   costPerSaleMicro,
+  efficiencySnapshot,
   groupListFollowUp,
+  insightTotals,
   type KpiCounters,
   type ListFollowUpRow,
   leadToSale,
+  type OfferCountryRow,
   roi,
+  rollUp,
   smsPerSale,
+  topOffersByCountry,
   ZERO_COUNTERS,
 } from "./kpi.js";
 
@@ -118,5 +123,93 @@ describe("groupListFollowUp", () => {
 
   it("is empty for no lists", () => {
     expect(groupListFollowUp([])).toEqual({ countries: [], untouched: [] });
+  });
+});
+
+const cell = (country: string, offer: string, over: Partial<KpiCounters>): OfferCountryRow => ({
+  country,
+  offerId: offer,
+  offer,
+  ...ZERO_COUNTERS,
+  ...over,
+});
+
+describe("performance insight (D5-04)", () => {
+  const rows = [
+    cell("GB", "Rolling Slots", {
+      sent: 5_000,
+      leads: 60,
+      sales: 4,
+      costMicro: 200_000_000n,
+      revenueMicro: 1_200_000_000n,
+    }),
+    cell("GB", "Trixino", {
+      sent: 3_000,
+      leads: 20,
+      sales: 1,
+      costMicro: 120_000_000n,
+      revenueMicro: 150_000_000n,
+    }),
+    cell("ES", "Rolling Slots", {
+      sent: 2_000,
+      leads: 10,
+      sales: 1,
+      costMicro: 50_000_000n,
+      revenueMicro: 300_000_000n,
+    }),
+    cell("ES", "Lucky Reel", { sent: 1_000, leads: 2, costMicro: 25_000_000n }),
+  ];
+
+  it("totals everything and works out the per-sale figures", () => {
+    const totals = insightTotals(rows);
+    expect(totals).toMatchObject({
+      sent: 11_000,
+      leads: 92,
+      sales: 6,
+      costMicro: 395_000_000n,
+      revenueMicro: 1_650_000_000n,
+      profitMicro: 1_255_000_000n,
+      smsPerSale: 1_833,
+    });
+    expect(totals.costPerSaleMicro).toBe(65_833_333n);
+    expect(totals.revenuePerSaleMicro).toBe(275_000_000n);
+    expect(totals.profitPerSaleMicro).toBe(209_166_666n);
+  });
+
+  it("has no per-sale figures without sales", () => {
+    const totals = insightTotals([cell("ES", "Lucky Reel", { sent: 10, costMicro: 5n })]);
+    expect(totals.smsPerSale).toBeNull();
+    expect(totals.costPerSaleMicro).toBeNull();
+    expect(totals.revenuePerSaleMicro).toBeNull();
+  });
+
+  it("rolls up by offer and by country", () => {
+    const offers = rollUp(rows, "offer");
+    expect(offers.map((o) => o.label)).toEqual(["Rolling Slots", "Trixino", "Lucky Reel"]);
+    expect(offers[0]).toMatchObject({ sent: 7_000, sales: 5, revenueMicro: 1_500_000_000n });
+    const countries = rollUp(rows, "country");
+    expect(countries.map((c) => [c.label, c.sales])).toEqual([
+      ["GB", 5],
+      ["ES", 1],
+    ]);
+  });
+
+  it("ranks the offers of each country by ROI or by sales", () => {
+    const byRoi = topOffersByCountry(rows, "roi");
+    expect(byRoi.map((c) => c.country)).toEqual(["GB", "ES"]);
+    expect(byRoi[0]?.sales).toBe(5);
+    expect(byRoi[0]?.offers.map((o) => o.offer)).toEqual(["Rolling Slots", "Trixino"]);
+    // In Spain the offer that only cost money comes last.
+    expect(byRoi[1]?.offers.map((o) => o.offer)).toEqual(["Rolling Slots", "Lucky Reel"]);
+    const top1 = topOffersByCountry(rows, "sales", 1);
+    expect(top1[0]?.offers.map((o) => o.offer)).toEqual(["Rolling Slots"]);
+  });
+
+  it("lists the offers that need the fewest SMS per sale", () => {
+    expect(efficiencySnapshot(rows)).toEqual([
+      { offer: "Rolling Slots", smsPerSale: 1_400, sales: 5 },
+      { offer: "Trixino", smsPerSale: 3_000, sales: 1 },
+    ]);
+    expect(efficiencySnapshot(rows, 1)).toHaveLength(1);
   });
 });

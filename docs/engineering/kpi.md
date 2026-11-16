@@ -46,6 +46,20 @@ The sidebar group is **Performance** (`components/shell/nav.ts`).
 - `kpiFilterOptions` feeds the Route and Offer selects (routes that have laps, the
   organisation's links) and returns the list countries and data providers for later screens.
 
+## Performance Insight (D5-04)
+
+`/kpi/insight?period=month|year|all&year=&month=&sort=roi|sales`
+
+- `kpiByOfferCountry(db, organisationId, filter)` returns one row per offer and country
+  inside the window. Everything on the page is derived from those rows in `packages/core`:
+  `insightTotals` (the eight tiles), `rollUp` (per offer, per country),
+  `topOffersByCountry` (five per country, by ROI or by sales) and `efficiencySnapshot`
+  (the six offers with the fewest SMS per sale).
+- `parseInsightQuery` defaults to the current UTC month; `insightWindow` turns the period into
+  the window, `insightLabel` into "November 2026", "2026" or "All time".
+- The bars are plain CSS (`BarList` in `components/kpi/insight.tsx`), sized against the
+  largest absolute value, red when negative. No chart library.
+
 ## Tests
 
 - `packages/core/src/kpi.test.ts`: the ratios and the grouping.
@@ -53,5 +67,6 @@ The sidebar group is **Performance** (`components/shell/nav.ts`).
   in PGlite; totals reconcile with `dashboardKpis`, each filter narrows as described, and
   another organisation sees nothing.
 - `apps/web/lib/kpi-params.test.ts`: parsing, the query string round trip, the window.
-- `apps/web/e2e/list-follow-up.spec.ts`: on the demo activity (`e2e/helpers/demo.ts` runs
-  `pnpm db:seed:activity` first).
+- `apps/web/e2e/list-follow-up.spec.ts` and `apps/web/e2e/insight.spec.ts`: on the demo
+  activity (`e2e/helpers/demo.ts` runs `pnpm db:seed:activity` first). The Insight spec uses
+  the all-time view because the demo sends are dated relative to the day they were seeded.

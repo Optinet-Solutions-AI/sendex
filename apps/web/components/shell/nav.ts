@@ -48,7 +48,10 @@ export const NAV_TREE: readonly NavGroup[] = [
     // The KPI screens (D5-03 onwards), after the Business KPIs Manager walkthrough.
     label: "Performance",
     icon: "performance",
-    children: [{ label: "List Follow-Up", href: "/kpi/list-follow-up", action: "campaign.view" }],
+    children: [
+      { label: "Insight", href: "/kpi/insight", action: "campaign.view" },
+      { label: "List Follow-Up", href: "/kpi/list-follow-up", action: "campaign.view" },
+    ],
   },
   {
     label: "Contacts",

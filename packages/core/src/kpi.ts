@@ -154,3 +154,116 @@ export function groupListFollowUp(rows: readonly ListFollowUpRow[]): ListFollowU
   countries.sort((a, b) => byDesc(roi(a), roi(b)) || a.country.localeCompare(b.country));
   return { countries, untouched };
 }
+
+// ---------------------------------------------------------------------------
+// Performance Insight (D5-04)
+// ---------------------------------------------------------------------------
+
+/** One offer in one country: the grain every Insight figure is built from. */
+export interface OfferCountryRow extends KpiCounters {
+  country: string;
+  /** Null for messages that carried no tracked link. */
+  offerId: string | null;
+  offer: string;
+}
+
+export interface InsightTotals extends KpiCounters {
+  profitMicro: bigint;
+  costPerSaleMicro: bigint | null;
+  revenuePerSaleMicro: bigint | null;
+  profitPerSaleMicro: bigint | null;
+  smsPerSale: number | null;
+}
+
+function sum(rows: readonly KpiCounters[]): KpiCounters {
+  return rows.reduce<KpiCounters>((total, r) => addCounters(total, r), ZERO_COUNTERS);
+}
+
+/** The eight tiles: sales, revenue, cost, profit and the four per-sale figures. */
+export function insightTotals(rows: readonly KpiCounters[]): InsightTotals {
+  const totals = sum(rows);
+  return {
+    ...totals,
+    profitMicro: profitMicro(totals),
+    costPerSaleMicro: costPerSaleMicro(totals),
+    revenuePerSaleMicro: revenuePerSaleMicro(totals),
+    profitPerSaleMicro: profitPerSaleMicro(totals),
+    smsPerSale: smsPerSale(totals),
+  };
+}
+
+export interface RollUpRow extends KpiCounters {
+  /** The offer name or the country code. */
+  label: string;
+}
+
+/** Totals per offer or per country, most sales first, then most revenue, then by name. */
+export function rollUp(rows: readonly OfferCountryRow[], by: "offer" | "country"): RollUpRow[] {
+  const groups = new Map<string, KpiCounters>();
+  for (const row of rows) {
+    const label = by === "offer" ? row.offer : row.country;
+    groups.set(label, addCounters(groups.get(label) ?? ZERO_COUNTERS, row));
+  }
+  return [...groups.entries()]
+    .map(([label, counters]) => ({ ...counters, label }))
+    .sort(
+      (a, b) =>
+        b.sales - a.sales ||
+        Number(b.revenueMicro - a.revenueMicro) ||
+        a.label.localeCompare(b.label),
+    );
+}
+
+export interface CountryOffers {
+  country: string;
+  /** Sales of the whole country, not only of the offers shown. */
+  sales: number;
+  offers: OfferCountryRow[];
+}
+
+/**
+ * "Offer performance by country": for each country, its best offers by ROI or by sales.
+ * Countries come most sales first. An offer without cost has no ROI and goes last.
+ */
+export function topOffersByCountry(
+  rows: readonly OfferCountryRow[],
+  sort: "roi" | "sales",
+  top = 5,
+): CountryOffers[] {
+  const byCountry = new Map<string, OfferCountryRow[]>();
+  for (const row of rows) {
+    const list = byCountry.get(row.country) ?? [];
+    list.push(row);
+    byCountry.set(row.country, list);
+  }
+  return [...byCountry.entries()]
+    .map(([country, offers]) => ({
+      country,
+      sales: offers.reduce((n, o) => n + o.sales, 0),
+      offers: [...offers]
+        .sort((a, b) =>
+          sort === "roi"
+            ? byDesc(roi(a), roi(b)) || b.sales - a.sales || a.offer.localeCompare(b.offer)
+            : b.sales - a.sales || byDesc(roi(a), roi(b)) || a.offer.localeCompare(b.offer),
+        )
+        .slice(0, top),
+    }))
+    .sort((a, b) => b.sales - a.sales || a.country.localeCompare(b.country));
+}
+
+export interface EfficiencyRow {
+  offer: string;
+  smsPerSale: number;
+  sales: number;
+}
+
+/** "SMS per sale": the offers that need the fewest SMS to get one sale, best first. */
+export function efficiencySnapshot(rows: readonly OfferCountryRow[], top = 6): EfficiencyRow[] {
+  return rollUp(rows, "offer")
+    .flatMap((o) => {
+      const perSale = smsPerSale(o);
+      return perSale === null ? [] : [{ offer: o.label, smsPerSale: perSale, sales: o.sales }];
+    })
+    .sort((a, b) => a.smsPerSale - b.smsPerSale || a.offer.localeCompare(b.offer))
+    .slice(0, top);
+}

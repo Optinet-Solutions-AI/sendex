@@ -21,6 +21,7 @@ interface Shell {
   organisationId: string;
   role: Role;
   balanceMicro: bigint;
+  previewFeatures: boolean;
 }
 
 /**
@@ -31,7 +32,12 @@ async function shellContext(): Promise<Shell | null> {
   try {
     const ctx = await requireOrg();
     const balanceMicro = await getBalanceMicro(db(), ctx.organisationId);
-    return { organisationId: ctx.organisationId, role: ctx.role, balanceMicro };
+    return {
+      organisationId: ctx.organisationId,
+      role: ctx.role,
+      balanceMicro,
+      previewFeatures: ctx.previewFeatures,
+    };
   } catch (error) {
     if (isAuthError(error)) return null;
     throw error;
@@ -50,7 +56,7 @@ export default async function DashboardLayout({ children }: { children: ReactNod
   const mode = authMode();
   const shell = await shellContext();
   const allowed = (action: Action) => Boolean(shell && can(shell.role, action));
-  const tree = visibleNav(allowed);
+  const tree = visibleNav(allowed, undefined, { preview: shell?.previewFeatures ?? false });
   const pages = flattenNav(tree);
   const balance = shell ? (
     <Link

@@ -16,7 +16,7 @@ export default async function SalesResultsPage({
   const now = new Date();
   const query = parseSalesResultsQuery(await searchParams, now);
   return (
-    <RequireOrg action="campaign.view">
+    <RequireOrg action="campaign.view" preview>
       {async (ctx) => {
         const rows = await salesResults(db(), ctx.organisationId, insightWindow(query));
         const leads = rows.reduce((n, r) => n + r.leads, 0);

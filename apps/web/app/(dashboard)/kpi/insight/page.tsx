@@ -29,7 +29,7 @@ export default async function InsightPage({
   const now = new Date();
   const query = parseInsightQuery(await searchParams, now);
   return (
-    <RequireOrg action="campaign.view">
+    <RequireOrg action="campaign.view" preview>
       {async (ctx) => {
         const rows = await kpiByOfferCountry(db(), ctx.organisationId, insightWindow(query));
         const totals = insightTotals(rows);

@@ -22,7 +22,7 @@ import {
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import type { CreatorData } from "../../../components/kpi/campaign-creator";
-import { AuthError, requireAction } from "../../../lib/auth";
+import { AuthError, requirePreviewAction } from "../../../lib/auth";
 import { assertCountryOpen, ClosedCountryError } from "../../../lib/open-countries";
 
 /**
@@ -61,7 +61,7 @@ export async function campaignCreatorDataAction(
   period: CreatorPeriod,
 ): Promise<ActionResult<CreatorData>> {
   return run(async () => {
-    const ctx = await requireAction("campaign.view");
+    const ctx = await requirePreviewAction("campaign.view");
     const chosen = z.enum(CREATOR_PERIODS).parse(period);
     const window = creatorPeriod(chosen, new Date());
     const filter = { from: window.from, to: window.to };
@@ -124,7 +124,7 @@ export async function createPlannedCampaignAction(
   input: unknown,
 ): Promise<ActionResult<{ campaignId: string; name: string }>> {
   return run(async () => {
-    const ctx = await requireAction("campaign.create");
+    const ctx = await requirePreviewAction("campaign.create");
     const data = plannedCampaignSchema.parse(input);
     const database = db();
     const list = await getList(database, ctx.organisationId, data.listId);
@@ -157,7 +157,7 @@ export async function setDailyTargetAction(
   input: string | null,
 ): Promise<ActionResult<{ target: number | null }>> {
   return run(async () => {
-    const ctx = await requireAction("settings.manage");
+    const ctx = await requirePreviewAction("settings.manage");
     const target = dailyTargetSchema.parse(input);
     const database = db();
     await setDailySendTarget(database, ctx.organisationId, target);

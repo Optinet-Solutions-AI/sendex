@@ -151,8 +151,11 @@ function parseWorkbook(buffer: ArrayBuffer): string[][] {
 export function UploadForm({
   lists,
   fixedList,
+  showProvider = false,
 }: {
   lists: ListNameRow[];
+  /** Offer the Data provider field on a new list: a preview feature (D5-09). */
+  showProvider?: boolean;
   /** Data Files tab: upload straight into this list (no target choice, no page header). */
   fixedList?: { id: string; name: string; country: string };
 }) {
@@ -620,7 +623,7 @@ export function UploadForm({
                     />
                   </div>
                 ) : null}
-                {isNew ? (
+                {isNew && showProvider ? (
                   <div className="space-y-1.5">
                     <Label htmlFor={ids.provider}>
                       Data provider <span className="font-normal text-muted">— optional</span>

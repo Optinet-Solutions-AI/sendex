@@ -35,4 +35,19 @@ describe("nav tree", () => {
     const everything = visibleNav(() => true);
     expect(everything).toEqual(NAV_TREE);
   });
+
+  it("hides the groups still in preview unless the organisation has them switched on (D5-09)", () => {
+    const off = visibleNav(() => true, NAV_TREE, { preview: false });
+    expect(off.map((g) => g.label)).toEqual([
+      "Dashboard",
+      "Campaigns",
+      "Contacts",
+      "Routes",
+      "Settings",
+    ]);
+    expect(flattenNav(off).some((p) => p.href.startsWith("/kpi/"))).toBe(false);
+    const on = visibleNav(() => true, NAV_TREE, { preview: true });
+    expect(on.map((g) => g.label)).toContain("Performance");
+    expect(flattenNav(on).some((p) => p.href === "/kpi/list-follow-up")).toBe(true);
+  });
 });

@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import {
+  boolean,
   index,
   jsonb,
   pgEnum,
@@ -20,6 +21,11 @@ export const organisations = pgTable("organisations", {
   name: text("name").notNull(),
   slug: text("slug").notNull().unique(),
   currency: text("currency").notNull().default("EUR"),
+  /**
+   * Shows the features that are still being tested (the Performance screens and the list data
+   * provider, D5 series) to this organisation only. Off for everyone by default (D5-09).
+   */
+  previewFeatures: boolean("preview_features").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });

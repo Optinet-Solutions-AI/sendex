@@ -16,6 +16,8 @@ export interface NavGroup {
   /** Direct page for the entry itself, when it is not only a folder. */
   href?: string;
   children?: readonly (NavLeaf | NavSubgroup)[];
+  /** Still in preview: shown only to organisations with the preview switched on (D5-09). */
+  preview?: boolean;
 }
 
 export interface NavSubgroup {
@@ -48,6 +50,7 @@ export const NAV_TREE: readonly NavGroup[] = [
     // The KPI screens (D5-03 onwards), after the Business KPIs Manager walkthrough.
     label: "Performance",
     icon: "performance",
+    preview: true,
     children: [
       { label: "Insight", href: "/kpi/insight", action: "campaign.view" },
       { label: "Sales Results", href: "/kpi/sales-results", action: "campaign.view" },
@@ -159,14 +162,21 @@ export function activeGroup(pathname: string, tree: readonly NavGroup[] = NAV_TR
   return null;
 }
 
-/** Filter the tree to what a role may see; groups left without pages disappear. */
+/**
+ * Filter the tree to what a role may see; groups left without pages disappear. Groups still in
+ * preview are dropped unless `options.preview` is true (the default keeps them, so only the
+ * shell, which knows the organisation, has to say).
+ */
 export function visibleNav(
   can: (action: Action) => boolean,
   tree: readonly NavGroup[] = NAV_TREE,
+  options: { preview?: boolean } = {},
 ): NavGroup[] {
   const allowed = (leaf: NavLeaf) => !leaf.action || can(leaf.action);
+  const showPreview = options.preview ?? true;
   const out: NavGroup[] = [];
   for (const group of tree) {
+    if (group.preview && !showPreview) continue;
     if (!group.children) {
       out.push(group);
       continue;

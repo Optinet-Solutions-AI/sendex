@@ -212,12 +212,16 @@ export default async function ListDetailPage({
           <>
             {flagEmoji(list.country)} {countryName(list.country)}
             {list.archivedAt ? " · Archived" : ""}
-            {" · "}
-            <ListProvider
-              listId={list.id}
-              provider={list.provider}
-              canEdit={can(ctx.role, "list.upload")}
-            />
+            {ctx.previewFeatures ? (
+              <>
+                {" · "}
+                <ListProvider
+                  listId={list.id}
+                  provider={list.provider}
+                  canEdit={can(ctx.role, "list.upload")}
+                />
+              </>
+            ) : null}
           </>
         }
         actions={

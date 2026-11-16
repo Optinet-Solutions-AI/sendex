@@ -15,6 +15,33 @@ pixel by pixel: the screens use Sendex's vocabulary and rules.
 | Contacts | SMS sent |
 | ROI % = revenue ÷ cost | ROI = profit ÷ cost, the dashboard's definition (reads 100 points lower) |
 
+## The preview switch (D5-09)
+
+Everything in the D5 series is hidden unless the organisation has
+`organisations.preview_features` set to true (migration `0027_preview_features`, false by
+default). It lets one organisation test on the live app while every other account sees the
+app as it was.
+
+- `OrgContext.previewFeatures` (`apps/web/lib/auth.ts`) carries the flag; it comes with the
+  organisation row the request already loads, so it costs no extra query.
+- **Menu.** The Performance group is marked `preview` in `components/shell/nav.ts`; the shell
+  calls `visibleNav(can, tree, { preview })`.
+- **Pages.** `<RequireOrg action="campaign.view" preview>` answers "not found" for an
+  organisation without the preview. The page streams, so the HTTP status stays 200.
+- **Server actions.** `requirePreviewAction` refuses with 403, so a hidden screen's actions
+  cannot be called either (`kpi/actions.ts`, `setListProviderAction`).
+- **Data provider.** The upload form gets `showProvider`, the list page shows `ListProvider`
+  only with the preview on, and `startUpload` drops a provider sent by an organisation without
+  it.
+- There is no screen for the switch. `setOrganisationPreview(db, organisationId, on)` exists
+  for scripts; on the live database it is one statement, run by whoever operates the platform:
+  `update organisations set preview_features = true where slug = '<organisation slug>';`
+- The demo activity seed switches it on for the demo organisation, so `pnpm dev:demo` shows
+  everything.
+
+To open the features to everyone later: either set the flag for every organisation, or remove
+the `preview` marks in a follow-up PR.
+
 ## Layers
 
 1. **`packages/core/src/kpi.ts`**, pure: `KpiCounters` (sent, leads, sales, cost, revenue),
@@ -130,6 +157,9 @@ A dialog on List Follow-Up (`components/kpi/campaign-creator.tsx`), for `campaig
   in PGlite; totals reconcile with `dashboardKpis`, each filter narrows as described, and
   another organisation sees nothing.
 - `apps/web/lib/kpi-params.test.ts`: parsing, the query string round trip, the window.
+- The preview switch: `tenancy.test.ts` (off by default, on and off per organisation),
+  `nav.test.ts` (the group is hidden without it), `auth.test.ts` (`requirePreviewAction`) and
+  `e2e/preview-switch.spec.ts`, which switches the demo organisation off and on again.
 - `apps/web/e2e/list-follow-up.spec.ts`, `insight.spec.ts`, `sales-results.spec.ts` and
   `trends.spec.ts` (which asks `latestDemoMonth()` for the month to open) and
   `campaign-creator.spec.ts` (which deletes the drafts it makes) and `daily-plan.spec.ts`

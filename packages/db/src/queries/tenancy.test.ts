@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import { memberships, users } from "../schema/core.js";
 import { createTestDb, seedOrganisation, type TestDb } from "../test/db.js";
-import { getTenantByClerkIds } from "./tenancy.js";
+import { getOrganisationPreview, getTenantByClerkIds, setOrganisationPreview } from "./tenancy.js";
 
 let t: TestDb;
 let orgA: string;
@@ -52,5 +52,26 @@ describe("getTenantByClerkIds", () => {
     expect(
       await getTenantByClerkIds(t.db, { clerkUserId: "u_alice", clerkOrgId: "org_unknown" }),
     ).toBeNull();
+  });
+});
+
+describe("preview features switch (D5-09)", () => {
+  it("is off for every organisation until it is switched on, one organisation at a time", async () => {
+    const qa = await seedOrganisation(t.db, "preview-qa");
+    const other = await seedOrganisation(t.db, "preview-other");
+    expect(await getOrganisationPreview(t.db, qa)).toBe(false);
+
+    expect(await setOrganisationPreview(t.db, qa, true)).toBe(true);
+    expect(await getOrganisationPreview(t.db, qa)).toBe(true);
+    expect(await getOrganisationPreview(t.db, other)).toBe(false);
+
+    expect(await setOrganisationPreview(t.db, qa, false)).toBe(true);
+    expect(await getOrganisationPreview(t.db, qa)).toBe(false);
+  });
+
+  it("reports an organisation that does not exist", async () => {
+    const missing = "00000000-0000-4000-8000-000000000000";
+    expect(await setOrganisationPreview(t.db, missing, true)).toBe(false);
+    expect(await getOrganisationPreview(t.db, missing)).toBe(false);
   });
 });

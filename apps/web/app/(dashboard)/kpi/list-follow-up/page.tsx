@@ -51,7 +51,7 @@ export default async function ListFollowUpPage({
 }) {
   const query = parseListFollowUpQuery(await searchParams);
   return (
-    <RequireOrg action="campaign.view">
+    <RequireOrg action="campaign.view" preview>
       {async (ctx) => {
         const database = db();
         const [rows, options] = await Promise.all([

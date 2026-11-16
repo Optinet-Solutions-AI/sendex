@@ -166,3 +166,31 @@ export async function getOrganisationById(db: Db, id: string): Promise<Organisat
   const [row] = await db.select().from(organisations).where(eq(organisations.id, id)).limit(1);
   return row ?? null;
 }
+
+/** Whether the organisation sees the features still in preview (D5-09); false when unknown. */
+export async function getOrganisationPreview(db: Db, organisationId: string): Promise<boolean> {
+  const [row] = await db
+    .select({ on: organisations.previewFeatures })
+    .from(organisations)
+    .where(eq(organisations.id, organisationId))
+    .limit(1);
+  return row?.on ?? false;
+}
+
+/**
+ * Switch the preview features on or off for one organisation (D5-09). Returns false when the
+ * organisation does not exist. There is no screen for this on purpose: it is set from the
+ * database by whoever runs the platform.
+ */
+export async function setOrganisationPreview(
+  db: Db,
+  organisationId: string,
+  on: boolean,
+): Promise<boolean> {
+  const updated = await db
+    .update(organisations)
+    .set({ previewFeatures: on, updatedAt: new Date() })
+    .where(eq(organisations.id, organisationId))
+    .returning({ id: organisations.id });
+  return updated.length > 0;
+}

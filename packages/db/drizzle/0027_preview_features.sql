@@ -1,0 +1,1 @@
+ALTER TABLE "organisations" ADD COLUMN "preview_features" boolean DEFAULT false NOT NULL;

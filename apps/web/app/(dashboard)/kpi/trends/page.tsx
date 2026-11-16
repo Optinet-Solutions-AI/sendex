@@ -18,7 +18,7 @@ export default async function TrendsPage({
   const windows = trendsWindows(query);
   const through = throughDay(query.year, query.month, now);
   return (
-    <RequireOrg action="campaign.view">
+    <RequireOrg action="campaign.view" preview>
       {async (ctx) => {
         const database = db();
         const [rows, previous] = await Promise.all([

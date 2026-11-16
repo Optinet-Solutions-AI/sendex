@@ -106,3 +106,15 @@ export async function cleanupE2ePlan(namePrefix: string): Promise<void> {
     await sql.end();
   }
 }
+
+/** Switch the preview features (D5-09) on or off for the demo organisation. */
+export async function setDemoPreview(on: boolean): Promise<void> {
+  const url = process.env.DATABASE_URL;
+  if (!url) throw new Error("DATABASE_URL must be set to run the KPI e2e specs");
+  const sql = postgres(url, { max: 1 });
+  try {
+    await sql`update organisations set preview_features = ${on} where slug = 'external'`;
+  } finally {
+    await sql.end();
+  }
+}

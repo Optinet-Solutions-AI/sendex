@@ -314,6 +314,7 @@ erDiagram
     text currency
     uuid id PK
     text name
+    boolean preview_features
     text slug UK
     timestamp_with_time_zone updated_at
   }

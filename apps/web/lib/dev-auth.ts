@@ -67,5 +67,6 @@ export async function devOrgContext(
     organisationId: organisation.id,
     clerkOrgId: organisation.clerkOrgId,
     role: config.role,
+    previewFeatures: organisation.previewFeatures === true,
   };
 }

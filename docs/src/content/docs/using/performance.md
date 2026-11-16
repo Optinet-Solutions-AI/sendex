@@ -3,6 +3,11 @@ title: Performance
 description: The Performance screens. Insight gives a period's totals and where sales come from, Sales Results the day-by-day record, Trends the month against the month before, and List Follow-Up the lists used and untouched.
 ---
 
+:::note
+These screens, and the **Data provider** field on lists, are in preview. They are shown only
+to organisations that have the preview switched on; everyone else sees the app without them.
+:::
+
 The **Performance** group in the sidebar holds the screens for deciding what to send next.
 They read the same sends, registrations (leads) and first deposits (sales) as the dashboard
 and the Campaigns Log, and follow the same rule: sends, leads and cost belong to the day the

@@ -332,6 +332,11 @@ export async function seedDemoActivity(db: Db, now: Date = new Date()): Promise<
     .where(eq(organisations.slug, "external"));
   if (!org) throw new Error("Run the demo seed first: the External organisation is missing");
   const organisationId = org.id;
+  // The screens this data is for are behind the preview switch (D5-09).
+  await db
+    .update(organisations)
+    .set({ previewFeatures: true })
+    .where(eq(organisations.id, organisationId));
 
   // A re-run keeps the dates of the first run: a campaign that exists is not touched again.
   const existing = await db

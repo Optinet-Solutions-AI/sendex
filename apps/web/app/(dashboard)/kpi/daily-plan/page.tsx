@@ -15,7 +15,7 @@ export default async function DailyPlanPage({
 }) {
   const query = parseDailyPlanQuery(await searchParams);
   return (
-    <RequireOrg action="campaign.view">
+    <RequireOrg action="campaign.view" preview>
       {async (ctx) => {
         const database = db();
         const [rows, target] = await Promise.all([

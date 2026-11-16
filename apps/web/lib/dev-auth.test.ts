@@ -76,6 +76,7 @@ describe("devOrgContext", () => {
       organisationId: "o_dev_org_external",
       clerkOrgId: "dev_org_external",
       role: "owner",
+      previewFeatures: false,
     });
     expect(store.users.get("dev_user_external")?.email).toBe("dev-external@sendex.local");
     expect(store.orgs.get("dev_org_external")).toMatchObject({

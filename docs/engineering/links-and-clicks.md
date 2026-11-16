@@ -167,6 +167,14 @@ Links service (`apps/links/wrangler.toml`):
 Worker (`.env`, Fly.io secrets): `INTERNAL_API_SECRET`. The send loop uses `LINKS_BASE_URL` to
 build the link in the text.
 
+## Placeholders in a link URL
+
+`renderLinkUrl` (`packages/core/src/links.ts`) fills `{{name}}` and `{{{name}}}` alike (D4-21).
+SMS Edge writes its placeholders with three braces, so links pasted from it carry
+`{{{dynamic}}}`. Before D4-21 only the inner two braces were matched and the destination kept a
+stray pair: `sub_id1={abc}`. The tracker then reported `{abc}` (or nothing) as the click id and
+the postback could not be matched to its message. Single braces are left alone.
+
 ## Cloudflare setup
 
 - **Domains.** Register the link domains (`.click`, `.sbs`, ...) in Cloudflare, DNS proxied, and

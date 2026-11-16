@@ -74,11 +74,17 @@ export type LinkPlaceholder = (typeof LINK_URL_PLACEHOLDERS)[number];
 export type LinkVars = Partial<Record<LinkPlaceholder, string>> &
   Record<string, string | undefined>;
 
-const PLACEHOLDER_PATTERN = /\{\{\s*([A-Za-z0-9_]+)\s*\}\}/g;
+/**
+ * `{{name}}`, and `{{{name}}}` as SMS Edge writes it (D4-21). The third brace on each side is
+ * part of the placeholder: matching only two would leave `{value}` in the destination, and the
+ * tracker would then report a click id the postback cannot be matched on.
+ */
+const PLACEHOLDER_PATTERN = /\{\{\{?\s*([A-Za-z0-9_]+)\s*\}\}\}?/g;
 
 /**
- * Replace every `{{name}}` in `template` with the URL-encoded value of `vars[name]`.
- * A placeholder with no value becomes the empty string so the destination stays a valid URL.
+ * Replace every `{{name}}` or `{{{name}}}` in `template` with the URL-encoded value of
+ * `vars[name]`. A placeholder with no value becomes the empty string so the destination stays
+ * a valid URL.
  */
 export function renderLinkUrl(template: string, vars: LinkVars): string {
   return template.replace(PLACEHOLDER_PATTERN, (_match, name: string) => {

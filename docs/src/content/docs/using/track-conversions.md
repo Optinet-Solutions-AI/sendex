@@ -9,7 +9,7 @@ Conversions come back from the brand (or its tracker, such as Affise, Voluum or 
 
 ## 1. Put the dynamic id in your link
 
-Every tracked link can carry `{{dynamic}}`, a unique id per message. Add it to the link's URL as whatever parameter the brand's tracker uses for a click id or sub id:
+Every tracked link can carry `{{dynamic}}`, a unique id per message. Three braces, `{{{dynamic}}}`, as SMS Edge writes it, work the same, so a link copied from SMS Edge can be pasted as it is. Add it to the link's URL as whatever parameter the brand's tracker uses for a click id or sub id:
 
 ```
 https://trk.brand.example/click?o=75&a=35&sub_id1={{dynamic}}

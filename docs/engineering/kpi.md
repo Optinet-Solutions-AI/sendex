@@ -90,6 +90,25 @@ The sidebar group is **Performance** (`components/shell/nav.ts`).
 - The charts are the `Lines` component of `@sendex/ui` inside `ChartFrame`; the month before
   is the dashed series.
 
+## Campaign creator (D5-07)
+
+A dialog on List Follow-Up (`components/kpi/campaign-creator.tsx`), for `campaign.create`.
+
+- `campaignCreatorDataAction(period)` returns everything one data period needs: offers, lists,
+  `kpiByOfferCountry` and `listOfferPairs` inside the period and with no window, and
+  `routesForCountry` for each list country. The dialog ranks on the client with the pure
+  functions of `packages/core/src/kpi.ts`: `rankOffersForCountry`, `rankCountriesForOffer`,
+  `rankListsForOffer`. "Never sent" comes from the all-time rows, the figures from the period.
+- `creatorPeriod(period, now)` gives the window and its label: this month to today, or the
+  last 1, 3, 6 or 12 whole months.
+- `createPlannedCampaignAction` validates with `plannedCampaignSchema`, checks the list's
+  country is open (`assertCountryOpen`, D4-19) and calls `createPlannedCampaign`, which checks
+  the list, the offer and that the route can carry the list's country, then writes the
+  campaign, `campaign_lists`, `campaign_links` and `campaign_routes` in one transaction.
+- `campaigns.planned_for` (date, migration `0025_campaign_planned_for`) is the planned day. It
+  is a plan only: the scheduler reads `scheduled_at` and never this column, so a planned
+  campaign stays a draft until someone sends it.
+
 ## Tests
 
 - `packages/core/src/kpi.test.ts`: the ratios and the grouping.
@@ -98,6 +117,7 @@ The sidebar group is **Performance** (`components/shell/nav.ts`).
   another organisation sees nothing.
 - `apps/web/lib/kpi-params.test.ts`: parsing, the query string round trip, the window.
 - `apps/web/e2e/list-follow-up.spec.ts`, `insight.spec.ts`, `sales-results.spec.ts` and
-  `trends.spec.ts` (which asks `latestDemoMonth()` for the month to open): on the demo
+  `trends.spec.ts` (which asks `latestDemoMonth()` for the month to open) and
+  `campaign-creator.spec.ts` (which deletes the drafts it makes): on the demo
   activity (`e2e/helpers/demo.ts` runs `pnpm db:seed:activity` first). The Insight spec uses
   the all-time view because the demo sends are dated relative to the day they were seeded.

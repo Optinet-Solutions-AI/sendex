@@ -26,6 +26,7 @@ import { useRouter } from "next/navigation";
 import { type FormEvent, Fragment, useState } from "react";
 import { formatNumber } from "../../lib/format";
 import { type ListFollowUpQuery, listFollowUpQueryString } from "../../lib/kpi-params";
+import { CampaignCreator } from "./campaign-creator";
 import { eur, percent, shortDay } from "./format";
 
 /** Counters as they cross the server boundary: micro-EUR as strings, ratios worked out. */
@@ -78,12 +79,15 @@ export function ListFollowUp({
   offers,
   countries,
   untouched,
+  canCreate,
 }: {
   query: ListFollowUpQuery;
   routes: readonly FollowUpOption[];
   offers: readonly FollowUpOption[];
   countries: readonly FollowUpCountryView[];
   untouched: readonly FollowUpListView[];
+  /** Shows "Create Campaign" (D5-07) to people who may create campaigns. */
+  canCreate: boolean;
 }) {
   const router = useRouter();
   const [search, setSearch] = useState(query.q);
@@ -115,6 +119,7 @@ export function ListFollowUp({
         breadcrumb={[{ label: "Performance" }, { label: "List Follow-Up" }]}
         title="List Follow-Up"
         subtitle="Which lists were used, what they produced, and which are still untouched."
+        actions={<CampaignCreator canCreate={canCreate} />}
       />
 
       <div className="flex flex-wrap items-center gap-3" data-testid="follow-up-filters">

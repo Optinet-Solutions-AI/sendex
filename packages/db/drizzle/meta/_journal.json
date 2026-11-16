@@ -176,6 +176,13 @@
       "when": 1794836886794,
       "tag": "0024_messages_contact_idx",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1794839431425,
+      "tag": "0025_campaign_planned_for",
+      "breakpoints": true
     }
   ]
 }

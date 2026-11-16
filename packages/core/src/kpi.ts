@@ -1,3 +1,5 @@
+import { z } from "zod";
+
 /**
  * Pure maths of the KPI screens (D5-03 onwards), built from the Business KPIs Manager
  * walkthrough of 11 November 2026. The vocabulary is Sendex's own: an offer is that tool's
@@ -490,3 +492,211 @@ export function trendBreakdown(rows: readonly DailyRow[]): TrendBreakdownRow[] {
     })
     .sort((a, b) => b.leads - a.leads || b.sales - a.sales || a.key.localeCompare(b.key));
 }
+
+// ---------------------------------------------------------------------------
+// Campaign creator (D5-07)
+// ---------------------------------------------------------------------------
+
+export const CREATOR_PERIODS = [
+  "this_month",
+  "last_month",
+  "last_3_months",
+  "last_6_months",
+  "last_12_months",
+] as const;
+export type CreatorPeriod = (typeof CREATOR_PERIODS)[number];
+
+export const CREATOR_PERIOD_LABELS: Record<CreatorPeriod, string> = {
+  this_month: "This month",
+  last_month: "Last month",
+  last_3_months: "Last 3 months",
+  last_6_months: "Last 6 months",
+  last_12_months: "Last 12 months",
+};
+
+const CREATOR_MONTHS: Record<Exclude<CreatorPeriod, "this_month">, number> = {
+  last_month: 1,
+  last_3_months: 3,
+  last_6_months: 6,
+  last_12_months: 12,
+};
+
+function dayLabel(date: Date): string {
+  const text = date.toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    timeZone: "UTC",
+  });
+  // Node writes "Sept" for September in en-GB; keep the three-letter form used elsewhere.
+  return text.replace("Sept", "Sep");
+}
+
+/**
+ * The window the creator ranks on, end exclusive, and how to say it: this month up to today,
+ * or the last 1, 3, 6 or 12 whole months before this one.
+ */
+export function creatorPeriod(
+  period: CreatorPeriod,
+  now: Date,
+): { from: Date; to: Date; label: string } {
+  const year = now.getUTCFullYear();
+  const month = now.getUTCMonth();
+  const window =
+    period === "this_month"
+      ? {
+          from: new Date(Date.UTC(year, month, 1)),
+          to: new Date(Date.UTC(year, month, now.getUTCDate() + 1)),
+        }
+      : {
+          from: new Date(Date.UTC(year, month - CREATOR_MONTHS[period], 1)),
+          to: new Date(Date.UTC(year, month, 1)),
+        };
+  const lastDay = new Date(window.to.getTime() - 86_400_000);
+  return { ...window, label: `${dayLabel(window.from)} – ${dayLabel(lastDay)}` };
+}
+
+export interface CreatorOffer {
+  id: string;
+  name: string;
+}
+
+export interface RankedOffer {
+  offerId: string;
+  offer: string;
+  roi: number | null;
+  leadToSale: number | null;
+  sales: number;
+  /** True when the offer was never sent to this country, in any period. */
+  neverSent: boolean;
+}
+
+/**
+ * "Top offers for a country": the offers sent there in the period, best ROI first, then the
+ * offers sent there before the period (no figures), then the ones never sent there.
+ */
+export function rankOffersForCountry(
+  period: readonly OfferCountryRow[],
+  ever: readonly OfferCountryRow[],
+  offers: readonly CreatorOffer[],
+  country: string,
+): RankedOffer[] {
+  const inPeriod = new Map<string, OfferCountryRow>();
+  for (const row of period) {
+    if (row.country === country && row.offerId) inPeriod.set(row.offerId, row);
+  }
+  const sentEver = new Set(
+    ever.filter((r) => r.country === country && r.sent > 0).flatMap((r) => r.offerId ?? []),
+  );
+  const rank = (o: RankedOffer) => (inPeriod.has(o.offerId) ? 0 : o.neverSent ? 2 : 1);
+  return offers
+    .map((offer) => {
+      const row = inPeriod.get(offer.id);
+      return {
+        offerId: offer.id,
+        offer: offer.name,
+        roi: row ? roi(row) : null,
+        leadToSale: row ? leadToSale(row) : null,
+        sales: row?.sales ?? 0,
+        neverSent: !sentEver.has(offer.id) && !row,
+      };
+    })
+    .sort(
+      (a, b) =>
+        rank(a) - rank(b) ||
+        byDesc(a.roi, b.roi) ||
+        b.sales - a.sales ||
+        a.offer.localeCompare(b.offer),
+    );
+}
+
+export interface RankedCountry {
+  country: string;
+  roi: number | null;
+  leadToSale: number | null;
+  sales: number;
+}
+
+/** "Top countries for an offer": where it was sent in the period, best ROI first. */
+export function rankCountriesForOffer(
+  period: readonly OfferCountryRow[],
+  offerId: string,
+): RankedCountry[] {
+  return period
+    .filter((r) => r.offerId === offerId)
+    .map((r) => ({ country: r.country, roi: roi(r), leadToSale: leadToSale(r), sales: r.sales }))
+    .sort(
+      (a, b) => byDesc(a.roi, b.roi) || b.sales - a.sales || a.country.localeCompare(b.country),
+    );
+}
+
+export interface CreatorList {
+  listId: string;
+  name: string;
+  country: string;
+  provider: string | null;
+  numbersCount: number;
+}
+
+/** What one list did with one offer. */
+export interface ListOfferPair {
+  listId: string;
+  offerId: string;
+  sent: number;
+  sales: number;
+  lastSentAt: Date | null;
+}
+
+export interface RankedList extends CreatorList {
+  /** True when this list was never sent this offer, in any period. */
+  neverSent: boolean;
+  lastSentAt: Date | null;
+  /** Sales of the offer on this list inside the period. */
+  sales: number;
+}
+
+/**
+ * The lists of a country for an offer: the ones never sent to it first (largest first), then
+ * the others by their sales in the period.
+ */
+export function rankListsForOffer(
+  lists: readonly CreatorList[],
+  ever: readonly ListOfferPair[],
+  period: readonly ListOfferPair[],
+  offerId: string,
+  country: string,
+): RankedList[] {
+  const find = (pairs: readonly ListOfferPair[], listId: string) =>
+    pairs.find((p) => p.listId === listId && p.offerId === offerId);
+  return lists
+    .filter((l) => l.country === country)
+    .map((l) => {
+      const before = find(ever, l.listId);
+      return {
+        ...l,
+        neverSent: !before || before.sent === 0,
+        lastSentAt: before?.lastSentAt ?? null,
+        sales: find(period, l.listId)?.sales ?? 0,
+      };
+    })
+    .sort(
+      (a, b) =>
+        Number(b.neverSent) - Number(a.neverSent) ||
+        (a.neverSent ? b.numbersCount - a.numbersCount : b.sales - a.sales) ||
+        a.name.localeCompare(b.name),
+    );
+}
+
+/** "Trixino → UK_ZEN_3", cut to the 120 characters a campaign name may have. */
+export function plannedCampaignName(offer: string, list: string): string {
+  return `${offer} → ${list}`.slice(0, 120);
+}
+
+/** What the creator's last step submits: an offer, a list, a route and the day planned. */
+export const plannedCampaignSchema = z.object({
+  offerId: z.uuid(),
+  listId: z.uuid(),
+  routeId: z.uuid(),
+  plannedFor: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Pick a day"),
+});
+export type PlannedCampaignInput = z.infer<typeof plannedCampaignSchema>;

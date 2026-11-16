@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   addCounters,
   costPerSaleMicro,
+  creatorPeriod,
   type DailyRow,
   efficiencySnapshot,
   groupListFollowUp,
@@ -10,6 +11,11 @@ import {
   type ListFollowUpRow,
   leadToSale,
   type OfferCountryRow,
+  plannedCampaignName,
+  plannedCampaignSchema,
+  rankCountriesForOffer,
+  rankListsForOffer,
+  rankOffersForCountry,
   roi,
   rollUp,
   smsPerSale,
@@ -334,5 +340,134 @@ describe("trends (D5-06)", () => {
     expect(rows[1]).toMatchObject({ firstHalf: 0, secondHalf: 0.25, trend: "up" });
     // A group with leads in one half only has no direction.
     expect(trendBreakdown([d("2026-11-02", "405", 5, 1)])[0]?.trend).toBeNull();
+  });
+});
+
+describe("campaign creator (D5-07)", () => {
+  const now = new Date("2026-11-16T12:00:00Z");
+
+  it("turns a data period into a window and a label", () => {
+    const thisMonth = creatorPeriod("this_month", now);
+    expect(thisMonth.from.toISOString()).toBe("2026-11-01T00:00:00.000Z");
+    expect(thisMonth.to.toISOString()).toBe("2026-11-17T00:00:00.000Z");
+    expect(thisMonth.label).toBe("1 Nov 2026 – 16 Nov 2026");
+
+    const lastMonth = creatorPeriod("last_month", now);
+    expect(lastMonth.from.toISOString()).toBe("2026-10-01T00:00:00.000Z");
+    expect(lastMonth.to.toISOString()).toBe("2026-11-01T00:00:00.000Z");
+    expect(lastMonth.label).toBe("1 Oct 2026 – 31 Oct 2026");
+
+    expect(creatorPeriod("last_3_months", now).from.toISOString()).toBe("2026-08-01T00:00:00.000Z");
+    expect(creatorPeriod("last_12_months", now).from.toISOString()).toBe(
+      "2025-11-01T00:00:00.000Z",
+    );
+    expect(creatorPeriod("last_12_months", now).to.toISOString()).toBe("2026-11-01T00:00:00.000Z");
+  });
+
+  const offers = [
+    { id: "o-rolling", name: "Rolling Slots" },
+    { id: "o-trix", name: "Trixino" },
+    { id: "o-lucky", name: "Lucky Reel" },
+    { id: "o-new", name: "Brand New" },
+  ];
+  const period = [
+    cell("GB", "o-rolling", {
+      sent: 5_000,
+      leads: 60,
+      sales: 4,
+      costMicro: 200n,
+      revenueMicro: 1_200n,
+    }),
+    cell("GB", "o-trix", { sent: 3_000, leads: 20, sales: 6, costMicro: 120n, revenueMicro: 150n }),
+    cell("ES", "o-rolling", {
+      sent: 2_000,
+      leads: 10,
+      sales: 1,
+      costMicro: 50n,
+      revenueMicro: 300n,
+    }),
+  ];
+  // Lucky Reel was sent to the UK before the period; Brand New never.
+  const everSent = [...period, cell("GB", "o-lucky", { sent: 900 })];
+
+  it("ranks the offers of a country by ROI and marks the ones never sent there", () => {
+    const ranked = rankOffersForCountry(period, everSent, offers, "GB");
+    expect(ranked.map((o) => o.offer)).toEqual([
+      "Rolling Slots",
+      "Trixino",
+      "Lucky Reel",
+      "Brand New",
+    ]);
+    expect(ranked[0]).toMatchObject({ offerId: "o-rolling", sales: 4, neverSent: false });
+    expect(ranked[0]?.roi).toBeCloseTo(5);
+    expect(ranked[0]?.leadToSale).toBeCloseTo(4 / 60);
+    // Sent before the period: no figures, but not "never sent".
+    expect(ranked[2]).toMatchObject({ roi: null, sales: 0, neverSent: false });
+    expect(ranked[3]).toMatchObject({ offer: "Brand New", neverSent: true });
+  });
+
+  it("ranks the countries of an offer by ROI", () => {
+    const ranked = rankCountriesForOffer(period, "o-rolling");
+    expect(ranked.map((c) => c.country)).toEqual(["GB", "ES"]);
+    expect(ranked[1]).toMatchObject({ country: "ES", sales: 1 });
+    expect(rankCountriesForOffer(period, "o-new")).toEqual([]);
+  });
+
+  it("puts the lists never sent to the offer first, then the best sellers", () => {
+    const lists = [
+      { listId: "l1", name: "UK_ZEN_1", country: "GB", provider: "ZEN", numbersCount: 300 },
+      { listId: "l2", name: "UK_DER_1", country: "GB", provider: "DER", numbersCount: 500 },
+      { listId: "l3", name: "UK_ZEN_3", country: "GB", provider: "ZEN", numbersCount: 900 },
+      { listId: "l4", name: "ES_DER_1", country: "ES", provider: "DER", numbersCount: 300 },
+    ];
+    const pair = (listId: string, sales: number, lastSentAt: string | null) => ({
+      listId,
+      offerId: "o-trix",
+      sent: 100,
+      sales,
+      lastSentAt: lastSentAt ? new Date(lastSentAt) : null,
+    });
+    const ever = [
+      pair("l1", 9, "2026-11-10T10:00:00Z"),
+      pair("l2", 2, "2026-10-02T10:00:00Z"),
+      { ...pair("l3", 0, "2026-09-01T10:00:00Z"), offerId: "o-rolling" },
+    ];
+    const inPeriod = [pair("l1", 3, "2026-11-10T10:00:00Z")];
+    const ranked = rankListsForOffer(lists, ever, inPeriod, "o-trix", "GB");
+    expect(ranked.map((l) => l.name)).toEqual(["UK_ZEN_3", "UK_ZEN_1", "UK_DER_1"]);
+    expect(ranked[0]).toMatchObject({ neverSent: true, sales: 0, lastSentAt: null });
+    expect(ranked[1]).toMatchObject({ neverSent: false, sales: 3 });
+    expect(ranked[1]?.lastSentAt?.toISOString()).toBe("2026-11-10T10:00:00.000Z");
+    // Sent before the period: its last send is known, its sales in the period are 0.
+    expect(ranked[2]).toMatchObject({ neverSent: false, sales: 0 });
+    expect(ranked[2]?.lastSentAt?.toISOString()).toBe("2026-10-02T10:00:00.000Z");
+  });
+
+  it("names a planned campaign after its offer and list", () => {
+    expect(plannedCampaignName("Trixino", "UK_ZEN_3")).toBe("Trixino → UK_ZEN_3");
+    expect(plannedCampaignName("x".repeat(100), "y".repeat(100))).toHaveLength(120);
+  });
+
+  it("validates what the creator sends", () => {
+    const id = "0b8f5a2e-3c1d-4e6f-9a7b-1c2d3e4f5a6b";
+    const ok = plannedCampaignSchema.safeParse({
+      offerId: id,
+      listId: id,
+      routeId: id,
+      plannedFor: "2026-11-17",
+    });
+    expect(ok.success).toBe(true);
+    expect(
+      plannedCampaignSchema.safeParse({ offerId: id, listId: id, routeId: id, plannedFor: "17/11" })
+        .success,
+    ).toBe(false);
+    expect(
+      plannedCampaignSchema.safeParse({
+        offerId: "x",
+        listId: id,
+        routeId: id,
+        plannedFor: "2026-11-17",
+      }).success,
+    ).toBe(false);
   });
 });

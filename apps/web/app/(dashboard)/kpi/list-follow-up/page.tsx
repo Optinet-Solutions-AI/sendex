@@ -1,4 +1,5 @@
 import {
+  can,
   groupListFollowUp,
   type KpiCounters,
   type ListFollowUpRow,
@@ -70,6 +71,7 @@ export default async function ListFollowUpPage({
               lists: c.lists.map(listView),
             }))}
             untouched={grouped.untouched.map(listView)}
+            canCreate={can(ctx.role, "campaign.create")}
           />
         );
       }}

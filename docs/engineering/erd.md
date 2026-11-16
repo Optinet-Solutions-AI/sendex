@@ -78,6 +78,7 @@ erDiagram
     uuid id PK
     text name
     uuid organisation_id FK
+    date planned_for
     timestamp_with_time_zone scheduled_at
     campaign_source source
     campaign_status status

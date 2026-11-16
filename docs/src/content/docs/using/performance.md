@@ -95,3 +95,28 @@ The filters above the table:
 - **Clear filters** puts everything back.
 
 The filters live in the address bar, so a view can be bookmarked or sent to a colleague.
+
+## Create Campaign
+
+The **Create Campaign** button on List Follow-Up helps you decide what to send next and sets
+the campaign up for you. People who may create campaigns see it.
+
+1. **Data period**: this month, last month, or the last 3, 6 or 12 months. The rankings below
+   use that period.
+2. **Choose a way in**:
+   - **By Country**: pick a country and see its offers, best ROI first, with lead → sale and
+     sales. Offers never sent to that country are marked **Never sent**.
+   - **By Offer**: pick an offer and see the countries it was sent to, best ROI first.
+   - **By List**: pick a list (lists that were never sent are marked), then an offer; the
+     offers this list never received are marked **Never sent to this list**.
+3. **Select a list**: the lists of the country, with the ones **never sent to that offer**
+   first (largest first), then the others by their sales in the period.
+4. **Route and day**: pick a route that can carry the country (its price per SMS is shown) and
+   the day the campaign is planned for, then **Add campaign**.
+
+The result is a **draft campaign** named "Offer → List" with the list, the offer's link and
+the route already attached, and the planned day recorded. **Nothing is sent and nothing is
+scheduled.** Open it from Campaigns, add the sender IDs and the text, and send it as usual.
+
+"Never sent" always looks at the whole history, not only the data period: a list sent to an
+offer a year ago is not offered as fresh.

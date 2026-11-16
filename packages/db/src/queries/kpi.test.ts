@@ -1,15 +1,27 @@
 import { and, count, eq, inArray } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { laps, links, lists, messages, routes } from "../schema/index.js";
+import {
+  campaignLinks,
+  campaignLists,
+  campaignRoutes,
+  campaigns,
+  laps,
+  links,
+  lists,
+  messages,
+  routes,
+} from "../schema/index.js";
 import { seedDemoActivity } from "../seed/demo-activity.js";
 import { seedDemo } from "../seed/demo-data.js";
 import { createTestDb, type TestDb } from "../test/db.js";
 import { dashboardKpis } from "./dashboard.js";
 import {
+  createPlannedCampaign,
   kpiByOfferCountry,
   kpiDaily,
   kpiFilterOptions,
   listFollowUp,
+  listOfferPairs,
   salesResults,
 } from "./kpi.js";
 
@@ -249,5 +261,97 @@ describe("kpiDaily", () => {
     expect(rows.length).toBeGreaterThan(0);
     expect(rows.every((r) => r.day.startsWith("2026-11-"))).toBe(true);
     expect(await kpiDaily(t.db, otherOrg, {}, "route")).toEqual([]);
+  });
+});
+
+describe("listOfferPairs", () => {
+  it("says what each list did with each offer", async () => {
+    const pairs = await listOfferPairs(t.db, org, {});
+    const zen1 = await listId("UK_ZEN_1");
+    const trixino = await offerId("Trixino");
+    const pair = pairs.find((p) => p.listId === zen1 && p.offerId === trixino);
+    expect(pair?.sent).toBeGreaterThan(0);
+    // UK_ZEN_1 got Trixino 24 days before NOW.
+    expect(pair?.lastSentAt?.toISOString().slice(0, 10)).toBe("2026-10-23");
+    // An untouched list has no pair at all.
+    const zen3 = await listId("UK_ZEN_3");
+    expect(pairs.some((p) => p.listId === zen3)).toBe(false);
+    expect(new Set(pairs.map((p) => `${p.listId}:${p.offerId}`)).size).toBe(pairs.length);
+  });
+
+  it("follows the window and the organisation", async () => {
+    const window = { from: new Date(NOW.getTime() - 7 * DAY_MS), to: NOW };
+    const pairs = await listOfferPairs(t.db, org, window);
+    const zen1 = await listId("UK_ZEN_1");
+    const trixino = await offerId("Trixino");
+    expect(pairs.some((p) => p.listId === zen1 && p.offerId === trixino)).toBe(false);
+    expect(await listOfferPairs(t.db, otherOrg, {})).toEqual([]);
+  });
+});
+
+describe("createPlannedCampaign", () => {
+  it("creates a draft with the list, the offer, the route and the planned day", async () => {
+    const input = {
+      offerId: await offerId("Trixino"),
+      listId: await listId("UK_ZEN_3"),
+      routeId: await routeId("724"),
+      plannedFor: "2026-11-17",
+    };
+    const campaign = await createPlannedCampaign(t.db, org, input);
+    expect(campaign).toMatchObject({
+      name: "Trixino → UK_ZEN_3",
+      country: "GB",
+      timezone: "Europe/London",
+      status: "draft",
+      plannedFor: "2026-11-17",
+      scheduledAt: null,
+    });
+    const attachedLists = await t.db
+      .select({ id: campaignLists.listId })
+      .from(campaignLists)
+      .where(eq(campaignLists.campaignId, campaign.id));
+    expect(attachedLists.map((l) => l.id)).toEqual([input.listId]);
+    const attachedLinks = await t.db
+      .select({ id: campaignLinks.linkId })
+      .from(campaignLinks)
+      .where(eq(campaignLinks.campaignId, campaign.id));
+    expect(attachedLinks.map((l) => l.id)).toEqual([input.offerId]);
+    const picked = await t.db
+      .select({ id: campaignRoutes.routeId })
+      .from(campaignRoutes)
+      .where(eq(campaignRoutes.campaignId, campaign.id));
+    expect(picked.map((r) => r.id)).toEqual([input.routeId]);
+  });
+
+  it("refuses a route that cannot carry the list's country, and other people's rows", async () => {
+    const offer = await offerId("Trixino");
+    const list = await listId("UK_ZEN_3");
+    const before = await t.db.select({ n: count() }).from(campaigns);
+    await expect(
+      createPlannedCampaign(t.db, org, {
+        offerId: offer,
+        listId: list,
+        routeId: await routeId("391"),
+        plannedFor: "2026-11-17",
+      }),
+    ).rejects.toThrow("This route cannot carry a campaign for United Kingdom");
+    await expect(
+      createPlannedCampaign(t.db, otherOrg, {
+        offerId: offer,
+        listId: list,
+        routeId: await routeId("724"),
+        plannedFor: "2026-11-17",
+      }),
+    ).rejects.toThrow("List not found");
+    await expect(
+      createPlannedCampaign(t.db, org, {
+        offerId: list,
+        listId: list,
+        routeId: await routeId("724"),
+        plannedFor: "2026-11-17",
+      }),
+    ).rejects.toThrow("Offer not found");
+    // Nothing half-made is left behind.
+    expect(await t.db.select({ n: count() }).from(campaigns)).toEqual(before);
   });
 });

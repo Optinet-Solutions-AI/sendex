@@ -1,12 +1,26 @@
-import type {
-  DailyRow,
-  ListFollowUpRow,
-  OfferCountryRow,
-  SalesResultRow,
-  TrendDimension,
+import {
+  countryName,
+  type DailyRow,
+  type ListFollowUpRow,
+  type ListOfferPair,
+  type OfferCountryRow,
+  type PlannedCampaignInput,
+  plannedCampaignName,
+  type SalesResultRow,
+  type TrendDimension,
+  timezoneForCountry,
 } from "@sendex/core";
-import { type SQL, sql } from "drizzle-orm";
+import { and, eq, type SQL, sql } from "drizzle-orm";
+import {
+  campaignLinks,
+  campaignLists,
+  campaignRoutes,
+  campaigns,
+  links,
+  lists,
+} from "../schema/index.js";
 import type { Db } from "../types.js";
+import { type CampaignRow, routesForCountry } from "./campaigns.js";
 import { type DashboardFilter, inCountries, messageFacts, rowsOf } from "./dashboard.js";
 import { listProviders } from "./lists.js";
 
@@ -237,4 +251,84 @@ export async function kpiDaily(
     leads: num(r.leads),
     sales: num(r.sales),
   }));
+}
+
+/**
+ * What each list did with each offer inside the filters: SMS sent, sales and the last send.
+ * The campaign creator (D5-07) reads it twice: with no window for "never sent to this offer",
+ * and with the data period for the ranking.
+ */
+export async function listOfferPairs(
+  db: Db,
+  organisationId: string,
+  filter: KpiFilter,
+): Promise<ListOfferPair[]> {
+  const rows = rowsOf(
+    await db.execute(sql`
+      with facts as (${messageFacts(organisationId, filter)})
+      select f.list_id, f.link_id, coalesce(sum(f.sent), 0) as sent,
+        coalesce(sum(f.sales), 0) as sales, max(f.sent_at) as last_sent
+      from facts f
+      where f.list_id is not null and f.link_id is not null${factFilter(filter)}
+      group by f.list_id, f.link_id`),
+  );
+  return rows.map((r) => ({
+    listId: String(r.list_id),
+    offerId: String(r.link_id),
+    sent: num(r.sent),
+    sales: num(r.sales),
+    lastSentAt: date(r.last_sent),
+  }));
+}
+
+/**
+ * The creator's last step (D5-07): a draft campaign named "Offer → List" in the list's
+ * country, with the list attached, the offer as its link, the route picked and the day it is
+ * planned for. Nothing is sent and nothing is scheduled. Everything is checked first and
+ * written in one transaction, so a refusal leaves nothing behind.
+ */
+export async function createPlannedCampaign(
+  db: Db,
+  organisationId: string,
+  input: PlannedCampaignInput & { createdBy?: string | null },
+): Promise<CampaignRow> {
+  const [list] = await db
+    .select({ id: lists.id, name: lists.name, country: lists.country })
+    .from(lists)
+    .where(and(eq(lists.id, input.listId), eq(lists.organisationId, organisationId)));
+  if (!list) throw new Error("List not found");
+  const [offer] = await db
+    .select({ id: links.id, name: links.name })
+    .from(links)
+    .where(and(eq(links.id, input.offerId), eq(links.organisationId, organisationId)));
+  if (!offer) throw new Error("Offer not found");
+  const usable = await routesForCountry(db, organisationId, list.country);
+  if (!usable.some((r) => r.id === input.routeId)) {
+    throw new Error(`This route cannot carry a campaign for ${countryName(list.country)}`);
+  }
+
+  return db.transaction(async (tx) => {
+    const [campaign] = await tx
+      .insert(campaigns)
+      .values({
+        organisationId,
+        name: plannedCampaignName(offer.name, list.name),
+        country: list.country,
+        timezone: timezoneForCountry(list.country),
+        plannedFor: input.plannedFor,
+        createdBy: input.createdBy ?? null,
+      })
+      .returning();
+    if (!campaign) throw new Error("createPlannedCampaign: no row returned");
+    await tx
+      .insert(campaignLists)
+      .values({ campaignId: campaign.id, listId: list.id, organisationId });
+    await tx
+      .insert(campaignLinks)
+      .values({ campaignId: campaign.id, linkId: offer.id, organisationId });
+    await tx
+      .insert(campaignRoutes)
+      .values({ campaignId: campaign.id, routeId: input.routeId, organisationId, position: 0 });
+    return campaign;
+  });
 }

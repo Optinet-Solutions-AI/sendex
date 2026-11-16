@@ -60,6 +60,19 @@ The sidebar group is **Performance** (`components/shell/nav.ts`).
 - The bars are plain CSS (`BarList` in `components/kpi/insight.tsx`), sized against the
   largest absolute value, red when negative. No chart library.
 
+## Sales Results (D5-05)
+
+`/kpi/sales-results?period=month|year|all&year=&month=&sort=sales|day|leads|revenue`
+
+- `salesResults(db, organisationId, filter)` groups the facts by day, offer, route, country,
+  list and the list's provider and keeps the groups with a lead or a sale. Leads sit on the
+  day the SMS was sent, sales and revenue on the day of the deposit, so one list can have a
+  leads-only line and, days later, a sales-only line.
+- `sortSalesResults` (core) orders by a column, largest or latest first; the page sorts on the
+  server so the order is part of the URL.
+- `PeriodQuery` and `components/kpi/period-filter.tsx` are the Month / Year / All time control
+  shared with Insight.
+
 ## Tests
 
 - `packages/core/src/kpi.test.ts`: the ratios and the grouping.
@@ -67,6 +80,6 @@ The sidebar group is **Performance** (`components/shell/nav.ts`).
   in PGlite; totals reconcile with `dashboardKpis`, each filter narrows as described, and
   another organisation sees nothing.
 - `apps/web/lib/kpi-params.test.ts`: parsing, the query string round trip, the window.
-- `apps/web/e2e/list-follow-up.spec.ts` and `apps/web/e2e/insight.spec.ts`: on the demo
+- `apps/web/e2e/list-follow-up.spec.ts`, `insight.spec.ts` and `sales-results.spec.ts`: on the demo
   activity (`e2e/helpers/demo.ts` runs `pnpm db:seed:activity` first). The Insight spec uses
   the all-time view because the demo sends are dated relative to the day they were seeded.

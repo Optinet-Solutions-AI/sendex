@@ -267,3 +267,44 @@ export function efficiencySnapshot(rows: readonly OfferCountryRow[], top = 6): E
     .sort((a, b) => a.smsPerSale - b.smsPerSale || a.offer.localeCompare(b.offer))
     .slice(0, top);
 }
+
+// ---------------------------------------------------------------------------
+// Sales Results (D5-05)
+// ---------------------------------------------------------------------------
+
+/**
+ * One line of the Sales Results table: a day, an offer, a route, a country, a list and its
+ * data provider, with the registrations of the SMS sent that day and the first deposits made
+ * that day.
+ */
+export interface SalesResultRow {
+  /** YYYY-MM-DD, UTC. */
+  day: string;
+  offer: string;
+  routeName: string;
+  country: string;
+  listName: string | null;
+  provider: string | null;
+  leads: number;
+  sales: number;
+  revenueMicro: bigint;
+}
+
+export type SalesResultSort = "day" | "leads" | "sales" | "revenue";
+
+/** Sort the table by a column, largest (or latest) first, most sales breaking ties. */
+export function sortSalesResults<
+  T extends Pick<SalesResultRow, "day" | "leads" | "sales"> & {
+    revenueMicro: bigint | string;
+  },
+>(rows: readonly T[], by: SalesResultSort): T[] {
+  const revenue = (r: T) => Number(BigInt(r.revenueMicro));
+  const value = (r: T): number | string =>
+    by === "day" ? r.day : by === "leads" ? r.leads : by === "sales" ? r.sales : revenue(r);
+  return [...rows].sort((a, b) => {
+    const x = value(a);
+    const y = value(b);
+    const main = typeof x === "string" ? String(y).localeCompare(x) : Number(y) - x;
+    return main || b.sales - a.sales || b.day.localeCompare(a.day);
+  });
+}

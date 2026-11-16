@@ -12,6 +12,7 @@ import {
   roi,
   rollUp,
   smsPerSale,
+  sortSalesResults,
   topOffersByCountry,
   ZERO_COUNTERS,
 } from "./kpi.js";
@@ -211,5 +212,40 @@ describe("performance insight (D5-04)", () => {
       { offer: "Trixino", smsPerSale: 3_000, sales: 1 },
     ]);
     expect(efficiencySnapshot(rows, 1)).toHaveLength(1);
+  });
+});
+
+describe("sortSalesResults (D5-05)", () => {
+  const rows = [
+    { day: "2026-11-03", leads: 5, sales: 1, revenueMicro: 30_000_000n },
+    { day: "2026-11-09", leads: 2, sales: 3, revenueMicro: 60_000_000n },
+    { day: "2026-11-06", leads: 9, sales: 3, revenueMicro: 90_000_000n },
+  ];
+
+  it("sorts by the column, largest or latest first", () => {
+    expect(sortSalesResults(rows, "day").map((r) => r.day)).toEqual([
+      "2026-11-09",
+      "2026-11-06",
+      "2026-11-03",
+    ]);
+    expect(sortSalesResults(rows, "leads").map((r) => r.leads)).toEqual([9, 5, 2]);
+    expect(sortSalesResults(rows, "revenue").map((r) => r.revenueMicro)).toEqual([
+      90_000_000n,
+      60_000_000n,
+      30_000_000n,
+    ]);
+  });
+
+  it("breaks a tie on sales with the later day", () => {
+    expect(sortSalesResults(rows, "sales").map((r) => r.day)).toEqual([
+      "2026-11-09",
+      "2026-11-06",
+      "2026-11-03",
+    ]);
+  });
+
+  it("takes revenue as a string too", () => {
+    const views = rows.map((r) => ({ ...r, revenueMicro: r.revenueMicro.toString() }));
+    expect(sortSalesResults(views, "revenue")[0]?.day).toBe("2026-11-06");
   });
 });

@@ -5,7 +5,7 @@ import { seedDemoActivity } from "../seed/demo-activity.js";
 import { seedDemo } from "../seed/demo-data.js";
 import { createTestDb, type TestDb } from "../test/db.js";
 import { dashboardKpis } from "./dashboard.js";
-import { kpiByOfferCountry, kpiFilterOptions, listFollowUp } from "./kpi.js";
+import { kpiByOfferCountry, kpiFilterOptions, listFollowUp, salesResults } from "./kpi.js";
 
 /**
  * The KPI read models run against the demo seed plus the demo activity (D5-02): eighteen
@@ -184,5 +184,32 @@ describe("kpiByOfferCountry", () => {
     expect(rows.reduce((n, r) => n + r.sent, 0)).toBe(kpis.sent);
     expect(rows.reduce((n, r) => n + r.sales, 0)).toBe(kpis.sales);
     expect(await kpiByOfferCountry(t.db, otherOrg, {})).toEqual([]);
+  });
+});
+
+describe("salesResults", () => {
+  it("returns the days with a lead or a sale, per offer, route, country, list and provider", async () => {
+    const rows = await salesResults(t.db, org, {});
+    const kpis = await dashboardKpis(t.db, org, {});
+    expect(rows.reduce((n, r) => n + r.leads, 0)).toBe(kpis.leads);
+    expect(rows.reduce((n, r) => n + r.sales, 0)).toBe(kpis.sales);
+    expect(rows.every((r) => r.leads > 0 || r.sales > 0)).toBe(true);
+    // Most sales first.
+    expect(rows.map((r) => r.sales)).toEqual([...rows.map((r) => r.sales)].sort((a, b) => b - a));
+
+    const row = rows.find((r) => r.listName === "UK_ZEN_1" && r.offer === "Trixino");
+    expect(row).toMatchObject({ country: "GB", provider: "ZEN", routeName: "137" });
+    expect(row?.day).toMatch(/^2026-\d{2}-\d{2}$/);
+    expect(rows.filter((r) => r.sales > 0).every((r) => r.revenueMicro > 0n)).toBe(true);
+  });
+
+  it("follows the window and the organisation", async () => {
+    const window = { from: new Date(NOW.getTime() - 10 * DAY_MS), to: NOW };
+    const rows = await salesResults(t.db, org, window);
+    const kpis = await dashboardKpis(t.db, org, window);
+    expect(rows.reduce((n, r) => n + r.leads, 0)).toBe(kpis.leads);
+    expect(rows.reduce((n, r) => n + r.sales, 0)).toBe(kpis.sales);
+    expect(rows.every((r) => r.day >= "2026-11-06" && r.day <= "2026-11-16")).toBe(true);
+    expect(await salesResults(t.db, otherOrg, {})).toEqual([]);
   });
 });

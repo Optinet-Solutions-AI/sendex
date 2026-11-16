@@ -1,4 +1,4 @@
-import type { ListFollowUpRow, OfferCountryRow } from "@sendex/core";
+import type { ListFollowUpRow, OfferCountryRow, SalesResultRow } from "@sendex/core";
 import { type SQL, sql } from "drizzle-orm";
 import type { Db } from "../types.js";
 import { type DashboardFilter, inCountries, messageFacts, rowsOf } from "./dashboard.js";
@@ -151,6 +151,44 @@ export async function kpiByOfferCountry(
     leads: num(r.leads),
     sales: num(r.sales),
     costMicro: big(r.cost),
+    revenueMicro: big(r.revenue),
+  }));
+}
+
+/**
+ * The Sales Results table (D5-05): for each day, offer, route, country and list inside the
+ * filters, the registrations of the SMS sent that day and the first deposits made that day
+ * with their revenue. Days with neither are left out. Most sales first, then the latest day.
+ */
+export async function salesResults(
+  db: Db,
+  organisationId: string,
+  filter: KpiFilter,
+): Promise<SalesResultRow[]> {
+  const rows = rowsOf(
+    await db.execute(sql`
+      with facts as (${messageFacts(organisationId, filter)})
+      select to_char(f.day, 'YYYY-MM-DD') as day, f.link_name, r.name as route_name, f.country,
+        f.list_name, li.provider,
+        coalesce(sum(f.leads), 0) as leads, coalesce(sum(f.sales), 0) as sales,
+        coalesce(sum(f.revenue), 0) as revenue
+      from facts f
+      left join routes r on r.id = f.route_id
+      left join lists li on li.id = f.list_id
+      where true${factFilter(filter)}
+      group by f.day, f.link_name, r.name, f.country, f.list_name, li.provider
+      having coalesce(sum(f.leads), 0) > 0 or coalesce(sum(f.sales), 0) > 0
+      order by coalesce(sum(f.sales), 0) desc, f.day desc, f.link_name, f.list_name`),
+  );
+  return rows.map((r) => ({
+    day: String(r.day),
+    offer: String(r.link_name),
+    routeName: String(r.route_name ?? ""),
+    country: String(r.country),
+    listName: r.list_name === null || r.list_name === undefined ? null : String(r.list_name),
+    provider: r.provider === null || r.provider === undefined ? null : String(r.provider),
+    leads: num(r.leads),
+    sales: num(r.sales),
     revenueMicro: big(r.revenue),
   }));
 }

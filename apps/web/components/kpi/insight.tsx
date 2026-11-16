@@ -7,7 +7,6 @@ import {
   KpiStrip,
   PageHeader,
   SegmentedControl,
-  SimpleSelect,
   Table,
   TableBody,
   TableCell,
@@ -18,15 +17,13 @@ import {
 import { useRouter } from "next/navigation";
 import { formatNumber } from "../../lib/format";
 import {
-  INSIGHT_FIRST_YEAR,
-  type InsightPeriod,
   type InsightQuery,
   type InsightSort,
   insightLabel,
   insightQueryString,
-  MONTH_NAMES,
 } from "../../lib/kpi-params";
 import { eur, percent } from "./format";
+import { PeriodFilter } from "./period-filter";
 
 export interface InsightTotalsView {
   sent: number;
@@ -71,12 +68,6 @@ export interface EfficiencyView {
   sales: number;
 }
 
-const PERIODS: ReadonlyArray<{ value: InsightPeriod; label: string }> = [
-  { value: "month", label: "Month" },
-  { value: "year", label: "Year" },
-  { value: "all", label: "All time" },
-];
-
 const SORTS: ReadonlyArray<{ value: InsightSort; label: string }> = [
   { value: "roi", label: "Sort by ROI" },
   { value: "sales", label: "Sort by sales" },
@@ -109,7 +100,6 @@ export function Insight({
   const router = useRouter();
   const navigate = (next: Partial<InsightQuery>) =>
     router.push(`/kpi/insight${insightQueryString({ ...query, ...next })}`, { scroll: false });
-  const years = Array.from({ length: thisYear - INSIGHT_FIRST_YEAR + 1 }, (_, i) => thisYear - i);
   const profit = BigInt(totals.profitMicro);
   const revenue = Number(BigInt(totals.revenueMicro));
   const cost = Number(BigInt(totals.costMicro));
@@ -124,30 +114,7 @@ export function Insight({
       />
 
       <div className="flex flex-wrap items-center gap-3" data-testid="insight-filters">
-        <SegmentedControl
-          label="Period"
-          value={query.period}
-          options={PERIODS}
-          onChange={(period) => navigate({ period })}
-        />
-        {query.period === "month" ? (
-          <SimpleSelect
-            aria-label="Month"
-            value={String(query.month)}
-            onValueChange={(value) => navigate({ month: Number(value) })}
-            options={MONTH_NAMES.map((name, i) => ({ value: String(i + 1), label: name }))}
-            className="w-40"
-          />
-        ) : null}
-        {query.period !== "all" ? (
-          <SimpleSelect
-            aria-label="Year"
-            value={String(query.year)}
-            onValueChange={(value) => navigate({ year: Number(value) })}
-            options={years.map((y) => ({ value: String(y), label: String(y) }))}
-            className="w-28"
-          />
-        ) : null}
+        <PeriodFilter query={query} thisYear={thisYear} onChange={navigate} />
       </div>
 
       <KpiStrip

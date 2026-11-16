@@ -50,6 +50,7 @@ export const NAV_TREE: readonly NavGroup[] = [
     icon: "performance",
     children: [
       { label: "Insight", href: "/kpi/insight", action: "campaign.view" },
+      { label: "Sales Results", href: "/kpi/sales-results", action: "campaign.view" },
       { label: "List Follow-Up", href: "/kpi/list-follow-up", action: "campaign.view" },
     ],
   },

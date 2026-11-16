@@ -1,3 +1,4 @@
+import type { SalesResultSort } from "@sendex/core";
 import type { KpiFilter } from "@sendex/db";
 import { parseIsoDay } from "./billing-params";
 import { parseCountries } from "./campaigns-log-params";
@@ -76,11 +77,15 @@ export const INSIGHT_PERIODS = ["month", "year", "all"] as const;
 export type InsightPeriod = (typeof INSIGHT_PERIODS)[number];
 export type InsightSort = "roi" | "sales";
 
-export interface InsightQuery {
+/** A month, a year or all time: the period control shared by the KPI screens. */
+export interface PeriodQuery {
   period: InsightPeriod;
   year: number;
   /** 1 to 12; only used when `period` is `month`. */
   month: number;
+}
+
+export interface InsightQuery extends PeriodQuery {
   /** How "Offer performance by country" ranks the offers. */
   sort: InsightSort;
 }
@@ -103,18 +108,23 @@ export function parseInsightQuery(params: SearchParams, now = new Date()): Insig
   };
 }
 
-export function insightQueryString(query: InsightQuery): string {
+function periodParams(query: PeriodQuery): URLSearchParams {
   const params = new URLSearchParams();
   if (query.period !== "month") params.set("period", query.period);
   if (query.period !== "all") params.set("year", String(query.year));
   if (query.period === "month") params.set("month", String(query.month));
+  return params;
+}
+
+export function insightQueryString(query: InsightQuery): string {
+  const params = periodParams(query);
   if (query.sort !== "roi") params.set("sort", query.sort);
   const text = params.toString();
   return text ? `?${text}` : "";
 }
 
 /** The UTC window of the period, end exclusive; empty for all time. */
-export function insightWindow(query: InsightQuery): { from?: Date; to?: Date } {
+export function insightWindow(query: PeriodQuery): { from?: Date; to?: Date } {
   if (query.period === "month") {
     return {
       from: new Date(Date.UTC(query.year, query.month - 1, 1)),
@@ -146,8 +156,39 @@ export const MONTH_NAMES = [
 ] as const;
 
 /** "November 2026", "2026" or "All time". */
-export function insightLabel(query: InsightQuery): string {
+export function insightLabel(query: PeriodQuery): string {
   if (query.period === "month") return `${MONTH_NAMES[query.month - 1] ?? ""} ${query.year}`;
   if (query.period === "year") return String(query.year);
   return "All time";
+}
+
+// ---------------------------------------------------------------------------
+// Sales Results (D5-05): `/kpi/sales-results?period=month&year=2026&month=11&sort=day`
+// ---------------------------------------------------------------------------
+
+export const SALES_RESULT_SORTS = ["sales", "day", "leads", "revenue"] as const;
+
+export interface SalesResultsQuery extends PeriodQuery {
+  /** The column the table is ordered by, largest or latest first. */
+  sort: SalesResultSort;
+}
+
+export function parseSalesResultsQuery(params: SearchParams, now = new Date()): SalesResultsQuery {
+  const { period, year, month } = parseInsightQuery(params, now);
+  const sort = first(params.sort);
+  return {
+    period,
+    year,
+    month,
+    sort: (SALES_RESULT_SORTS as readonly string[]).includes(sort)
+      ? (sort as SalesResultSort)
+      : "sales",
+  };
+}
+
+export function salesResultsQueryString(query: SalesResultsQuery): string {
+  const params = periodParams(query);
+  if (query.sort !== "sales") params.set("sort", query.sort);
+  const text = params.toString();
+  return text ? `?${text}` : "";
 }

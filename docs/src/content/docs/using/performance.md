@@ -38,6 +38,23 @@ a year or all time.
 
 A period with no sends and no sales says so instead of showing empty charts.
 
+## Sales Results
+
+**Performance → Sales Results** is the day-by-day record: one line per day, offer, route,
+country and list, with the list's data provider, the **leads** of the SMS sent that day, the
+**sales** (first deposits) made that day and their **revenue**. Nobody types it in: it is
+read from the postbacks, and revenue is the amount the postback reported or, without one, the
+offer's payout.
+
+- Pick a month, a year or all time, as on Insight.
+- The table starts with the most sales first. Click **Date**, **Leads**, **Sales** or
+  **Revenue** to order by that column, largest or latest first.
+- Days with no lead and no sale are left out.
+- The strip above shows the period's leads, sales, lead → sale and revenue.
+
+Use it to tell a data owner what their list produced: every line carries the list and its
+data provider.
+
 ## List Follow-Up
 
 **Performance → List Follow-Up** answers three questions: which lists have I used, what did

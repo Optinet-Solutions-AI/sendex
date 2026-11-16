@@ -7,6 +7,8 @@ import {
   listFollowUpQueryString,
   parseInsightQuery,
   parseListFollowUpQuery,
+  parseSalesResultsQuery,
+  salesResultsQueryString,
 } from "./kpi-params";
 
 const UUID = "0b8f5a2e-3c1d-4e6f-9a7b-1c2d3e4f5a6b";
@@ -128,18 +130,39 @@ describe("performance insight query", () => {
   });
 
   it("turns the period into a UTC window and a label", () => {
-    const month = insightWindow({ period: "month", year: 2026, month: 12, sort: "roi" });
+    const month = insightWindow({ period: "month", year: 2026, month: 12 });
     expect(month.from?.toISOString()).toBe("2026-12-01T00:00:00.000Z");
     expect(month.to?.toISOString()).toBe("2027-01-01T00:00:00.000Z");
-    const year = insightWindow({ period: "year", year: 2026, month: 5, sort: "roi" });
+    const year = insightWindow({ period: "year", year: 2026, month: 5 });
     expect(year.from?.toISOString()).toBe("2026-01-01T00:00:00.000Z");
     expect(year.to?.toISOString()).toBe("2027-01-01T00:00:00.000Z");
-    expect(insightWindow({ period: "all", year: 2026, month: 5, sort: "roi" })).toEqual({});
+    expect(insightWindow({ period: "all", year: 2026, month: 5 })).toEqual({});
 
-    expect(insightLabel({ period: "month", year: 2026, month: 11, sort: "roi" })).toBe(
-      "November 2026",
+    expect(insightLabel({ period: "month", year: 2026, month: 11 })).toBe("November 2026");
+    expect(insightLabel({ period: "year", year: 2026, month: 11 })).toBe("2026");
+    expect(insightLabel({ period: "all", year: 2026, month: 11 })).toBe("All time");
+  });
+});
+
+describe("sales results query", () => {
+  const now = new Date("2026-11-16T12:00:00Z");
+
+  it("defaults to the current month, most sales first", () => {
+    expect(parseSalesResultsQuery({}, now)).toEqual({
+      period: "month",
+      year: 2026,
+      month: 11,
+      sort: "sales",
+    });
+  });
+
+  it("reads the sort and the period and round-trips them", () => {
+    const query = parseSalesResultsQuery({ period: "all", sort: "revenue" }, now);
+    expect(query).toMatchObject({ period: "all", sort: "revenue" });
+    expect(salesResultsQueryString(query)).toBe("?period=all&sort=revenue");
+    expect(parseSalesResultsQuery({ sort: "name" }, now).sort).toBe("sales");
+    expect(salesResultsQueryString(parseSalesResultsQuery({ month: "10" }, now))).toBe(
+      "?year=2026&month=10",
     );
-    expect(insightLabel({ period: "year", year: 2026, month: 11, sort: "roi" })).toBe("2026");
-    expect(insightLabel({ period: "all", year: 2026, month: 11, sort: "roi" })).toBe("All time");
   });
 });

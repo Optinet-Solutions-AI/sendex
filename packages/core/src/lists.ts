@@ -83,9 +83,21 @@ export function countryByCode(code: string): CountryInfo | undefined {
 
 export const ListCountrySchema = z.enum(LIST_COUNTRY_CODES);
 
+/**
+ * Who supplied a list's data: a short code such as ZEN or DER (D5-01). The reports group and
+ * filter by it so results can be reported back to the data owner. Blank means not set.
+ */
+export const ListProviderSchema = z
+  .string()
+  .trim()
+  .max(40, "A data provider is 40 characters at most.")
+  .nullable()
+  .transform((value) => (value === null || value === "" ? null : value));
+
 export const NewListSchema = z.object({
   name: z.string().trim().min(1).max(100),
   country: ListCountrySchema,
+  provider: ListProviderSchema.optional(),
 });
 export type NewList = z.infer<typeof NewListSchema>;
 

@@ -14,6 +14,8 @@ import {
   emptyUploadSummary,
   flagEmoji,
   importedGood,
+  ListProviderSchema,
+  NewListSchema,
   parseCountryCell,
   totalDropped,
   UploadSettingsSchema,
@@ -403,5 +405,27 @@ describe("cleanUploadRows: a file re-saved by a spreadsheet", () => {
     const { damaged: _damaged, ...oldDropped } = emptyDropCounts();
     const parsed = UploadSummarySchema.parse({ ...emptyUploadSummary(), dropped: oldDropped });
     expect(parsed.dropped.damaged).toBe(0);
+  });
+});
+
+describe("list data provider (D5-01)", () => {
+  it("keeps a short code, trimmed", () => {
+    expect(ListProviderSchema.parse("  ZEN ")).toBe("ZEN");
+  });
+
+  it("reads a blank value as not set", () => {
+    expect(ListProviderSchema.parse("   ")).toBeNull();
+    expect(ListProviderSchema.parse(null)).toBeNull();
+  });
+
+  it("refuses a value longer than 40 characters", () => {
+    expect(ListProviderSchema.safeParse("x".repeat(41)).success).toBe(false);
+  });
+
+  it("is optional on a new list", () => {
+    expect(NewListSchema.parse({ name: "UK_ZEN_9", country: "GB" }).provider).toBeUndefined();
+    expect(NewListSchema.parse({ name: "UK_ZEN_9", country: "GB", provider: "ZEN" }).provider).toBe(
+      "ZEN",
+    );
   });
 });

@@ -162,6 +162,13 @@
       "when": 1794485847731,
       "tag": "0022_sending_hours",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1794834327410,
+      "tag": "0023_list_provider",
+      "breakpoints": true
     }
   ]
 }

@@ -285,6 +285,8 @@ export async function getList(
 export interface NewListInput {
   name: string;
   country: string;
+  /** Who supplied the data (D5-01); blank or missing means not set. */
+  provider?: string | null | undefined;
 }
 
 export async function createList(
@@ -294,10 +296,40 @@ export async function createList(
 ): Promise<ListRow> {
   const [row] = await db
     .insert(lists)
-    .values({ organisationId, name: input.name, country: input.country.toUpperCase() })
+    .values({
+      organisationId,
+      name: input.name,
+      country: input.country.toUpperCase(),
+      provider: input.provider?.trim() || null,
+    })
     .returning();
   if (!row) throw new Error("createList: no row returned");
   return row;
+}
+
+/** Set or clear a list's data provider. Returns false when it is not the organisation's. */
+export async function setListProvider(
+  db: Db,
+  organisationId: string,
+  listId: string,
+  provider: string | null,
+): Promise<boolean> {
+  const updated = await db
+    .update(lists)
+    .set({ provider: provider?.trim() || null })
+    .where(and(eq(lists.id, listId), eq(lists.organisationId, organisationId)))
+    .returning({ id: lists.id });
+  return updated.length > 0;
+}
+
+/** The data providers the organisation's lists carry, each once, sorted: for the filters. */
+export async function listProviders(db: Db, organisationId: string): Promise<string[]> {
+  const rows = await db
+    .selectDistinct({ provider: lists.provider })
+    .from(lists)
+    .where(and(eq(lists.organisationId, organisationId), isNotNull(lists.provider)))
+    .orderBy(asc(lists.provider));
+  return rows.flatMap((r) => (r.provider ? [r.provider] : []));
 }
 
 /** Delete a list and its members (contacts stay). Returns true when a row was deleted. */

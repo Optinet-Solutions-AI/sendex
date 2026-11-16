@@ -39,6 +39,9 @@ A list is a set of phone numbers for one country. Campaigns pick one or more lis
 2. The **Import** page opens, titled after the file, with its rows and size. On the left:
    - **List**: **+ New List** or one of your lists. A new list takes the **New List Name**,
      proposed from the file name (`test-20261107-batch2.csv` becomes `Test 20261107 batch2`).
+   - **Data provider** (optional, new list only): who supplied the data, as a short code
+     such as `ZEN`. The reports group results by it, so you can tell a data owner what their
+     numbers produced. You can set or change it later on the list's page, next to the country.
    - **Fixed Country** (required for a new list): the list's country. **Auto-detect from
      file** takes the most common country of the file's **Country** column; without one, pick
      the country yourself. An existing list keeps its own country. Only the countries that

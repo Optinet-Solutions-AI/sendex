@@ -22,6 +22,7 @@ import { CampaignsTab } from "../../../../components/lists/campaigns-tab";
 import { ContactsTab } from "../../../../components/lists/contacts-tab";
 import { DataFilesTab } from "../../../../components/lists/data-files-tab";
 import { ListActions } from "../../../../components/lists/list-actions";
+import { ListProvider } from "../../../../components/lists/list-provider";
 import { ListTabs } from "../../../../components/lists/list-tabs";
 import { LookupTab } from "../../../../components/lists/lookup-tab";
 import { isListTab } from "../../../../components/lists/tabs";
@@ -211,6 +212,12 @@ export default async function ListDetailPage({
           <>
             {flagEmoji(list.country)} {countryName(list.country)}
             {list.archivedAt ? " · Archived" : ""}
+            {" · "}
+            <ListProvider
+              listId={list.id}
+              provider={list.provider}
+              canEdit={can(ctx.role, "list.upload")}
+            />
           </>
         }
         actions={

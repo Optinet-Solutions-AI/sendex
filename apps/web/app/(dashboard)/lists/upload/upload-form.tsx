@@ -161,6 +161,7 @@ export function UploadForm({
     paste: useId(),
     list: useId(),
     name: useId(),
+    provider: useId(),
     country: useId(),
     header: useId(),
     logical: useId(),
@@ -181,6 +182,7 @@ export function UploadForm({
   const [listValue, setListValue] = useState<string>(fixedList?.id ?? NEW_LIST);
   const [name, setName] = useState("");
   const [nameTouched, setNameTouched] = useState(false);
+  const [provider, setProvider] = useState("");
   const [countryChoice, setCountryChoice] = useState<CountryChoice>(AUTO_COUNTRY);
   const [logicalCheck, setLogicalCheck] = useState(true);
   const [duplicates, setDuplicates] = useState<DuplicateMode>("allow");
@@ -355,7 +357,12 @@ export function UploadForm({
     const settingsInput: UploadSettingsInput = {
       target:
         isNew && listCountry
-          ? { kind: "new", name: name.trim(), country: listCountry }
+          ? {
+              kind: "new",
+              name: name.trim(),
+              country: listCountry,
+              ...(provider.trim() ? { provider: provider.trim() } : {}),
+            }
           : { kind: "existing", listId: existingList?.id ?? "" },
       logicalCheck,
       duplicates,
@@ -611,6 +618,24 @@ export function UploadForm({
                       maxLength={100}
                       disabled={uploading}
                     />
+                  </div>
+                ) : null}
+                {isNew ? (
+                  <div className="space-y-1.5">
+                    <Label htmlFor={ids.provider}>
+                      Data provider <span className="font-normal text-muted">— optional</span>
+                    </Label>
+                    <Input
+                      id={ids.provider}
+                      value={provider}
+                      onChange={(e) => setProvider(e.target.value)}
+                      maxLength={40}
+                      placeholder="e.g. ZEN"
+                      disabled={uploading}
+                    />
+                    <p className="text-xs text-muted">
+                      Who supplied this data. The reports group results by it.
+                    </p>
                   </div>
                 ) : null}
               </div>

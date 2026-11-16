@@ -219,6 +219,7 @@ erDiagram
     text name
     integer numbers_count
     uuid organisation_id FK
+    text provider
   }
   lookup_prices {
     char(2) country

@@ -86,7 +86,10 @@ export const ACTIVITY_LISTS: readonly ActivityList[] = [
 interface ActivityOffer {
   name: string;
   url: string;
-  /** What one first deposit pays, in EUR. */
+  /**
+   * What one first deposit pays, in EUR. Kept small on purpose: the demo sends are a few
+   * hundred SMS each, so a real payout would make every ROI read in the thousands of percent.
+   */
   payoutEur: number;
 }
 
@@ -94,22 +97,22 @@ const OFFERS: readonly ActivityOffer[] = [
   {
     name: "Rolling Slots",
     url: "https://trk.example.com/click?o=75&a=35&sub_id1={{dynamic}}",
-    payoutEur: 300,
+    payoutEur: 24,
   },
   {
     name: "Gambiva Roy Boy",
     url: "https://trk.example.com/click?o=76&a=35&sub_id1={{dynamic}}",
-    payoutEur: 250,
+    payoutEur: 18,
   },
   {
     name: "Trixino",
     url: "https://trk.example.com/click?o=77&a=35&sub_id1={{dynamic}}",
-    payoutEur: 350,
+    payoutEur: 30,
   },
   {
     name: "Lucky Reel",
     url: "https://trk.example.com/click?o=81&a=35&sub_id1={{dynamic}}",
-    payoutEur: 280,
+    payoutEur: 22,
   },
 ];
 

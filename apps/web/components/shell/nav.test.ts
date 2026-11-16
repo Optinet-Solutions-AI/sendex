@@ -22,13 +22,14 @@ describe("nav tree", () => {
     expect(activeGroup("/lists/upload")).toBe("Contacts");
     expect(activeGroup("/reports/postbacks")).toBe("Campaigns");
     expect(activeGroup("/")).toBe("Dashboard");
+    expect(activeGroup("/kpi/list-follow-up")).toBe("Performance");
     expect(activeGroup("/nowhere")).toBeNull();
   });
 
   it("hides pages a role may not open and drops emptied groups", () => {
     const viewerOnly = visibleNav((action) => action === "campaign.view" || action === "list.view");
     const labels = viewerOnly.map((g) => g.label);
-    expect(labels).toEqual(["Dashboard", "Campaigns", "Contacts", "Settings"]);
+    expect(labels).toEqual(["Dashboard", "Campaigns", "Performance", "Contacts", "Settings"]);
     const settings = viewerOnly.find((g) => g.label === "Settings");
     expect(settings?.children?.map((c) => c.label)).toEqual(["Billing"]);
     const everything = visibleNav(() => true);

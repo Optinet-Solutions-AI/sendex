@@ -12,7 +12,7 @@ export interface NavLeaf {
 export interface NavGroup {
   label: string;
   /** lucide icon name, resolved by the rail. */
-  icon: "dashboard" | "campaigns" | "contacts" | "routes" | "settings";
+  icon: "dashboard" | "campaigns" | "performance" | "contacts" | "routes" | "settings";
   /** Direct page for the entry itself, when it is not only a folder. */
   href?: string;
   children?: readonly (NavLeaf | NavSubgroup)[];
@@ -43,6 +43,12 @@ export const NAV_TREE: readonly NavGroup[] = [
         ],
       },
     ],
+  },
+  {
+    // The KPI screens (D5-03 onwards), after the Business KPIs Manager walkthrough.
+    label: "Performance",
+    icon: "performance",
+    children: [{ label: "List Follow-Up", href: "/kpi/list-follow-up", action: "campaign.view" }],
   },
   {
     label: "Contacts",

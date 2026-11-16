@@ -8,6 +8,7 @@
   },
   "scripts": {
     "dev": "turbo run dev",
+    "dev:demo": "node scripts/dev-demo.mjs",
     "build": "turbo run build",
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
@@ -18,6 +19,7 @@
     "db:generate": "pnpm --filter @sendex/db generate",
     "db:migrate": "pnpm --filter @sendex/db migrate",
     "db:seed": "pnpm --filter @sendex/db seed",
+    "db:seed:activity": "pnpm --filter @sendex/db seed:activity",
     "prepare": "lefthook install"
   },
   "devDependencies": {

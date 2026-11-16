@@ -169,6 +169,13 @@
       "when": 1794834327410,
       "tag": "0023_list_provider",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1794836886794,
+      "tag": "0024_messages_contact_idx",
+      "breakpoints": true
     }
   ]
 }

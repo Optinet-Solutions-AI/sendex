@@ -1,0 +1,1 @@
+CREATE INDEX "messages_contact_idx" ON "messages" USING btree ("contact_id");

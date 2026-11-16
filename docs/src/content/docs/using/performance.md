@@ -1,6 +1,6 @@
 ---
 title: Performance
-description: The Performance screens. Insight gives the period's totals and where sales come from; List Follow-Up shows which lists were used, what they produced and which are still untouched.
+description: The Performance screens. Insight gives a period's totals and where sales come from, Sales Results the day-by-day record, Trends the month against the month before, and List Follow-Up the lists used and untouched.
 ---
 
 The **Performance** group in the sidebar holds the screens for deciding what to send next.
@@ -54,6 +54,24 @@ offer's payout.
 
 Use it to tell a data owner what their list produced: every line carries the list and its
 data provider.
+
+## Trends
+
+**Performance → Trends** shows how a month is doing against the month before.
+
+- **The tiles**: leads, sales and lead → sale for the month so far, each with the change
+  against the same days of the month before ("through day 16"). The conversion change is in
+  percentage points.
+- **Two charts**, leads and sales, one point per day. **Cumulative** (the default) draws
+  running totals, **Daily** the figure of each day. The dotted line is the month before; untick
+  **vs the month before** to hide it. For the month in progress the line stops at today.
+- **Breakdown**: the month per route, offer, country or data provider (the **Group by**
+  select), with leads, sales, lead → sale, the conversion of days 1 to 15 and of day 16 to the
+  end, and an arrow saying whether the second half converts better or worse than the first.
+  The arrow needs leads in both halves.
+
+Leads count on the day their SMS went out and sales on the day of the deposit, as everywhere
+else.
 
 ## List Follow-Up
 

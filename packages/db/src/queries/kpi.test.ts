@@ -5,7 +5,13 @@ import { seedDemoActivity } from "../seed/demo-activity.js";
 import { seedDemo } from "../seed/demo-data.js";
 import { createTestDb, type TestDb } from "../test/db.js";
 import { dashboardKpis } from "./dashboard.js";
-import { kpiByOfferCountry, kpiFilterOptions, listFollowUp, salesResults } from "./kpi.js";
+import {
+  kpiByOfferCountry,
+  kpiDaily,
+  kpiFilterOptions,
+  listFollowUp,
+  salesResults,
+} from "./kpi.js";
 
 /**
  * The KPI read models run against the demo seed plus the demo activity (D5-02): eighteen
@@ -211,5 +217,37 @@ describe("salesResults", () => {
     expect(rows.reduce((n, r) => n + r.sales, 0)).toBe(kpis.sales);
     expect(rows.every((r) => r.day >= "2026-11-06" && r.day <= "2026-11-16")).toBe(true);
     expect(await salesResults(t.db, otherOrg, {})).toEqual([]);
+  });
+});
+
+describe("kpiDaily", () => {
+  it("gives leads and sales per day and group, for each way of grouping", async () => {
+    const kpis = await dashboardKpis(t.db, org, {});
+    for (const by of ["route", "offer", "country", "provider"] as const) {
+      const rows = await kpiDaily(t.db, org, {}, by);
+      expect(rows.reduce((n, r) => n + r.leads, 0)).toBe(kpis.leads);
+      expect(rows.reduce((n, r) => n + r.sales, 0)).toBe(kpis.sales);
+      expect(rows.every((r) => /^\d{4}-\d{2}-\d{2}$/.test(r.day))).toBe(true);
+      expect(new Set(rows.map((r) => `${r.day}:${r.key}`)).size).toBe(rows.length);
+    }
+    const keys = async (by: "route" | "offer" | "country" | "provider") =>
+      [...new Set((await kpiDaily(t.db, org, {}, by)).map((r) => r.key))].sort();
+    expect(await keys("route")).toEqual(["136", "137", "391", "400", "724"]);
+    expect(await keys("country")).toEqual(["ES", "GB", "PL"]);
+    expect(await keys("provider")).toEqual(["DER", "DIM", "ZEN"]);
+    expect(await keys("offer")).toEqual([
+      "Gambiva Roy Boy",
+      "Lucky Reel",
+      "Rolling Slots",
+      "Trixino",
+    ]);
+  });
+
+  it("follows the window and the organisation", async () => {
+    const window = { from: new Date("2026-11-01T00:00:00Z"), to: new Date("2026-12-01T00:00:00Z") };
+    const rows = await kpiDaily(t.db, org, window, "route");
+    expect(rows.length).toBeGreaterThan(0);
+    expect(rows.every((r) => r.day.startsWith("2026-11-"))).toBe(true);
+    expect(await kpiDaily(t.db, otherOrg, {}, "route")).toEqual([]);
   });
 });

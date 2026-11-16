@@ -8,7 +8,10 @@ import {
   parseInsightQuery,
   parseListFollowUpQuery,
   parseSalesResultsQuery,
+  parseTrendsQuery,
   salesResultsQueryString,
+  trendsQueryString,
+  trendsWindows,
 } from "./kpi-params";
 
 const UUID = "0b8f5a2e-3c1d-4e6f-9a7b-1c2d3e4f5a6b";
@@ -164,5 +167,44 @@ describe("sales results query", () => {
     expect(salesResultsQueryString(parseSalesResultsQuery({ month: "10" }, now))).toBe(
       "?year=2026&month=10",
     );
+  });
+});
+
+describe("trends query", () => {
+  const now = new Date("2026-11-16T12:00:00Z");
+
+  it("defaults to the current month, by route, running totals, compared", () => {
+    expect(parseTrendsQuery({}, now)).toEqual({
+      year: 2026,
+      month: 11,
+      by: "route",
+      cumulative: true,
+      compare: true,
+    });
+  });
+
+  it("reads the grouping, the mode and the comparison, and round-trips them", () => {
+    const query = parseTrendsQuery(
+      { year: "2026", month: "10", by: "provider", mode: "daily", compare: "0" },
+      now,
+    );
+    expect(query).toEqual({
+      year: 2026,
+      month: 10,
+      by: "provider",
+      cumulative: false,
+      compare: false,
+    });
+    expect(trendsQueryString(query)).toBe("?year=2026&month=10&by=provider&mode=daily&compare=0");
+    expect(parseTrendsQuery({ by: "list" }, now).by).toBe("route");
+    expect(trendsQueryString(parseTrendsQuery({}, now))).toBe("?year=2026&month=11");
+  });
+
+  it("gives the month and the month before, across a year end too", () => {
+    const windows = trendsWindows({ year: 2026, month: 1 });
+    expect(windows.current.from.toISOString()).toBe("2026-01-01T00:00:00.000Z");
+    expect(windows.current.to.toISOString()).toBe("2026-02-01T00:00:00.000Z");
+    expect(windows.previous.from.toISOString()).toBe("2025-12-01T00:00:00.000Z");
+    expect(windows.previous.to.toISOString()).toBe("2026-01-01T00:00:00.000Z");
   });
 });

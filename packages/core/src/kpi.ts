@@ -308,3 +308,185 @@ export function sortSalesResults<
     return main || b.sales - a.sales || b.day.localeCompare(a.day);
   });
 }
+
+// ---------------------------------------------------------------------------
+// Trends (D5-06)
+// ---------------------------------------------------------------------------
+
+export const TREND_DIMENSIONS = ["route", "offer", "country", "provider"] as const;
+export type TrendDimension = (typeof TREND_DIMENSIONS)[number];
+
+/** Leads of the SMS sent on a day and sales made on that day, for one group (a route, …). */
+export interface DailyRow {
+  /** YYYY-MM-DD, UTC. */
+  day: string;
+  key: string;
+  leads: number;
+  sales: number;
+}
+
+function daysInMonth(year: number, month: number): number {
+  return new Date(Date.UTC(year, month, 0)).getUTCDate();
+}
+
+const dayOf = (row: DailyRow): number => Number(row.day.slice(8, 10));
+
+/**
+ * The last day of the month there are figures for: today for the month in progress, the
+ * month's last day for a past month, 0 for a month that has not started.
+ */
+export function throughDay(year: number, month: number, now: Date): number {
+  const current = now.getUTCFullYear() * 12 + now.getUTCMonth();
+  const asked = year * 12 + (month - 1);
+  if (asked > current) return 0;
+  if (asked < current) return daysInMonth(year, month);
+  return now.getUTCDate();
+}
+
+function totalsThrough(rows: readonly DailyRow[], through: number) {
+  let leads = 0;
+  let sales = 0;
+  for (const row of rows) {
+    if (dayOf(row) > through) continue;
+    leads += row.leads;
+    sales += row.sales;
+  }
+  return { leads, sales, conversion: leads > 0 ? sales / leads : null };
+}
+
+export interface TrendSummary {
+  leads: number;
+  sales: number;
+  /** Sales per lead, 0..1. */
+  conversion: number | null;
+  /** Change against the same days of the month before, as a fraction; null without a base. */
+  leadsChange: number | null;
+  salesChange: number | null;
+  /** Change of the conversion in percentage points. */
+  conversionChangePoints: number | null;
+}
+
+/** The three tiles: the month through `through`, against the same days of the month before. */
+export function trendSummary(
+  rows: readonly DailyRow[],
+  previous: readonly DailyRow[],
+  through: number,
+): TrendSummary {
+  const now = totalsThrough(rows, through);
+  const before = totalsThrough(previous, through);
+  const change = (a: number, b: number) => (b > 0 ? (a - b) / b : null);
+  return {
+    ...now,
+    leadsChange: change(now.leads, before.leads),
+    salesChange: change(now.sales, before.sales),
+    conversionChangePoints:
+      now.conversion !== null && before.conversion !== null
+        ? (now.conversion - before.conversion) * 100
+        : null,
+  };
+}
+
+export interface TrendPoint {
+  /** Day of the month, 1-based. */
+  day: number;
+  /** Null after the last day there are figures for. */
+  leads: number | null;
+  sales: number | null;
+  prevLeads: number;
+  prevSales: number;
+}
+
+/**
+ * One point per day of the month: leads and sales of the day, or running totals, next to the
+ * same day of the month before (which is complete, so it runs to the end).
+ */
+export function trendSeries(
+  rows: readonly DailyRow[],
+  previous: readonly DailyRow[],
+  options: { year: number; month: number; through: number; cumulative?: boolean },
+): TrendPoint[] {
+  const days = daysInMonth(options.year, options.month);
+  const perDay = (source: readonly DailyRow[]) => {
+    const leads = new Array<number>(days + 1).fill(0);
+    const sales = new Array<number>(days + 1).fill(0);
+    for (const row of source) {
+      const day = dayOf(row);
+      if (day < 1 || day > days) continue;
+      leads[day] = (leads[day] ?? 0) + row.leads;
+      sales[day] = (sales[day] ?? 0) + row.sales;
+    }
+    return { leads, sales };
+  };
+  const now = perDay(rows);
+  const before = perDay(previous);
+  const points: TrendPoint[] = [];
+  const running = { leads: 0, sales: 0, prevLeads: 0, prevSales: 0 };
+  for (let day = 1; day <= days; day += 1) {
+    running.leads += now.leads[day] ?? 0;
+    running.sales += now.sales[day] ?? 0;
+    running.prevLeads += before.leads[day] ?? 0;
+    running.prevSales += before.sales[day] ?? 0;
+    const known = day <= options.through;
+    points.push(
+      options.cumulative
+        ? {
+            day,
+            leads: known ? running.leads : null,
+            sales: known ? running.sales : null,
+            prevLeads: running.prevLeads,
+            prevSales: running.prevSales,
+          }
+        : {
+            day,
+            leads: known ? (now.leads[day] ?? 0) : null,
+            sales: known ? (now.sales[day] ?? 0) : null,
+            prevLeads: before.leads[day] ?? 0,
+            prevSales: before.sales[day] ?? 0,
+          },
+    );
+  }
+  return points;
+}
+
+export interface TrendBreakdownRow {
+  key: string;
+  leads: number;
+  sales: number;
+  conversion: number | null;
+  /** Conversion of days 1 to 15; null without leads in them. */
+  firstHalf: number | null;
+  /** Conversion of day 16 to the end; null without leads in them. */
+  secondHalf: number | null;
+  /** How the second half compares with the first; null when a half has no leads. */
+  trend: "up" | "down" | "flat" | null;
+}
+
+/** The breakdown table: each group's month, its two halves and the direction between them. */
+export function trendBreakdown(rows: readonly DailyRow[]): TrendBreakdownRow[] {
+  const groups = new Map<string, { first: [number, number]; second: [number, number] }>();
+  for (const row of rows) {
+    const group = groups.get(row.key) ?? { first: [0, 0], second: [0, 0] };
+    const half = dayOf(row) <= 15 ? group.first : group.second;
+    half[0] += row.leads;
+    half[1] += row.sales;
+    groups.set(row.key, group);
+  }
+  const rate = (leads: number, sales: number) => (leads > 0 ? sales / leads : null);
+  return [...groups.entries()]
+    .map(([key, g]) => {
+      const leads = g.first[0] + g.second[0];
+      const sales = g.first[1] + g.second[1];
+      const firstHalf = rate(g.first[0], g.first[1]);
+      const secondHalf = rate(g.second[0], g.second[1]);
+      const trend: TrendBreakdownRow["trend"] =
+        firstHalf === null || secondHalf === null
+          ? null
+          : secondHalf > firstHalf
+            ? "up"
+            : secondHalf < firstHalf
+              ? "down"
+              : "flat";
+      return { key, leads, sales, conversion: rate(leads, sales), firstHalf, secondHalf, trend };
+    })
+    .sort((a, b) => b.leads - a.leads || b.sales - a.sales || a.key.localeCompare(b.key));
+}

@@ -1,4 +1,10 @@
-import type { ListFollowUpRow, OfferCountryRow, SalesResultRow } from "@sendex/core";
+import type {
+  DailyRow,
+  ListFollowUpRow,
+  OfferCountryRow,
+  SalesResultRow,
+  TrendDimension,
+} from "@sendex/core";
 import { type SQL, sql } from "drizzle-orm";
 import type { Db } from "../types.js";
 import { type DashboardFilter, inCountries, messageFacts, rowsOf } from "./dashboard.js";
@@ -190,5 +196,45 @@ export async function salesResults(
     leads: num(r.leads),
     sales: num(r.sales),
     revenueMicro: big(r.revenue),
+  }));
+}
+
+/**
+ * Leads and sales per day and group inside the filters, for Trends (D5-06). The group is the
+ * route name, the offer name, the country code or the list's data provider ("(not set)" for a
+ * list without one). Days with neither a lead nor a sale are left out.
+ */
+export async function kpiDaily(
+  db: Db,
+  organisationId: string,
+  filter: KpiFilter,
+  by: TrendDimension,
+): Promise<DailyRow[]> {
+  const key =
+    by === "route"
+      ? sql`coalesce(r.name, '(no route)')`
+      : by === "offer"
+        ? sql`f.link_name`
+        : by === "country"
+          ? sql`f.country`
+          : sql`coalesce(li.provider, '(not set)')`;
+  const rows = rowsOf(
+    await db.execute(sql`
+      with facts as (${messageFacts(organisationId, filter)})
+      select to_char(f.day, 'YYYY-MM-DD') as day, ${key} as key,
+        coalesce(sum(f.leads), 0) as leads, coalesce(sum(f.sales), 0) as sales
+      from facts f
+      left join routes r on r.id = f.route_id
+      left join lists li on li.id = f.list_id
+      where true${factFilter(filter)}
+      group by f.day, ${key}
+      having coalesce(sum(f.leads), 0) > 0 or coalesce(sum(f.sales), 0) > 0
+      order by f.day, ${key}`),
+  );
+  return rows.map((r) => ({
+    day: String(r.day),
+    key: String(r.key),
+    leads: num(r.leads),
+    sales: num(r.sales),
   }));
 }

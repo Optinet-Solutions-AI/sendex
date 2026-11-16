@@ -1,4 +1,4 @@
-import type { SalesResultSort } from "@sendex/core";
+import { type SalesResultSort, TREND_DIMENSIONS, type TrendDimension } from "@sendex/core";
 import type { KpiFilter } from "@sendex/db";
 import { parseIsoDay } from "./billing-params";
 import { parseCountries } from "./campaigns-log-params";
@@ -191,4 +191,54 @@ export function salesResultsQueryString(query: SalesResultsQuery): string {
   if (query.sort !== "sales") params.set("sort", query.sort);
   const text = params.toString();
   return text ? `?${text}` : "";
+}
+
+// ---------------------------------------------------------------------------
+// Trends (D5-06): `/kpi/trends?year=2026&month=11&by=offer&mode=daily&compare=0`
+// ---------------------------------------------------------------------------
+
+export interface TrendsQuery {
+  year: number;
+  /** 1 to 12. */
+  month: number;
+  /** What the breakdown table groups by. */
+  by: TrendDimension;
+  /** Running totals (the default) or the figures of each day. */
+  cumulative: boolean;
+  /** Draw the month before next to the month. */
+  compare: boolean;
+}
+
+export function parseTrendsQuery(params: SearchParams, now = new Date()): TrendsQuery {
+  const { year, month } = parseInsightQuery(params, now);
+  const by = first(params.by);
+  return {
+    year,
+    month,
+    by: (TREND_DIMENSIONS as readonly string[]).includes(by) ? (by as TrendDimension) : "route",
+    cumulative: first(params.mode) !== "daily",
+    compare: first(params.compare) !== "0",
+  };
+}
+
+export function trendsQueryString(query: TrendsQuery): string {
+  const params = new URLSearchParams();
+  params.set("year", String(query.year));
+  params.set("month", String(query.month));
+  if (query.by !== "route") params.set("by", query.by);
+  if (!query.cumulative) params.set("mode", "daily");
+  if (!query.compare) params.set("compare", "0");
+  return `?${params.toString()}`;
+}
+
+/** The UTC windows of the month and of the month before, ends exclusive. */
+export function trendsWindows(query: Pick<TrendsQuery, "year" | "month">): {
+  current: { from: Date; to: Date };
+  previous: { from: Date; to: Date };
+} {
+  const start = (offset: number) => new Date(Date.UTC(query.year, query.month - 1 + offset, 1));
+  return {
+    current: { from: start(0), to: start(1) },
+    previous: { from: start(-1), to: start(0) },
+  };
 }

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   addCounters,
   costPerSaleMicro,
+  type DailyRow,
   efficiencySnapshot,
   groupListFollowUp,
   insightTotals,
@@ -13,7 +14,11 @@ import {
   rollUp,
   smsPerSale,
   sortSalesResults,
+  throughDay,
   topOffersByCountry,
+  trendBreakdown,
+  trendSeries,
+  trendSummary,
   ZERO_COUNTERS,
 } from "./kpi.js";
 
@@ -247,5 +252,87 @@ describe("sortSalesResults (D5-05)", () => {
   it("takes revenue as a string too", () => {
     const views = rows.map((r) => ({ ...r, revenueMicro: r.revenueMicro.toString() }));
     expect(sortSalesResults(views, "revenue")[0]?.day).toBe("2026-11-06");
+  });
+});
+
+describe("trends (D5-06)", () => {
+  const d = (day: string, key: string, leads: number, sales: number): DailyRow => ({
+    day,
+    key,
+    leads,
+    sales,
+  });
+  const november = [
+    d("2026-11-01", "724", 10, 1),
+    d("2026-11-01", "137", 5, 0),
+    d("2026-11-03", "724", 20, 4),
+    d("2026-11-16", "137", 8, 2),
+    d("2026-11-20", "724", 6, 0),
+  ];
+  const october = [
+    d("2026-10-01", "724", 4, 1),
+    d("2026-10-03", "724", 6, 0),
+    d("2026-10-25", "724", 30, 9),
+  ];
+
+  it("knows how far into the month the figures go", () => {
+    const midNovember = new Date("2026-11-16T12:00:00Z");
+    expect(throughDay(2026, 11, midNovember)).toBe(16);
+    expect(throughDay(2026, 10, midNovember)).toBe(31);
+    expect(throughDay(2026, 2, midNovember)).toBe(28);
+    expect(throughDay(2026, 12, midNovember)).toBe(0);
+  });
+
+  it("compares the month with the same days of the month before", () => {
+    const summary = trendSummary(november, october, 16);
+    // Through day 16: 43 leads and 7 sales now; 10 leads and 1 sale a month earlier.
+    expect(summary.leads).toBe(43);
+    expect(summary.sales).toBe(7);
+    expect(summary.conversion).toBeCloseTo(7 / 43);
+    expect(summary.leadsChange).toBeCloseTo(3.3);
+    expect(summary.salesChange).toBeCloseTo(6);
+    expect(summary.conversionChangePoints).toBeCloseTo((7 / 43 - 1 / 10) * 100);
+  });
+
+  it("has no change to show when the month before was empty", () => {
+    const summary = trendSummary(november, [], 16);
+    expect(summary.leadsChange).toBeNull();
+    expect(summary.salesChange).toBeNull();
+    expect(summary.conversionChangePoints).toBeNull();
+  });
+
+  it("gives one point per day, daily or running totals, up to the day reached", () => {
+    const daily = trendSeries(november, october, { year: 2026, month: 11, through: 16 });
+    expect(daily).toHaveLength(30);
+    expect(daily[0]).toEqual({ day: 1, leads: 15, sales: 1, prevLeads: 4, prevSales: 1 });
+    expect(daily[1]).toEqual({ day: 2, leads: 0, sales: 0, prevLeads: 0, prevSales: 0 });
+    // Nothing is known after day 16 of the month in progress; the month before is complete.
+    expect(daily[19]).toEqual({ day: 20, leads: null, sales: null, prevLeads: 0, prevSales: 0 });
+    expect(daily[24]?.prevLeads).toBe(30);
+
+    const running = trendSeries(november, october, {
+      year: 2026,
+      month: 11,
+      through: 16,
+      cumulative: true,
+    });
+    expect(running[2]).toEqual({ day: 3, leads: 35, sales: 5, prevLeads: 10, prevSales: 1 });
+    expect(running[15]).toMatchObject({ day: 16, leads: 43, sales: 7 });
+    expect(running[16]?.leads).toBeNull();
+    expect(running[29]?.prevLeads).toBe(40);
+  });
+
+  it("breaks the month down by group with both halves and the direction", () => {
+    const rows = trendBreakdown(november);
+    expect(rows.map((r) => r.key)).toEqual(["724", "137"]);
+    expect(rows[0]).toMatchObject({ leads: 36, sales: 5 });
+    expect(rows[0]?.conversion).toBeCloseTo(5 / 36);
+    expect(rows[0]?.firstHalf).toBeCloseTo(5 / 30);
+    expect(rows[0]?.secondHalf).toBe(0);
+    expect(rows[0]?.trend).toBe("down");
+    // 137 converted nothing in days 1–15 and a quarter after.
+    expect(rows[1]).toMatchObject({ firstHalf: 0, secondHalf: 0.25, trend: "up" });
+    // A group with leads in one half only has no direction.
+    expect(trendBreakdown([d("2026-11-02", "405", 5, 1)])[0]?.trend).toBeNull();
   });
 });

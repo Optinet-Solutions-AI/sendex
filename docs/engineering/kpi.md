@@ -73,6 +73,23 @@ The sidebar group is **Performance** (`components/shell/nav.ts`).
 - `PeriodQuery` and `components/kpi/period-filter.tsx` are the Month / Year / All time control
   shared with Insight.
 
+## Trends (D5-06)
+
+`/kpi/trends?year=&month=&by=route|offer|country|provider&mode=daily&compare=0`
+
+- `kpiDaily(db, organisationId, filter, by)` returns leads and sales per day and group. The
+  page calls it for the month and for the month before (`trendsWindows`).
+- Pure parts in `packages/core/src/kpi.ts`:
+  - `throughDay(year, month, now)`: today for the month in progress, the last day for a past
+    month, 0 for a future one;
+  - `trendSummary`: the month through that day against the same days of the month before
+    (changes as fractions, the conversion change in points, null without a base);
+  - `trendSeries`: one point per day, daily or running, null after the day reached, with the
+    month before alongside;
+  - `trendBreakdown`: per group, the month, its two halves and the direction between them.
+- The charts are the `Lines` component of `@sendex/ui` inside `ChartFrame`; the month before
+  is the dashed series.
+
 ## Tests
 
 - `packages/core/src/kpi.test.ts`: the ratios and the grouping.
@@ -80,6 +97,7 @@ The sidebar group is **Performance** (`components/shell/nav.ts`).
   in PGlite; totals reconcile with `dashboardKpis`, each filter narrows as described, and
   another organisation sees nothing.
 - `apps/web/lib/kpi-params.test.ts`: parsing, the query string round trip, the window.
-- `apps/web/e2e/list-follow-up.spec.ts`, `insight.spec.ts` and `sales-results.spec.ts`: on the demo
+- `apps/web/e2e/list-follow-up.spec.ts`, `insight.spec.ts`, `sales-results.spec.ts` and
+  `trends.spec.ts` (which asks `latestDemoMonth()` for the month to open): on the demo
   activity (`e2e/helpers/demo.ts` runs `pnpm db:seed:activity` first). The Insight spec uses
   the all-time view because the demo sends are dated relative to the day they were seeded.

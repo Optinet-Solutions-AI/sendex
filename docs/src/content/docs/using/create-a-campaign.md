@@ -19,6 +19,11 @@ bar, sent and bad counts and a per-list flush) and, above them, your **Segments*
 audience sends only to the contacts that match its rules, one lap per list they live in; the
 number on the right is how many can still be sent to. **+ Create Segment** opens the builder.
 
+The **Lists** row of the form on the left is a dropdown as well: click it, type part of a list
+name in the box (any words of the name, in any order) and the lists narrow as you type. Press
+**Enter** to pick the first match, or tick and untick lists with the mouse. Every change is
+saved at once, and the Lists tab opens next to it with the details.
+
 ## Routes tab
 
 The routes you pick are saved on the campaign straight away, in the order you pick them, so
@@ -43,7 +48,7 @@ country by CTR, by cost per click and overall, pooled across all accounts on the
 1. Open **Campaigns** and press **+ New Campaign**: name, country, and the UI timezone that follows the country. The campaign opens on its page.
 2. The page is one card, **Send this campaign**: the form on the left, a context panel on the right. Each row of the form opens the matching tab on the right, where the details are managed.
 3. **SIDs**: pick a SID group in the select, or open the SIDs tab for **+ New group** and **+ Add SID**. Only one group is active per campaign; each sender ID has its own switch.
-4. **Lists**: open the Lists tab and tick the lists of the campaign country. Each row shows its progress bar, **Sent 600 / 1,896**, Bad, and a flush button that resets its sending progress.
+4. **Lists**: click the Lists row and type the list's name, or open the Lists tab and tick the lists of the campaign country. Each row shows its progress bar, **Sent 600 / 1,896**, Bad, and a flush button that resets its sending progress.
 5. **Offers**: open the Offers tab, choose an existing offer or **— New offer —** with a name, the URL and the token chips (Dynamic, Geo, Phone, First Name, Campaign ID, Route Name, Custom 1–5, …). **Advanced › Profit (€)** records the revenue per conversion for ROI. Press **Add Offer**.
 6. **Ad Texts**: open the Ad Texts tab, **+ Add Texts**, and write the message with `{{domain}}` where the link goes. Several texts at once are separated by a line containing only `//`. The red counter shows `GSM_7BIT · chars · parts · left`, counting `{{domain}}` at the real short link length, so the parts it shows are the parts you are billed for; keep to one part where you can. **Check {{domain}} exists** is on; **Long message** is off, so a text over one part cannot be saved until you switch it on. `{word1|word2}` picks one word per message; `{{last_name}}` is under **More**. There is no opt-out placeholder yet: write the opt-out wording into the text.
 7. **Routes**: open the Routes tab and tick the routes to test; the price per SMS is shown next to each.

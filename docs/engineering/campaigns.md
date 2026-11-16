@@ -80,6 +80,16 @@ To open more countries, set the variable on Vercel and redeploy (it is read at b
 Playwright server runs with `GB,ES,DE,MT` because the specs create Spanish, German and Maltese
 data through the UI; `e2e/open-countries.spec.ts` uses France as the closed country.
 
+## The Lists row (D4-20)
+
+The Lists row of the send form is `ListPicker` (`components/campaigns/list-picker.tsx`): a
+popover under the row with a search box, the lists of the campaign country filtered by
+`filterListsByName` (every word typed must be in the name, any case, any order), a checkbox
+per list and Enter to pick the first match. It saves through `setCampaignListsAction`, the
+same action as the Lists tab, and opens that tab alongside. Before D4-20 the row only switched
+the tab on the right, which looked like a dropdown that did not open, most of all on a narrow
+window where the tab sits below the form.
+
 ## Permissions and audit
 
 | Action                                                              | Permission        |

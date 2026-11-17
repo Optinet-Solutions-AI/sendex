@@ -35,6 +35,15 @@ queued ──dispatcher──▶ sending ──send loop──▶ done
    Scheduled campaigns need no job of their own: their laps wait in `queued` until
    `scheduled_at` has passed.
 
+   The same tick then runs `completeIdleCampaigns()` (D4-23): every `sending` campaign
+   that has laps, none of them `sending` or `queued` and switched on, becomes
+   `completed`. A campaign with AutoSender on and not yet stopped is left alone, because
+   AutoSender may queue more laps for it. The check runs on every tick and not only when
+   a lap finishes, so a campaign whose last lap was cancelled, or whose worker died, is
+   still picked up; a failure there is logged and never fails the dispatch. When a lap
+   of a `completed` campaign is claimed (Send again, a top-up, a lap switched back on),
+   `claimQueuedLaps` moves the campaign back to `sending`.
+
 2. **Send loop** (`send/send-lap.ts`, `sendLap()`), one job per lap:
    - Load the lap context: lap, campaign, list, route, the campaign's active sender ids
      (sorted by value), active texts (by position), first active link, and the route's

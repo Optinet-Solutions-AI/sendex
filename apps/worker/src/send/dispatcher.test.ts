@@ -5,7 +5,7 @@ import { dispatchQueuedLaps, lapJobId } from "./dispatcher.js";
 
 const quiet = createLogger({ write: () => undefined });
 
-function fakeStore(batches: ClaimedLap[][]) {
+function fakeStore(batches: ClaimedLap[][], idle: string[] | Error = []) {
   const unclaimed: string[] = [];
   return {
     unclaimed,
@@ -15,6 +15,10 @@ function fakeStore(batches: ClaimedLap[][]) {
       },
       async unclaimLap(lapId: string) {
         unclaimed.push(lapId);
+      },
+      async completeIdleCampaigns() {
+        if (idle instanceof Error) throw idle;
+        return idle;
       },
     },
   };
@@ -36,7 +40,7 @@ describe("dispatchQueuedLaps", () => {
       },
     };
     const result = await dispatchQueuedLaps({ store, sendQueue: queue, log: quiet });
-    expect(result).toEqual({ claimed: 2, enqueued: 2, failed: 0 });
+    expect(result).toEqual({ claimed: 2, enqueued: 2, failed: 0, completed: 0 });
     expect(added).toEqual([
       {
         name: "send-lap",
@@ -66,8 +70,42 @@ describe("dispatchQueuedLaps", () => {
       claimed: 0,
       enqueued: 0,
       failed: 0,
+      completed: 0,
     });
     expect(adds).toBe(0);
+  });
+
+  it("marks campaigns whose laps are all finished as completed on every tick (D4-23)", async () => {
+    const { store } = fakeStore([], ["C7", "C8"]);
+    const queue = {
+      async add() {
+        return {};
+      },
+    };
+    expect(await dispatchQueuedLaps({ store, sendQueue: queue, log: quiet })).toEqual({
+      claimed: 0,
+      enqueued: 0,
+      failed: 0,
+      completed: 2,
+    });
+  });
+
+  it("still dispatches when the completed check fails", async () => {
+    const { store } = fakeStore(
+      [[{ id: "L1", organisationId: "O1", campaignId: "C1" }]],
+      new Error("database gone"),
+    );
+    const queue = {
+      async add() {
+        return {};
+      },
+    };
+    expect(await dispatchQueuedLaps({ store, sendQueue: queue, log: quiet })).toEqual({
+      claimed: 1,
+      enqueued: 1,
+      failed: 0,
+      completed: 0,
+    });
   });
 
   it("puts a lap back to queued when its job cannot be added, then throws", async () => {

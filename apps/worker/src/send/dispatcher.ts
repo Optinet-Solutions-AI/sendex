@@ -39,7 +39,7 @@ export interface SendQueueLike {
 }
 
 export interface DispatcherDeps {
-  store: Pick<SendingStore, "claimQueuedLaps" | "unclaimLap">;
+  store: Pick<SendingStore, "claimQueuedLaps" | "unclaimLap" | "completeIdleCampaigns">;
   sendQueue: SendQueueLike;
   log: Logger;
   now?: () => Date;
@@ -49,6 +49,8 @@ export interface DispatchResult {
   claimed: number;
   enqueued: number;
   failed: number;
+  /** Campaigns marked completed on this tick because none of their laps is left to send. */
+  completed: number;
 }
 
 /**
@@ -56,6 +58,10 @@ export interface DispatchResult {
  * `sending` and enqueue its `SendLapJob`. The job id is `lap:<lapId>`, so a lap that
  * already has a job (waiting, active or kept after completion) is never enqueued twice.
  * A lap whose job cannot be added goes back to `queued` for the next tick.
+ *
+ * The tick also marks campaigns with nothing left to send as completed (D4-23). That check
+ * runs on every tick, not only when a lap finishes, so a campaign whose last lap was
+ * cancelled or whose worker died is still picked up; a failure there never fails the dispatch.
  */
 export async function dispatchQueuedLaps(deps: DispatcherDeps): Promise<DispatchResult> {
   const now = deps.now?.() ?? new Date();
@@ -83,8 +89,16 @@ export async function dispatchQueuedLaps(deps: DispatcherDeps): Promise<Dispatch
       await deps.store.unclaimLap(lap.id);
     }
   }
+  let completed = 0;
+  try {
+    const ids = await deps.store.completeIdleCampaigns();
+    completed = ids.length;
+    if (completed > 0) deps.log("info", "campaigns completed", { campaignIds: ids });
+  } catch (err) {
+    deps.log("warn", "completed check failed, will retry on the next tick", { err });
+  }
   if (failed > 0) {
     throw new Error(`${failed} of ${claimed.length} laps could not be enqueued`);
   }
-  return { claimed: claimed.length, enqueued, failed };
+  return { claimed: claimed.length, enqueued, failed, completed };
 }

@@ -4,6 +4,7 @@ import {
   asc,
   desc,
   eq,
+  exists,
   gt,
   inArray,
   isNull,
@@ -253,6 +254,13 @@ export interface SendingStore {
   rankCampaignLaps(campaignId: string): Promise<void>;
   /** Move every dispatchable queued lap to `sending` and return them. */
   claimQueuedLaps(now: Date): Promise<ClaimedLap[]>;
+  /**
+   * Mark every `sending` campaign that has nothing left to send as `completed` (D4-23) and
+   * return their ids. Nothing left means: it has laps, and none is `sending` or `queued` and
+   * switched on. A campaign AutoSender is still working on is left alone, since AutoSender
+   * may queue more laps for it.
+   */
+  completeIdleCampaigns(): Promise<string[]>;
   /** Put a claimed lap back to `queued` (its job could not be enqueued). */
   unclaimLap(lapId: string): Promise<void>;
   listCampaignLaps(organisationId: string, campaignId: string): Promise<CampaignLapRow[]>;
@@ -846,16 +854,52 @@ export function createSendingStore(db: Db): SendingStore {
             organisationId: laps.organisationId,
             campaignId: laps.campaignId,
           });
-        // A scheduled campaign whose time has come is now sending (D2-08).
+        // A scheduled campaign whose time has come is now sending (D2-08), and so is a
+        // completed one that was given another lap (D4-23).
         const campaignIds = [...new Set(claimed.map((l) => l.campaignId))];
         if (campaignIds.length > 0) {
           await tx
             .update(campaigns)
             .set({ status: "sending", updatedAt: new Date() })
-            .where(and(inArray(campaigns.id, campaignIds), eq(campaigns.status, "scheduled")));
+            .where(
+              and(
+                inArray(campaigns.id, campaignIds),
+                inArray(campaigns.status, ["scheduled", "completed"]),
+              ),
+            );
         }
         return claimed;
       });
+    },
+
+    async completeIdleCampaigns() {
+      const lapsOfCampaign = eq(laps.campaignId, campaigns.id);
+      const rows = await db
+        .update(campaigns)
+        .set({ status: "completed", updatedAt: new Date() })
+        .where(
+          and(
+            eq(campaigns.status, "sending"),
+            or(eq(campaigns.autosender, false), sql`${campaigns.autosenderStoppedAt} is not null`),
+            exists(db.select({ one: sql`1` }).from(laps).where(lapsOfCampaign)),
+            notExists(
+              db
+                .select({ one: sql`1` })
+                .from(laps)
+                .where(
+                  and(
+                    lapsOfCampaign,
+                    or(
+                      eq(laps.status, "sending"),
+                      and(eq(laps.status, "queued"), eq(laps.active, true)),
+                    ),
+                  ),
+                ),
+            ),
+          ),
+        )
+        .returning({ id: campaigns.id });
+      return rows.map((r) => r.id);
     },
 
     listCampaignLaps(organisationId, campaignId) {

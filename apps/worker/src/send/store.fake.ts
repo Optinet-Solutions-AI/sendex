@@ -252,6 +252,9 @@ export function createFakeStore(options: FakeStoreOptions): FakeStore {
       lap.status = "sending";
       return [{ id: lap.id, organisationId: lap.organisationId, campaignId: lap.campaignId }];
     },
+    async completeIdleCampaigns() {
+      return [];
+    },
     async unclaimLap() {
       if (lap.status === "sending") lap.status = "queued";
     },

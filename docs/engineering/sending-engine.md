@@ -138,7 +138,7 @@ from the number of messages already created). Placeholders in the text:
 | `{{first_name}}` | `contacts.first_name`, empty when unknown |
 | `{{last_name}}` | `contacts.last_name`, empty when unknown |
 | `{{phone}}` | the E.164 number |
-| `{{domain}}` | `${LINKS_BASE_URL}/<shortCode>`; empty when the campaign has no active link |
+| `{{domain}}` | `${LINKS_BASE_URL}/<shortCode>`, or the shortener's address in front of it (see below); empty when the campaign has no active link |
 | `{a\|b\|c}` | one option picked at random per message (resolved on the template before the placeholders, so a contact name is never read as a randomizer) |
 
 `{{opt_out}}` is refused when a text is saved until the opt-out wording is decided. The parts
@@ -340,6 +340,33 @@ until the real adapters land; `smpp` (23Telecom, D2-15) is unknown until then, s
 such a route is cancelled with `unknown provider "smpp"` rather than retried forever.
 `createDefaultProviderRegistry()` in `send/providers.ts` is where adapters are registered.
 
+## A shortener in front of the link (D4-22)
+
+With `SHORT_IO_KEY` set, the SMS carries a Short.io address that forwards to our own
+`${LINKS_BASE_URL}/<shortCode>`. The message row keeps our short code, so clicks and
+conversions are counted as before (ADR 0011).
+
+- **Domain per lap.** `shortDomainForLap` (`packages/core`) picks one of the account's
+  set-up domains by the lap's place among the campaign's laps: lap 1 the first in
+  alphabetical order, lap 2 the next, and round again. The list is read from Short.io
+  and reused for five minutes. The domain a lap used is on its `lap.finish` audit row
+  as `shortDomain`.
+- **One bulk call per batch.** Before a batch is claimed, `prepareLinks` in
+  `send/send-lap.ts` makes the batch's short codes and asks `POST /links/bulk` for their
+  addresses, for at most the numbers still eligible. The claim transaction never waits
+  on Short.io.
+- **Falling back.** Domains unreadable: the lap sends our own links. A bulk call
+  refused: that batch and the rest of the lap send our own links (one warning in the
+  log, `shortener refused`). One address missing: that message carries our own link.
+- **Estimates.** The balance and cap estimates, and the web app's counter, still count
+  our own link's length. Billing follows the text really sent, so it can be fewer
+  parts than estimated, never more.
+- **Not covered.** Routes > Testing messages do not carry a tracked link and are not
+  touched.
+
+The client is `createShortIoShortener` in `send/shortener.ts`; anything with
+`domains()` and `shorten(domain, targets)` can stand in for it.
+
 ## Environment variables
 
 | Variable | Default | Used for |
@@ -347,6 +374,7 @@ such a route is cancelled with `unknown provider "smpp"` rather than retried for
 | `LAP_POLL_MS` | 5000 | dispatcher tick interval |
 | `PAUSE_RETRY_MS` | 10000 | how long a paused lap's job is parked before it looks again |
 | `LINKS_BASE_URL` | `http://localhost:8787` | base of the `{{domain}}` short links |
+| `SHORT_IO_KEY` | none (our own links are sent) | Short.io secret key; switches the shortener on (D4-22) |
 | `INTERNAL_API_SECRET` | none (routes answer 503) | shared secret for `/internal/*` |
 | `DATABASE_URL` | none | without it the send and dispatch handlers are stubs that only log |
 | `DLR_EXPIRY_MS` | 86400000 (24 h) | a `sent` message with no receipt after this long is expired |

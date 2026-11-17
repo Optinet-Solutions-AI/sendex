@@ -51,12 +51,16 @@ import {
 import { scheduleLapDispatcher } from "./send/dispatcher.js";
 import { createProgressTracker } from "./send/progress.js";
 import { createDefaultProviderRegistry } from "./send/providers.js";
+import { createShortIoShortener } from "./send/shortener.js";
 import { bindSmppAsLeader, type SmppLeadership } from "./send/smpp-leader.js";
 
 const port = Number(process.env.WORKER_PORT ?? 4000);
 const version = process.env.SENDEX_VERSION ?? "dev";
 const SHUTDOWN_TIMEOUT_MS = Number(process.env.SHUTDOWN_TIMEOUT_MS ?? 30_000);
 const linksBaseUrl = process.env.LINKS_BASE_URL ?? "http://localhost:8787";
+// Short.io in front of our own short links (D4-22): on only when the key is set.
+const shortIoKey = process.env.SHORT_IO_KEY?.trim();
+const shortener = shortIoKey ? createShortIoShortener({ apiKey: shortIoKey }) : null;
 const internalSecret = process.env.INTERNAL_API_SECRET;
 // Receipt expiry (D3-01): a `sent` message with no receipt after this long is expired.
 const dlrExpiryMs = Number(process.env.DLR_EXPIRY_MS ?? 24 * 60 * 60 * 1000);
@@ -91,7 +95,11 @@ if (redis) {
           redis,
           progress,
           sendQueue: queues.send,
-          send: { linksBaseUrl, pauseRetryMs: settings.pauseRetryMs },
+          send: {
+            linksBaseUrl,
+            pauseRetryMs: settings.pauseRetryMs,
+            ...(shortener ? { shortener } : {}),
+          },
           caps: createCapsStore(db()),
           autosender: createAutosenderStore(db()),
           tests: {

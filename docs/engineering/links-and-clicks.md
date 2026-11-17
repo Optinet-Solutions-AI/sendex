@@ -32,6 +32,15 @@ apps/worker  POST /internal/clicks -> Zod -> BullMQ click-ingest -> createClickI
    the redirect never waits for the queue or the worker.
 4. The worker validates the batch, queues a `click-ingest` job and the handler writes the rows.
 
+## A shortener in front (D4-22)
+
+When the worker has `SHORT_IO_KEY`, the address in the SMS is a Short.io link that
+forwards here, to `/<shortCode>`. Nothing changes in this service: it still resolves the
+code, records the click and redirects to the offer. The visitor's browser makes the
+second request itself, so the click's IP address and user agent are the visitor's, not
+the shortener's. See ADR 0011 and "A shortener in front of the link" in
+`sending-engine.md`.
+
 ## KV
 
 Namespace binding `LINKS`. Key `code:<shortCode>`, value:

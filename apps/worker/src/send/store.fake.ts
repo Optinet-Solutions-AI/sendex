@@ -51,6 +51,8 @@ export interface FakeStoreOptions {
   /** Opening deposit. */
   balanceMicro: bigint;
   campaignStatus?: CampaignStatus;
+  /** Laps the campaign already had before this one, for what depends on the lap's place. */
+  earlierLaps?: number;
 }
 
 export interface FakeStore extends SendingStore {
@@ -254,7 +256,15 @@ export function createFakeStore(options: FakeStoreOptions): FakeStore {
       if (lap.status === "sending") lap.status = "queued";
     },
     async listCampaignLaps() {
+      const earlier = Array.from({ length: options.earlierLaps ?? 0 }, (_, i) => ({
+        id: `earlier-lap-${i + 1}`,
+        status: "done" as const,
+        testSize: lap.testSize,
+        sent: lap.testSize,
+        failed: 0,
+      }));
       return [
+        ...earlier,
         {
           id: lap.id,
           status: lap.status,

@@ -12,6 +12,7 @@ import { dispatchQueuedLaps, type SendQueueLike } from "./send/dispatcher.js";
 import { createExpiryTick } from "./send/expiry.js";
 import type { ProgressTracker, SendRedis } from "./send/progress.js";
 import { sendLap } from "./send/send-lap.js";
+import type { LinkShortener } from "./send/shortener.js";
 import {
   dispatchDueTests,
   type TestDispatchStore,
@@ -43,6 +44,8 @@ export interface HandlerDeps {
     linksBaseUrl: string;
     batchSize?: number;
     pauseRetryMs?: number;
+    /** Link shortener in front of our own links (D4-22); without it the SMS carries ours. */
+    shortener?: LinkShortener;
   };
   /** Daily caps for the send loop (D3-11); without it no cap is enforced. */
   caps?: CapsStore;

@@ -92,3 +92,17 @@ export function renderLinkUrl(template: string, vars: LinkVars): string {
     return value === undefined ? "" : encodeURIComponent(value);
   });
 }
+
+/**
+ * The shortener domain a lap puts in its SMS (D4-22): every lap of a campaign takes the next
+ * one, so two laps in a row never share an address, and it starts over when the campaign has
+ * more laps than there are domains. `lapIndex` is the lap's place among the campaign's laps,
+ * 0 for the first. The domains are put in alphabetical order first, so the order the
+ * shortener lists them in does not move a lap to another domain. Null when there is none.
+ */
+export function shortDomainForLap(domains: readonly string[], lapIndex: number): string | null {
+  const hosts = [...new Set(domains.map((d) => d.trim().toLowerCase()).filter(Boolean))].sort();
+  if (hosts.length === 0) return null;
+  const index = Number.isInteger(lapIndex) && lapIndex > 0 ? lapIndex : 0;
+  return hosts[index % hosts.length] ?? null;
+}

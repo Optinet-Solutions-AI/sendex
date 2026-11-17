@@ -7,6 +7,7 @@ import {
   renderLinkUrl,
   SHORT_CODE_ALPHABET,
   SHORT_CODE_LENGTH,
+  shortDomainForLap,
 } from "./links.js";
 
 describe("SHORT_CODE_ALPHABET", () => {
@@ -201,5 +202,33 @@ describe("renderLinkUrl", () => {
 
   it("returns a template without placeholders unchanged", () => {
     expect(renderLinkUrl("https://x.example/plain?q=1", vars)).toBe("https://x.example/plain?q=1");
+  });
+});
+
+describe("shortDomainForLap", () => {
+  const domains = ["cc.test", "aa.test", "bb.test"];
+
+  it("gives each lap of a campaign the next domain, in a stable order", () => {
+    expect(shortDomainForLap(domains, 0)).toBe("aa.test");
+    expect(shortDomainForLap(domains, 1)).toBe("bb.test");
+    expect(shortDomainForLap(domains, 2)).toBe("cc.test");
+    // The order the shortener lists them in does not matter.
+    expect(shortDomainForLap([...domains].reverse(), 0)).toBe("aa.test");
+  });
+
+  it("starts over when a campaign has more laps than there are domains", () => {
+    expect(shortDomainForLap(domains, 3)).toBe("aa.test");
+    expect(shortDomainForLap(domains, 7)).toBe("bb.test");
+  });
+
+  it("is null when there is no domain to use", () => {
+    expect(shortDomainForLap([], 0)).toBeNull();
+    expect(shortDomainForLap(["", "  "], 2)).toBeNull();
+  });
+
+  it("ignores case, blanks and repeats, and treats a bad lap number as the first lap", () => {
+    expect(shortDomainForLap([" CC.test ", "cc.test", "aa.test"], 1)).toBe("cc.test");
+    expect(shortDomainForLap(domains, -1)).toBe("aa.test");
+    expect(shortDomainForLap(domains, 1.5)).toBe("aa.test");
   });
 });

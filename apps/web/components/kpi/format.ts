@@ -1,4 +1,5 @@
 import { formatEur } from "@sendex/core";
+import { formatPricePerSms } from "../campaigns/format";
 
 /** Shared formatting of the KPI screens (D5-03 onwards). */
 
@@ -21,4 +22,17 @@ export function shortDay(iso: string | null): string {
     year: "numeric",
     timeZone: "UTC",
   });
+}
+
+/**
+ * A route in the campaign creator's dropdown: "Route 405 · GB (€0.0123/SMS)". The price has
+ * four decimals, as on the campaign page; two would show €0.0123 as €0.01 (D5-10).
+ */
+export function routeChoiceLabel(
+  route: { name: string; platform: boolean; priceMicro: string | null },
+  country: string,
+): string {
+  const name = route.platform ? `Route ${route.name}` : route.name;
+  const price = route.priceMicro === null ? "" : ` (${formatPricePerSms(route.priceMicro)}/SMS)`;
+  return `${name} · ${country}${price}`;
 }

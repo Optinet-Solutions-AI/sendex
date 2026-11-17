@@ -5,7 +5,6 @@ import {
   CREATOR_PERIODS,
   type CreatorPeriod,
   countryName,
-  formatEur,
   type ListOfferPair,
   type OfferCountryRow,
   rankCountriesForOffer,
@@ -31,7 +30,7 @@ import {
   createPlannedCampaignAction,
 } from "../../app/(dashboard)/kpi/actions";
 import { formatNumber } from "../../lib/format";
-import { percent, shortDay } from "./format";
+import { percent, routeChoiceLabel, shortDay } from "./format";
 
 /** What the creator ranks on, as it crosses the server boundary (money and dates as strings). */
 export interface CreatorData {
@@ -480,9 +479,7 @@ export function CampaignCreator({ canCreate }: { canCreate: boolean }) {
                       onValueChange={setRouteId}
                       options={routes.map((r) => ({
                         value: r.id,
-                        label: `${r.platform ? `Route ${r.name}` : r.name} · ${country}${
-                          r.priceMicro === null ? "" : ` (${formatEur(BigInt(r.priceMicro))}/SMS)`
-                        }`,
+                        label: routeChoiceLabel(r, country),
                       }))}
                     />
                   )}

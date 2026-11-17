@@ -53,7 +53,8 @@ test.describe("campaign creator", () => {
     await expect(creator.getByTestId("creator-summary")).toContainText("Trixino → UK_DIM_1");
     await expect(creator.getByTestId("creator-add")).toBeDisabled();
     await creator.getByRole("combobox", { name: "Route" }).click();
-    await page.getByRole("option", { name: /Route 724/ }).click();
+    // The price has four decimals, as on the campaign page (D5-10).
+    await page.getByRole("option", { name: /Route 724 · GB \(€\d\.\d{4}\/SMS\)/ }).click();
     await creator.getByTestId("creator-add").click();
 
     await expect(page.getByTestId("toast").last()).toContainText("Campaign added");

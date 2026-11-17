@@ -3,6 +3,7 @@ import {
   bigint,
   boolean,
   char,
+  date,
   index,
   integer,
   jsonb,
@@ -60,6 +61,11 @@ export const campaigns = pgTable("campaigns", {
   autosenderStoppedAt: timestamp("autosender_stopped_at", { withTimezone: true }),
   autosenderStopReason: text("autosender_stop_reason"),
   scheduledAt: timestamp("scheduled_at", { withTimezone: true }),
+  /**
+   * The day the campaign is meant to go out, set by the campaign creator (D5-07) and read by
+   * the daily plan. A plan only: nothing sends because of it, unlike `scheduled_at`.
+   */
+  plannedFor: date("planned_for"),
   /** Where the campaign was created: the dashboard or the public API (D4-05 API Usage tab). */
   source: campaignSourceEnum("source").notNull().default("dashboard"),
   createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),

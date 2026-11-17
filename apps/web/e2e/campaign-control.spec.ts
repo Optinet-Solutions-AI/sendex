@@ -15,10 +15,15 @@ function headerStatus(page: Page) {
   return page.locator("header span[data-status]").first();
 }
 
-async function logActions(page: Page): Promise<string[]> {
+/**
+ * The actions on the Logs tab, newest first. Waits for `count` rows: the tab can still be
+ * showing the rows from before the last action when the suite is under load, and reading it
+ * at the first visible row then missed the newest one.
+ */
+async function logActions(page: Page, count: number): Promise<string[]> {
   await page.getByRole("tab", { name: "Logs" }).click();
   const rows = page.getByTestId("logs-table").locator("tbody tr[data-action]");
-  await expect(rows.first()).toBeVisible();
+  await expect(rows).toHaveCount(count);
   return rows.evaluateAll((trs) => trs.map((tr) => tr.getAttribute("data-action") ?? ""));
 }
 
@@ -53,7 +58,7 @@ test.describe("campaign control", () => {
     );
     await expect(page.getByTestId("campaign-controls")).toBeHidden();
 
-    const actions = await logActions(page);
+    const actions = await logActions(page, 3);
     expect(actions).toEqual(["campaign.stop", "campaign.resume", "campaign.pause"]);
   });
 
@@ -104,7 +109,7 @@ test.describe("campaign control", () => {
     );
     await expect(page.getByTestId("schedule-editor")).toBeHidden();
 
-    const actions = await logActions(page);
+    const actions = await logActions(page, 2);
     expect(actions).toEqual(["campaign.schedule_cancel", "campaign.reschedule"]);
 
     // Gone from the Scheduled view.

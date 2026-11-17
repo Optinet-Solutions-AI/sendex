@@ -34,6 +34,20 @@ All take `(db, organisationId, …)` and scope every statement by organisation
 `recordAudit` in `queries/audit.ts` appends an `audit_log` row; the lists actions use it for
 `list.upload`, `list.flush` and `list.flush_all`.
 
+## Data provider (D5-01)
+
+`lists.provider` (text, null when not set; migration `0023_list_provider`) records who supplied
+a list's data, as a short code such as `ZEN`. It comes from the recording of 11 November 2026,
+where every list carries a provider so results can be reported back to the data owner.
+
+- `ListProviderSchema` (`packages/core/src/lists.ts`) trims, caps at 40 characters and reads a
+  blank value as null; `NewListSchema.provider` is optional.
+- `createList` stores it, `setListProvider` changes or clears it (false for another
+  organisation's list) and `listProviders` returns the codes in use for the report filters.
+- The upload form has an optional **Data provider** field for a new list; the list page shows
+  it next to the country with a pencil for people who may upload (`setListProviderAction`,
+  audited as `list.provider`).
+
 ## Import pipeline
 
 ```

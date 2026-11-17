@@ -1,0 +1,1 @@
+ALTER TABLE "campaigns" ADD COLUMN "planned_for" date;

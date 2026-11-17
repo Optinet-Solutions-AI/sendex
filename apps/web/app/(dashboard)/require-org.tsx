@@ -1,5 +1,6 @@
 import type { Action } from "@sendex/core";
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
 import { AuthError, type OrgContext, requireAction, requireOrg } from "../../lib/auth";
 
@@ -31,9 +32,15 @@ export function AuthErrorView({ error }: { error: AuthError }) {
  */
 export async function RequireOrg({
   action,
+  preview = false,
   children,
 }: {
   action?: Action;
+  /**
+   * The page is still in preview (D5-09): an organisation without the preview switched on gets
+   * "not found", exactly as if the page did not exist.
+   */
+  preview?: boolean;
   children: (ctx: OrgContext) => ReactNode;
 }) {
   let ctx: OrgContext;
@@ -43,5 +50,6 @@ export async function RequireOrg({
     if (error instanceof AuthError) return <AuthErrorView error={error} />;
     throw error;
   }
+  if (preview && !ctx.previewFeatures) notFound();
   return <>{children(ctx)}</>;
 }

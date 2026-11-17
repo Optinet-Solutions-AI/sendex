@@ -7,17 +7,17 @@ export const dynamic = "force-dynamic";
 
 /** Upload Contacts: files or paste, then the Import step (settings, field types), chunked import. */
 export default async function UploadListPage() {
-  let organisationId: string;
+  let ctx: Awaited<ReturnType<typeof requireAction>>;
   try {
-    organisationId = (await requireAction("list.upload")).organisationId;
+    ctx = await requireAction("list.upload");
   } catch (error) {
     if (error instanceof AuthError) return <AuthErrorView error={error} />;
     throw error;
   }
-  const lists = await listListNames(db(), organisationId);
+  const lists = await listListNames(db(), ctx.organisationId);
   return (
     <section className="max-w-6xl">
-      <UploadForm lists={lists} />
+      <UploadForm lists={lists} showProvider={ctx.previewFeatures} />
     </section>
   );
 }

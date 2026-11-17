@@ -14,6 +14,7 @@
     "generate": "drizzle-kit generate",
     "migrate": "tsx src/migrate.ts",
     "seed": "tsx src/seed.ts",
+    "seed:activity": "tsx src/seed-activity.ts",
     "studio": "drizzle-kit studio",
     "erd": "tsx scripts/erd.ts",
     "erd:check": "tsx scripts/erd.ts --check"

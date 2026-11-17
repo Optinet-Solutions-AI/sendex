@@ -22,7 +22,9 @@ import {
   listListNames,
   listLists,
   listMembersPage,
+  listProviders,
   setListArchived,
+  setListProvider,
 } from "./lists.js";
 
 let t: TestDb;
@@ -533,5 +535,30 @@ describe("importContacts: bad members actually added", () => {
     expect(second.imported).toBe(1);
     expect(second.skippedExisting).toBe(1);
     expect(second.importedBad).toEqual({ landline: 1, suspicious: 0 });
+  });
+});
+
+describe("list data provider (D5-01)", () => {
+  it("is stored on a new list, changed, cleared and scoped to the organisation", async () => {
+    const org = await seedOrganisation(t.db, "provider-a");
+    const other = await seedOrganisation(t.db, "provider-b");
+    const plain = await createList(t.db, org, { name: "UK_PLAIN", country: "GB" });
+    expect(plain.provider).toBeNull();
+    const zen = await createList(t.db, org, { name: "UK_ZEN_9", country: "GB", provider: "ZEN" });
+    expect(zen.provider).toBe("ZEN");
+
+    expect(await setListProvider(t.db, other, zen.id, "DER")).toBe(false);
+    expect((await getList(t.db, org, zen.id))?.provider).toBe("ZEN");
+
+    expect(await setListProvider(t.db, org, zen.id, "DER")).toBe(true);
+    expect((await getList(t.db, org, zen.id))?.provider).toBe("DER");
+    expect(await setListProvider(t.db, org, zen.id, null)).toBe(true);
+    expect((await getList(t.db, org, zen.id))?.provider).toBeNull();
+
+    expect(await listProviders(t.db, org)).toEqual([]);
+    await setListProvider(t.db, org, zen.id, "ZEN");
+    await setListProvider(t.db, org, plain.id, "DER");
+    expect(await listProviders(t.db, org)).toEqual(["DER", "ZEN"]);
+    expect(await listProviders(t.db, other)).toEqual([]);
   });
 });

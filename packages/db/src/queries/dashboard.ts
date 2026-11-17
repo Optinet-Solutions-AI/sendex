@@ -22,7 +22,7 @@ export interface DashboardFilter {
 }
 
 /** `db.execute` returns a row list on postgres-js and `{ rows }` on PGlite. */
-function rowsOf(result: unknown): Record<string, unknown>[] {
+export function rowsOf(result: unknown): Record<string, unknown>[] {
   if (Array.isArray(result)) return result as Record<string, unknown>[];
   const maybe = result as { rows?: Record<string, unknown>[] };
   return maybe.rows ?? [];
@@ -41,7 +41,7 @@ function codes(countries: readonly string[] | undefined): string[] {
   return (countries ?? []).map((c) => c.toUpperCase()).filter((c) => /^[A-Z]{2}$/.test(c));
 }
 
-function inCountries(column: SQL, countries: readonly string[] | undefined): SQL {
+export function inCountries(column: SQL, countries: readonly string[] | undefined): SQL {
   const list = codes(countries);
   if (list.length === 0) return sql``;
   return sql` and ${column} in (${sql.join(
@@ -135,7 +135,11 @@ function depositFacts(organisationId: string, filter: DashboardFilter, onlyApi =
  * Sends and first deposits stacked: sum `sent`, `leads`, `cost` and `sales`, `revenue` over
  * it. `count(*)` would count the deposit rows as sends, so read models use `sum(f.sent)`.
  */
-function messageFacts(organisationId: string, filter: DashboardFilter, onlyApi = false): SQL {
+export function messageFacts(
+  organisationId: string,
+  filter: DashboardFilter,
+  onlyApi = false,
+): SQL {
   return sql`${sendFacts(organisationId, filter, onlyApi)}
     union all ${depositFacts(organisationId, filter, onlyApi)}`;
 }

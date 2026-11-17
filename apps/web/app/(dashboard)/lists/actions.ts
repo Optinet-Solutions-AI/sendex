@@ -6,6 +6,7 @@ import {
   importedGood,
   type ListCountry,
   ListCountrySchema,
+  ListProviderSchema,
   timezoneForCountry,
   totalDropped,
   UPLOAD_CHUNK_SIZE,
@@ -30,10 +31,11 @@ import {
   recordAudit,
   setCampaignLists,
   setListArchived,
+  setListProvider,
 } from "@sendex/db";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { AuthError, requireAction } from "../../../lib/auth";
+import { AuthError, requireAction, requirePreviewAction } from "../../../lib/auth";
 import { assertCountryOpen, ClosedCountryError } from "../../../lib/open-countries";
 
 /**
@@ -115,7 +117,11 @@ export async function startUpload(
     const settings = UploadSettingsSchema.parse(input);
     if (settings.target.kind === "new") {
       assertCountryOpen(settings.target.country);
-      const list = await createList(db(), ctx.organisationId, settings.target);
+      // The data provider is a preview feature (D5-09): ignored for everyone else.
+      const target = ctx.previewFeatures
+        ? settings.target
+        : { ...settings.target, provider: undefined };
+      const list = await createList(db(), ctx.organisationId, target);
       return { listId: list.id, name: list.name, country: settings.target.country };
     }
     const list = await getList(db(), ctx.organisationId, settings.target.listId);
@@ -272,6 +278,31 @@ export async function createCampaignFromListAction(
     });
     revalidatePath("/campaigns");
     return { campaignId: campaign.id };
+  });
+}
+
+/** Set or clear who supplied a list's data (D5-01). */
+export async function setListProviderAction(
+  listId: string,
+  provider: string | null,
+): Promise<ActionResult<{ provider: string | null }>> {
+  return run(async () => {
+    const ctx = await requirePreviewAction("list.upload");
+    const id = z.uuid().parse(listId);
+    const value = ListProviderSchema.parse(provider);
+    const list = await getList(db(), ctx.organisationId, id);
+    if (!list) throw new Error("List not found");
+    await setListProvider(db(), ctx.organisationId, id, value);
+    await recordAudit(db(), ctx.organisationId, {
+      actorUserId: ctx.userId,
+      action: "list.provider",
+      targetType: "list",
+      targetId: id,
+      details: { name: list.name, provider: value },
+    });
+    revalidatePath("/lists");
+    revalidatePath(`/lists/${id}`);
+    return { provider: value };
   });
 }
 

@@ -44,6 +44,8 @@ export interface OrgContext {
   organisationId: string;
   clerkOrgId: string;
   role: Role;
+  /** The organisation sees the features still in preview (D5-09). */
+  previewFeatures: boolean;
 }
 
 async function resolveUser(database: Database, clerkUserId: string) {
@@ -107,8 +109,22 @@ export const requireOrg = cache(async (): Promise<OrgContext> => {
     organisationId: organisation.id,
     clerkOrgId: session.orgId,
     role,
+    previewFeatures: organisation.previewFeatures === true,
   };
 });
+
+/**
+ * `requireAction()` for a feature that is still in preview (D5-09): also refuses when the
+ * organisation does not have the preview switched on, so a hidden screen's server actions
+ * cannot be called by an account that does not see the screen.
+ */
+export async function requirePreviewAction(action: Action): Promise<OrgContext> {
+  const ctx = await requireAction(action);
+  if (!ctx.previewFeatures) {
+    throw new AuthError(403, "forbidden", "This feature is not switched on for your organisation.");
+  }
+  return ctx;
+}
 
 /** `requireOrg()` plus a permission check. Throws `AuthError` 403 when the role may not act. */
 export async function requireAction(action: Action): Promise<OrgContext> {

@@ -1,0 +1,1 @@
+ALTER TABLE "organisation_settings" ADD COLUMN "daily_send_target" integer;

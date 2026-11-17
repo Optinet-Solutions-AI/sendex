@@ -8,6 +8,7 @@ import {
   Megaphone,
   Radio,
   Settings,
+  TrendingUp,
   Users,
 } from "lucide-react";
 import Link from "next/link";
@@ -18,6 +19,7 @@ import { activeGroup, activeHref, isSubgroup, type NavGroup } from "./nav";
 const ICONS: Record<NavGroup["icon"], ReactNode> = {
   dashboard: <LayoutGrid className="h-5 w-5" aria-hidden="true" />,
   campaigns: <Megaphone className="h-5 w-5" aria-hidden="true" />,
+  performance: <TrendingUp className="h-5 w-5" aria-hidden="true" />,
   contacts: <Users className="h-5 w-5" aria-hidden="true" />,
   routes: <Radio className="h-5 w-5" aria-hidden="true" />,
   settings: <Settings className="h-5 w-5" aria-hidden="true" />,

@@ -15,7 +15,10 @@ vi.mock("@clerk/nextjs/server", () => ({
 /** In-memory stand-in for the tenancy queries in `@sendex/db`. */
 const store = vi.hoisted(() => {
   const users = new Map<string, { id: string; clerkUserId: string; email: string }>();
-  const orgs = new Map<string, { id: string; clerkOrgId: string; name: string; slug: string }>();
+  const orgs = new Map<
+    string,
+    { id: string; clerkOrgId: string; name: string; slug: string; previewFeatures?: boolean }
+  >();
   const memberships = new Map<string, { organisationId: string; userId: string; role: string }>();
   const key = (o: string, u: string) => `${o}:${u}`;
   return {
@@ -74,7 +77,7 @@ const store = vi.hoisted(() => {
 
 vi.mock("@sendex/db", () => store);
 
-import { AuthError, isAuthError, requireAction, requireOrg } from "./auth";
+import { AuthError, isAuthError, requireAction, requireOrg, requirePreviewAction } from "./auth";
 
 function signedIn(overrides: Record<string, unknown> = {}) {
   clerk.auth.mockResolvedValue({
@@ -117,6 +120,7 @@ describe("development auth stub", () => {
       organisationId: "o_dev_org_external",
       clerkOrgId: "dev_org_external",
       role: "owner",
+      previewFeatures: false,
     });
     expect(store.orgs.get("dev_org_external")?.slug).toBe("external");
     expect(store.memberships.get("o_dev_org_external:u_dev_user_external")?.role).toBe("owner");
@@ -184,6 +188,7 @@ describe("requireOrg", () => {
       organisationId: "o_org_1",
       clerkOrgId: "org_1",
       role: "owner",
+      previewFeatures: false,
     });
     expect(store.users.get("user_1")?.email).toBe("chris@example.com");
     expect(store.orgs.get("org_1")?.slug).toBe("external");
@@ -249,5 +254,29 @@ describe("requireAction", () => {
     clerk.auth.mockResolvedValue({ userId: null, orgId: null, orgRole: null });
     const err = await requireAction("campaign.view").catch((e: unknown) => e);
     expect((err as AuthError).status).toBe(401);
+  });
+});
+
+describe("preview features (D5-09)", () => {
+  it("refuses a preview feature when the organisation does not have the preview on", async () => {
+    signedIn();
+    const ctx = await requireAction("campaign.view");
+    expect(ctx.previewFeatures).toBe(false);
+    const err = await requirePreviewAction("campaign.view").catch((e: unknown) => e);
+    expect(isAuthError(err)).toBe(true);
+    expect((err as AuthError).status).toBe(403);
+    expect((err as AuthError).message).toBe(
+      "This feature is not switched on for your organisation.",
+    );
+  });
+
+  it("lets it through once the organisation has the preview on", async () => {
+    signedIn();
+    await requireOrg();
+    const org = store.orgs.get("org_1");
+    if (!org) throw new Error("the organisation was not created");
+    store.orgs.set("org_1", { ...org, previewFeatures: true });
+    const ctx = await requirePreviewAction("campaign.view");
+    expect(ctx.previewFeatures).toBe(true);
   });
 });

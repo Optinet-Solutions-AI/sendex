@@ -91,6 +91,8 @@ export const messages = pgTable(
     index("messages_sent_pending_receipt_idx").on(t.sentAt).where(sql`"status" = 'sent'`),
     /** The Campaigns Log and Send Calendar window messages by sent_at (D4-05). */
     index("messages_org_sent_idx").on(t.organisationId, t.sentAt),
+    /** "How often was this contact sent to": the dashboard's Contacts tab counts per contact (D5-02). */
+    index("messages_contact_idx").on(t.contactId),
   ],
 );
 

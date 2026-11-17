@@ -56,6 +56,8 @@ export const lists = pgTable("lists", {
     .references(() => organisations.id, { onDelete: "cascade" }),
   name: text("name").notNull(),
   country: char("country", { length: 2 }).notNull(),
+  /** Who supplied the data: a short code such as ZEN or DER; null when not set (D5-01). */
+  provider: text("provider"),
   /** Denormalised member count, maintained by the upload and flush helpers. */
   numbersCount: integer("numbers_count").notNull().default(0),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

@@ -34,6 +34,7 @@ export default defineConfig({
             { label: "The campaigns list", slug: "using/campaigns-list" },
             { label: "Reports", slug: "using/reports" },
             { label: "Dashboard", slug: "using/dashboard" },
+            { label: "Performance", slug: "using/performance" },
             { label: "Routes", slug: "using/routes" },
             { label: "Balance and billing", slug: "using/balance-and-billing" },
             { label: "Daily caps and alerts", slug: "using/caps-and-alerts" },

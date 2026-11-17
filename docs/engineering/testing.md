@@ -20,6 +20,29 @@ pnpm --filter @sendex/web test     # one package
 pnpm --filter @sendex/web exec vitest run lib/auth.test.ts   # one file
 ```
 
+## Trying a branch on your own machine (D5-02)
+
+To look at screens that are not on `main` yet, with numbers in them:
+
+```sh
+git fetch origin && git checkout <the branch>
+pnpm install
+wsl -d Ubuntu -u root -- systemctl start postgresql redis-server   # the local database
+pnpm dev:demo
+```
+
+`pnpm dev:demo` (`scripts/dev-demo.mjs`) applies the branch's migrations to the **local**
+database, runs the demo seed and the demo activity seed, and starts the dashboard on
+http://localhost:3000 under the development auth stub: you are the owner of the demo
+organisation "External", with no Clerk sign-in. Every country is open in this mode.
+
+`pnpm db:seed:activity` on its own adds the demo activity
+(`packages/db/src/seed/demo-activity.ts`): twelve lists with data providers (four left
+untouched), eighteen finished campaigns over the last six weeks, their messages with ledger
+debits, clicks, registrations and first deposits. The numbers are made up, nothing is sent, and
+a second run changes nothing. Both commands refuse a database that is not on this machine, so
+they cannot write demo rows into the live one.
+
 ## End-to-end tests (Playwright)
 
 `apps/web/e2e/*.spec.ts`, configured in `apps/web/playwright.config.ts`: Chromium only,

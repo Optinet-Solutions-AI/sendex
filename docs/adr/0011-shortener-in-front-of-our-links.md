@@ -18,6 +18,8 @@ Sendex makes one short code per SMS: that is how a click, and later a registrati
 - **The shortener can never stop a send.** Without `SHORT_IO_KEY` nothing changes. If the domains cannot be read, the lap sends our own links. If a bulk call is refused (for example the plan's links are used up), that batch and the rest of the lap send our own links. If one address is missing from an answer, that one message carries our own link.
 - **Balance and cap estimates still count our own, longer link.** The text is billed by the parts of what is really sent, so a shortened message can cost fewer parts than the estimate, never more.
 
+- **Added 2026-11-17 (D4-24): the ending is ours, three characters.** The team asked for an address as short as SMS Edge's (two or three characters after the slash; Short.io's own endings are six). The worker asks for a random three-character ending per link, about 175,000 per domain, which is ample for a plan of 1,000 links. An ending already taken is asked for again without one, so Short.io picks. Three characters will not hold real volume; the length has to grow when our own short domains replace this.
+
 ## Consequences
 
 - With the Free plan this is for test sends only: one link per SMS means the account's 1000 links are 1000 SMS. After that every lap falls back to our own link by itself; nothing fails.

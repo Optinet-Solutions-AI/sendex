@@ -355,6 +355,12 @@ conversions are counted as before (ADR 0011).
   `send/send-lap.ts` makes the batch's short codes and asks `POST /links/bulk` for their
   addresses, for at most the numbers still eligible. The claim transaction never waits
   on Short.io.
+- **Three characters after the slash (D4-24).** The client asks for its own ending on
+  every link (`randomShortPath`, `SHORT_PATH_LENGTH` = 3, from the short code alphabet)
+  instead of Short.io's six. An ending already in use on the domain is refused for that
+  one link (409 inside a 200 answer); those links are asked for once more without an
+  ending and get Short.io's own. If that second call fails, the links already made are
+  kept and the rest carry our own link.
 - **Falling back.** Domains unreadable: the lap sends our own links. A bulk call
   refused: that batch and the rest of the lap send our own links (one warning in the
   log, `shortener refused`). One address missing: that message carries our own link.

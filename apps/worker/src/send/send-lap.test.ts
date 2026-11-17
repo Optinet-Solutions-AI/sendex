@@ -16,6 +16,7 @@ import { createFakeCapsStore } from "./caps.fake.js";
 import { createProgressTracker, progressKeys } from "./progress.js";
 import { fakeRedis } from "./redis.fake.js";
 import { type SendLapDeps, sendLap } from "./send-lap.js";
+import type { LinkShortener } from "./shortener.js";
 import { createFakeStore, type FakeMember, type FakeStoreOptions } from "./store.fake.js";
 
 const quiet = createLogger({ write: () => undefined });
@@ -561,5 +562,149 @@ describe("sendLap with daily caps (D3-11)", () => {
     expect(store.lap.status).toBe("done");
     expect(capsStore.refusals).toEqual([]);
     expect(capsStore.alerts).toEqual([]);
+  });
+});
+
+describe("sendLap with a link shortener (D4-22)", () => {
+  /** A shortener that remembers what it was asked and answers `https://<domain>/s<n>`. */
+  function fakeShortener(options: { domains?: string[]; fail?: "domains" | "shorten" } = {}) {
+    const asked: Array<{ domain: string; targets: string[] }> = [];
+    let n = 0;
+    const shortener: LinkShortener = {
+      async domains() {
+        if (options.fail === "domains") throw new Error("Short.io answered 500");
+        return options.domains ?? ["cc.test", "aa.test", "bb.test"];
+      },
+      async shorten(domain, targets) {
+        if (options.fail === "shorten") throw new Error("Short.io answered 402");
+        asked.push({ domain, targets: [...targets] });
+        return targets.map(() => {
+          n += 1;
+          return `https://${domain}/s${n}`;
+        });
+      },
+    };
+    return { shortener, asked };
+  }
+
+  /** A lap of three over a list of three; made fresh each time, the fake store marks members sent. */
+  const three = () => ({
+    members: members(3),
+    ctx: context({ lap: { ...context().lap, testSize: 3 } }),
+  });
+
+  it("puts the shortener's address in the text and keeps our own code on the message", async () => {
+    const { shortener, asked } = fakeShortener();
+    let code = 0;
+    const { deps, store } = harness(three(), new FakeProvider(), {
+      shortener,
+      shortCode: () => {
+        code += 1;
+        return `code000${code}`;
+      },
+    });
+    const result = await sendLap(deps, job, meta());
+    expect(result).toMatchObject({ outcome: "done", sent: 3 });
+    expect(store.messages.map((m) => m.text)).toEqual([
+      "Hi Name0, play at https://aa.test/s1",
+      "+34600000002 wins at https://aa.test/s2",
+      "Hi Name2, play at https://aa.test/s3",
+    ]);
+    // The short address points at our own tracked link, which the message keeps for the click.
+    expect(store.messages.map((m) => m.shortCode)).toEqual(["code0001", "code0002", "code0003"]);
+    expect(asked).toEqual([
+      {
+        domain: "aa.test",
+        targets: [
+          "http://localhost:8787/code0001",
+          "http://localhost:8787/code0002",
+          "http://localhost:8787/code0003",
+        ],
+      },
+    ]);
+  });
+
+  it("gives the next lap of the campaign the next domain", async () => {
+    const { shortener } = fakeShortener();
+    const { deps, store } = harness({ ...three(), earlierLaps: 1 }, new FakeProvider(), {
+      shortener,
+    });
+    await sendLap(deps, job, meta());
+    expect(store.messages[0]?.text).toContain("https://bb.test/");
+    const finish = store.audits.find((a) => a.action === "lap.finish");
+    expect(finish?.details).toMatchObject({ shortDomain: "bb.test" });
+  });
+
+  it("asks for no more short addresses than there are numbers left to send to", async () => {
+    const { shortener, asked } = fakeShortener();
+    // The lap wants 100 but the list has only 3 numbers.
+    const { deps } = harness({ members: members(3) }, new FakeProvider(), { shortener });
+    await sendLap(deps, job, meta());
+    expect(asked.map((a) => a.targets.length)).toEqual([3]);
+  });
+
+  it("sends with our own link when the shortener refuses, and stops asking for that lap", async () => {
+    const { shortener } = fakeShortener({ fail: "shorten" });
+    const { deps, store } = harness({ members: members(120) }, new FakeProvider(), {
+      shortener,
+      shortCode: () => "abcdefgh",
+      batchSize: 50,
+    });
+    let calls = 0;
+    const counted: LinkShortener = {
+      domains: () => shortener.domains(),
+      shorten: (domain, targets) => {
+        calls += 1;
+        return shortener.shorten(domain, targets);
+      },
+    };
+    const result = await sendLap({ ...deps, shortener: counted }, job, meta());
+    expect(result).toMatchObject({ outcome: "done", sent: 100 });
+    expect(store.messages[0]?.text).toBe("Hi Name0, play at http://localhost:8787/abcdefgh");
+    expect(store.messages[99]?.text).toContain("http://localhost:8787/abcdefgh");
+    expect(calls).toBe(1);
+  });
+
+  it("sends with our own link when the shortener's domains cannot be read", async () => {
+    const { shortener, asked } = fakeShortener({ fail: "domains" });
+    const { deps, store } = harness(three(), new FakeProvider(), {
+      shortener,
+      shortCode: () => "abcdefgh",
+    });
+    const result = await sendLap(deps, job, meta());
+    expect(result).toMatchObject({ outcome: "done", sent: 3 });
+    expect(store.messages[0]?.text).toBe("Hi Name0, play at http://localhost:8787/abcdefgh");
+    expect(asked).toHaveLength(0);
+  });
+
+  it("uses our own link for a message the shortener gave no address for", async () => {
+    const { shortener } = fakeShortener();
+    const partial: LinkShortener = {
+      domains: () => shortener.domains(),
+      shorten: async (domain, targets) =>
+        targets.map((_, i) => (i === 1 ? null : `https://${domain}/ok${i}`)),
+    };
+    const { deps, store } = harness(three(), new FakeProvider(), {
+      shortener: partial,
+      shortCode: () => "abcdefgh",
+    });
+    await sendLap(deps, job, meta());
+    expect(store.messages.map((m) => m.text)).toEqual([
+      "Hi Name0, play at https://aa.test/ok0",
+      "+34600000002 wins at http://localhost:8787/abcdefgh",
+      "Hi Name2, play at https://aa.test/ok2",
+    ]);
+  });
+
+  it("leaves the shortener alone when the campaign has no link", async () => {
+    const { shortener, asked } = fakeShortener();
+    const { deps, store } = harness(
+      { ...three(), ctx: context({ link: null, lap: { ...context().lap, testSize: 3 } }) },
+      new FakeProvider(),
+      { shortener },
+    );
+    await sendLap(deps, job, meta());
+    expect(store.messages[0]?.text).toBe("Hi Name0, play at ");
+    expect(asked).toHaveLength(0);
   });
 });

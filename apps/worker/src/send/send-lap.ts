@@ -8,6 +8,7 @@ import {
   isCustomProvider,
   type PickOption,
   renderMessageText,
+  shortDomainForLap,
   startOfUtcDay,
   utcDayKey,
 } from "@sendex/core";
@@ -33,6 +34,7 @@ import type { Logger } from "../log.js";
 import type { JobMeta } from "../queues.js";
 import { type ProgressTracker, progressKeys, type SendRedis } from "./progress.js";
 import { generateShortCode } from "./short-code.js";
+import type { LinkShortener } from "./shortener.js";
 
 export const DEFAULT_BATCH_SIZE = 50;
 export const DEFAULT_PAUSE_RETRY_MS = 10_000;
@@ -63,6 +65,11 @@ export interface SendLapDeps {
    * cancelled as unknown providers.
    */
   customProvider?: (route: LapContext["route"]) => Provider | null;
+  /**
+   * Puts a shortener's address in front of our own tracked link (D4-22), on a domain that
+   * changes with every lap. Absent, or failing, the SMS carries our own link.
+   */
+  shortener?: LinkShortener;
 }
 
 export type SendLapOutcome = "done" | "cancelled" | "paused" | "skipped";
@@ -75,6 +82,12 @@ export interface SendLapResult {
   reason?: string;
   /** Messages the lap wanted to send but a daily cap refused (D3-11). */
   refused?: number;
+}
+
+/** A tracked link made ahead of a batch: our code and, when shortened, the address to show. */
+interface PreparedLink {
+  code: string;
+  url: string | null;
 }
 
 type Guard =
@@ -306,23 +319,68 @@ export async function sendLap(
     remaining,
     skipped,
   });
+  // The shortener domain of this lap (D4-22): the lap's place in the campaign picks it.
+  let shortDomain: string | null = null;
+  if (deps.shortener && ctx.link && remaining > 0) {
+    try {
+      const campaignLaps = await store.listCampaignLaps(ctx.lap.organisationId, ctx.lap.campaignId);
+      const lapIndex = campaignLaps.findIndex((l) => l.id === ctx.lap.id);
+      shortDomain = shortDomainForLap(await deps.shortener.domains(), lapIndex);
+      log("info", "lap short links", { ...fields, shortDomain, lapIndex });
+    } catch (err) {
+      log("warn", "shortener domains unavailable, sending our own links", { ...fields, err });
+    }
+  }
+  /** The domain that did carry this lap's links: set once the shortener has made some. */
+  let shortDomainUsed: string | null = null;
+
+  /**
+   * Short addresses for the next batch, made before the members are claimed: the claim is
+   * one database transaction and must not wait on another service. No more are asked for
+   * than there are numbers left, so none is wasted at the end of a list. On a refusal the
+   * rest of the lap sends our own links.
+   */
+  async function prepareLinks(limit: number): Promise<PreparedLink[]> {
+    if (!deps.shortener || !shortDomain || !ctx.link) return [];
+    const count = Math.min(limit, await store.countEligibleMembers(eligibility));
+    const codes = Array.from({ length: count }, () => newShortCode());
+    if (count === 0) return [];
+    try {
+      const urls = await deps.shortener.shorten(
+        shortDomain,
+        codes.map((code) => `${linksBaseUrl}/${code}`),
+      );
+      if (urls.some((url) => url)) shortDomainUsed = shortDomain;
+      return codes.map((code, i) => ({ code, url: urls[i] ?? null }));
+    } catch (err) {
+      log("warn", "shortener refused, sending our own links for the rest of the lap", {
+        ...fields,
+        shortDomain,
+        err,
+      });
+      shortDomain = null;
+      return codes.map((code) => ({ code, url: null }));
+    }
+  }
+
   // Round-robin over sender ids and texts; a resumed lap continues where the count left off.
   let rotation = existing;
 
-  function build(members: EligibleMember[]): NewMessageInput[] {
-    return members.map((m) => {
+  function build(members: EligibleMember[], prepared: PreparedLink[] = []): NewMessageInput[] {
+    return members.map((m, i) => {
       const senderId = ctx.senderIds[rotation % ctx.senderIds.length] ?? "";
       const adText = ctx.texts[rotation % ctx.texts.length];
       const template = adText?.text ?? "";
       rotation += 1;
-      const shortCode = ctx.link ? newShortCode() : null;
+      const link = ctx.link ? (prepared[i] ?? { code: newShortCode(), url: null }) : null;
+      const shortCode = link?.code ?? null;
       const text = renderMessageText(
         template,
         {
           firstName: m.firstName,
           lastName: m.lastName,
           phone: m.e164,
-          domain: shortCode ? `${linksBaseUrl}/${shortCode}` : null,
+          domain: link ? (link.url ?? `${linksBaseUrl}/${link.code}`) : null,
         },
         deps.pickOption,
       );
@@ -385,13 +443,15 @@ export async function sendLap(
       if (deps.caps) await refuse(deps.caps, g);
       break;
     }
+    const limit = Math.min(wanted, g.limit ?? wanted);
+    const prepared = await prepareLinks(limit);
     const created = await store.claimAndCreateMessages({
       lap: ctx.lap,
       eligibility,
-      limit: Math.min(wanted, g.limit ?? wanted),
+      limit,
       priceMicro: basePriceMicro,
       feeMicro,
-      build,
+      build: (claimed) => build(claimed, prepared),
     });
     if (created.length === 0) break; // the list has no eligible member left
     remaining -= created.length;
@@ -411,6 +471,7 @@ export async function sendLap(
       failed: ctx.lap.failed + runFailed,
       planned: ctx.lap.testSize,
       skipped,
+      ...(shortDomainUsed ? { shortDomain: shortDomainUsed } : {}),
       ...(refusalReason ? { refused, refusalReason } : {}),
     },
   });

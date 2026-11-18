@@ -12,7 +12,7 @@ page, with the totals of its laps.
 | --- | --- |
 | **ID** | The first block of the campaign's id; hover for the full id. |
 | **Campaign** | The name; click it to open the campaign. |
-| **Status** | A badge with its own label for each status: **Draft** (grey), **Scheduled** (outlined), **Sending** (green outline), **Paused** (amber), **Stopped** (red) or **Completed** (green). The campaign page and a list's Campaigns tab use the same badge. |
+| **Status** | A badge with its own label for each status: **Draft** (grey), **Scheduled** (outlined), **Sending** (green outline), **Paused** (amber), **Stopped** (red) or **Completed** (green). A campaign is **Sending** while a lap is queued or going out and turns **Completed** by itself within a few seconds of its last lap finishing; sending another lap makes it **Sending** again. The campaign page and a list's Campaigns tab use the same badge. |
 | **Country** | The flag and country code the campaign sends to. |
 | **Laps** | How many laps (list × route sends) the campaign has queued or run. |
 | **Sent** | Messages the carrier accepted, over all laps. |

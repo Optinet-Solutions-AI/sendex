@@ -733,3 +733,130 @@ describe("segments at send time", () => {
     expect(names(await store.selectEligibleMembers(scope, 100))).toEqual(["seg-drop", "seg-keep"]);
   });
 });
+
+describe("completeIdleCampaigns (D4-23)", () => {
+  type CampaignStatus = "draft" | "scheduled" | "sending" | "paused" | "stopped" | "completed";
+  type LapStatus = "queued" | "sending" | "done" | "cancelled";
+
+  async function addCampaign(
+    name: string,
+    status: CampaignStatus,
+    extra: Partial<typeof campaigns.$inferInsert> = {},
+  ): Promise<string> {
+    return must(
+      (
+        await t.db
+          .insert(campaigns)
+          .values({
+            organisationId: org,
+            name,
+            country: "ES",
+            timezone: "Europe/Madrid",
+            status,
+            ...extra,
+          })
+          .returning({ id: campaigns.id })
+      )[0],
+      "campaign",
+    ).id;
+  }
+
+  async function addLap(campaign: string, status: LapStatus, active = true): Promise<string> {
+    return must(
+      (
+        await t.db
+          .insert(laps)
+          .values({
+            organisationId: org,
+            campaignId: campaign,
+            listId,
+            routeId,
+            testSize: 1,
+            status,
+            active,
+          })
+          .returning({ id: laps.id })
+      )[0],
+      "lap",
+    ).id;
+  }
+
+  async function statusOf(id: string): Promise<string | undefined> {
+    const [row] = await t.db
+      .select({ status: campaigns.status })
+      .from(campaigns)
+      .where(eq(campaigns.id, id));
+    return row?.status;
+  }
+
+  it("marks a sending campaign completed once none of its laps is queued or sending", async () => {
+    const finished = await addCampaign("all laps done", "sending");
+    await addLap(finished, "done");
+    await addLap(finished, "cancelled");
+    const completed = await store.completeIdleCampaigns();
+    expect(completed).toContain(finished);
+    expect(await statusOf(finished)).toBe("completed");
+    // Nothing left to do on the next tick.
+    expect(await store.completeIdleCampaigns()).not.toContain(finished);
+  });
+
+  it("leaves a campaign sending while a lap is still queued or sending", async () => {
+    const waiting = await addCampaign("one lap queued", "sending");
+    await addLap(waiting, "done");
+    await addLap(waiting, "queued");
+    const running = await addCampaign("one lap sending", "sending");
+    await addLap(running, "sending");
+    const completed = await store.completeIdleCampaigns();
+    expect(completed).not.toContain(waiting);
+    expect(completed).not.toContain(running);
+    expect(await statusOf(waiting)).toBe("sending");
+    expect(await statusOf(running)).toBe("sending");
+  });
+
+  it("does not wait for a queued lap that is switched off", async () => {
+    const off = await addCampaign("queued lap switched off", "sending");
+    await addLap(off, "done");
+    await addLap(off, "queued", false);
+    expect(await store.completeIdleCampaigns()).toContain(off);
+    expect(await statusOf(off)).toBe("completed");
+  });
+
+  it("touches only sending campaigns that have laps", async () => {
+    const untouched: Array<[string, CampaignStatus]> = [];
+    for (const status of ["draft", "scheduled", "paused", "stopped"] as const) {
+      const id = await addCampaign(`idle ${status}`, status);
+      await addLap(id, "done");
+      untouched.push([id, status]);
+    }
+    const noLaps = await addCampaign("sending without laps", "sending");
+    untouched.push([noLaps, "sending"]);
+    const completed = await store.completeIdleCampaigns();
+    for (const [id, status] of untouched) {
+      expect(completed).not.toContain(id);
+      expect(await statusOf(id)).toBe(status);
+    }
+  });
+
+  it("leaves a campaign to AutoSender until AutoSender is done with it", async () => {
+    const measuring = await addCampaign("autosender measuring", "sending", { autosender: true });
+    await addLap(measuring, "done");
+    const stopped = await addCampaign("autosender finished", "sending", {
+      autosender: true,
+      autosenderStoppedAt: T2,
+    });
+    await addLap(stopped, "done");
+    const completed = await store.completeIdleCampaigns();
+    expect(completed).not.toContain(measuring);
+    expect(completed).toContain(stopped);
+    expect(await statusOf(measuring)).toBe("sending");
+  });
+
+  it("a completed campaign is sending again when a new lap of it is claimed", async () => {
+    const again = await addCampaign("sent, then topped up", "completed");
+    await addLap(again, "done");
+    const lap = await addLap(again, "queued");
+    const claimed = await store.claimQueuedLaps(new Date());
+    expect(claimed.map((l) => l.id)).toContain(lap);
+    expect(await statusOf(again)).toBe("sending");
+  });
+});

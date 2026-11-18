@@ -445,9 +445,11 @@ describe("estimateSend and createLaps", () => {
     await addAdTexts(t.db, orgA, campaign.id, "Hello {{domain}}");
     const link = await createLink(t.db, orgA, { name: "L", url: "https://x.example/{{dynamic}}" });
     await attachLink(t.db, orgA, campaign.id, link.id);
+    // Account-wide, so the estimate counts what is left of the list (5 of 10). A per campaign
+    // campaign that has not sent yet counts the whole list: see the D4-25 tests below.
     await updateSendSettings(t.db, orgA, campaign.id, {
       testSize: 3,
-      contactReuse: "per_campaign",
+      contactReuse: "account_wide",
       sendNow: true,
     });
 
@@ -714,5 +716,121 @@ describe("segment audiences", () => {
     const copy = await duplicateCampaign(t.db, orgA, campaign.id, null);
     const copied = await getCampaign(t.db, orgA, copy.id);
     expect(copied?.segments.map((s) => s.id)).toEqual([segment.id]);
+  });
+});
+
+describe("per campaign reuse starts from the whole list (D4-25)", () => {
+  /** A list of five: three already sent to by other campaigns, one bad, one never sent. */
+  async function usedList(name: string, prefix: string) {
+    const list = await seedList(orgA, name, "ES", prefix, 5);
+    const [a, b, c, d] = list.contacts;
+    if (!a || !b || !c || !d) throw new Error("setup failed");
+    for (const contact of [a, b, c]) {
+      await t.db
+        .update(listMembers)
+        .set({ sentAt: new Date("2026-11-01T10:00:00Z") })
+        .where(eq(listMembers.contactId, contact.id));
+    }
+    await t.db.update(listMembers).set({ bad: true }).where(eq(listMembers.contactId, d.id));
+    return list;
+  }
+
+  async function readyCampaign(
+    name: string,
+    listId: string,
+    reuse: "per_campaign" | "account_wide",
+  ) {
+    const campaign = await createCampaign(t.db, orgA, {
+      name,
+      country: "ES",
+      timezone: "Europe/Madrid",
+    });
+    const group = await createSidGroup(t.db, orgA, { name: `${name} SIDs`, country: "ES" });
+    await addSenderIds(t.db, orgA, group.id, ["AAA111"]);
+    await setCampaignSidGroup(t.db, orgA, campaign.id, group.id);
+    await setCampaignLists(t.db, orgA, campaign.id, [listId]);
+    await addAdTexts(t.db, orgA, campaign.id, "Hello");
+    await updateSendSettings(t.db, orgA, campaign.id, {
+      testSize: 10,
+      contactReuse: reuse,
+      sendNow: true,
+    });
+    return campaign;
+  }
+
+  const membersOf = (listId: string) =>
+    t.db.select().from(listMembers).where(eq(listMembers.listId, listId));
+
+  it("counts every good number for a per campaign campaign that has not sent yet", async () => {
+    const list = await usedList("Reuse count", "+34611000");
+    const fresh = await readyCampaign("Per campaign, new", list.id, "per_campaign");
+    const estimate = await estimateSend(t.db, orgA, fresh.id, {
+      routeIds: [route405],
+      sendAll: false,
+    });
+    // Four good numbers, three of them sent to by other campaigns: all four count.
+    expect(estimate.contacts).toBe(4);
+    expect(estimate.smsCount).toBe(4);
+    expect((await getCampaign(t.db, orgA, fresh.id))?.lists[0]?.available).toBe(4);
+  });
+
+  it("still counts only the unsent numbers for an account-wide campaign", async () => {
+    const list = await usedList("Reuse account wide", "+34612000");
+    const campaign = await readyCampaign("Account wide, new", list.id, "account_wide");
+    const estimate = await estimateSend(t.db, orgA, campaign.id, {
+      routeIds: [route405],
+      sendAll: false,
+    });
+    expect(estimate.contacts).toBe(1);
+    await createLaps(t.db, orgA, campaign.id, { routeIds: [route405], sendAll: false });
+    // Nothing was flushed: the three sent numbers keep their mark.
+    expect((await membersOf(list.id)).filter((m) => m.sentAt !== null)).toHaveLength(3);
+  });
+
+  it("flushes the lists by itself on the first send of a per campaign campaign", async () => {
+    const list = await usedList("Reuse first send", "+34613000");
+    const campaign = await readyCampaign("Per campaign, first send", list.id, "per_campaign");
+    const created = await createLaps(t.db, orgA, campaign.id, {
+      routeIds: [route405],
+      sendAll: false,
+      actorUserId: null,
+    });
+    expect(created.map((l) => l.testSize)).toEqual([4]);
+    const members = await membersOf(list.id);
+    expect(members.filter((m) => m.sentAt !== null)).toHaveLength(0);
+    expect(members.every((m) => m.flushedAt instanceof Date)).toBe(true);
+    // The bad flag is untouched.
+    expect(members.filter((m) => m.bad)).toHaveLength(1);
+    const audit = await t.db.select().from(auditLog).where(eq(auditLog.targetId, list.id));
+    expect(audit).toHaveLength(1);
+    expect(audit[0]).toMatchObject({
+      action: "list.flush",
+      details: { members: 5, by: "campaign", campaignId: campaign.id },
+    });
+  });
+
+  it("does not flush again on a later send of the same campaign", async () => {
+    const list = await usedList("Reuse later send", "+34614000");
+    const campaign = await readyCampaign("Per campaign, later send", list.id, "per_campaign");
+    await createLaps(t.db, orgA, campaign.id, { routeIds: [route405], sendAll: false });
+    // The send loop marks two numbers as sent.
+    const [first, second] = list.contacts;
+    if (!first || !second) throw new Error("setup failed");
+    for (const contact of [first, second]) {
+      await t.db
+        .update(listMembers)
+        .set({ sentAt: new Date() })
+        .where(eq(listMembers.contactId, contact.id));
+    }
+    const estimate = await estimateSend(t.db, orgA, campaign.id, {
+      routeIds: [route405],
+      sendAll: false,
+    });
+    // Once it has laps, the campaign counts what is left of the list: 4 good, 2 sent.
+    expect(estimate.contacts).toBe(2);
+    await createLaps(t.db, orgA, campaign.id, { routeIds: [route405], sendAll: false });
+    expect((await membersOf(list.id)).filter((m) => m.sentAt !== null)).toHaveLength(2);
+    const flushes = await t.db.select().from(auditLog).where(eq(auditLog.targetId, list.id));
+    expect(flushes).toHaveLength(1);
   });
 });

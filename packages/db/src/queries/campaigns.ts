@@ -23,7 +23,7 @@ import {
   senderIds,
   sidGroups,
 } from "../schema/campaigns.js";
-import { lists } from "../schema/lists.js";
+import { listMembers, lists } from "../schema/lists.js";
 import { routes } from "../schema/routes.js";
 import type { Db } from "../types.js";
 import { recordAudit } from "./audit.js";
@@ -61,13 +61,17 @@ function toNullableDate(value: unknown): Date | null {
  * is not suppressed for the organisation. Written with explicit aliases and a literal
  * `lists.id` because Drizzle drops table qualifiers in single-table selects; callers must
  * select from `lists` unaliased.
+ *
+ * `ignoreSent` leaves the sent flags out: what a per campaign campaign reaches on its first
+ * send, which flushes its lists by itself (D4-25).
  */
-function availableSql(): SQL<number> {
+function availableSql(ignoreSent = false): SQL<number> {
+  const unsent = ignoreSent ? sql`` : sql`and (m.sent_at is null or m.flushed_at > m.sent_at)`;
   return sql<number>`(select count(*) from list_members m
     join contacts c on c.id = m.contact_id
     where m.list_id = lists.id
       and m.bad = false
-      and (m.sent_at is null or m.flushed_at > m.sent_at)
+      ${unsent}
       and not exists (select 1 from suppressions s
         where s.organisation_id = m.organisation_id
           and s.e164 = c.e164))::int`.mapWith(Number);
@@ -392,9 +396,29 @@ export interface CampaignDetail extends CampaignRow {
   routeIds: string[];
 }
 
+/**
+ * True for a per campaign campaign that has no lap yet (D4-25). "Per campaign" means a new
+ * campaign can message every contact of its lists whoever messaged them before, with no
+ * flush by hand: its first send flushes the lists itself (`createLaps`), and until then its
+ * counts leave the sent flags out. Once it has laps it counts what is left, like any other.
+ */
+async function startsFromWholeLists(
+  db: Db,
+  campaign: Pick<CampaignRow, "id" | "contactReuse">,
+): Promise<boolean> {
+  if (campaign.contactReuse !== "per_campaign") return false;
+  const [lap] = await db
+    .select({ id: laps.id })
+    .from(laps)
+    .where(eq(laps.campaignId, campaign.id))
+    .limit(1);
+  return lap === undefined;
+}
+
 async function campaignListsWithAvailable(
   db: Db,
   campaignId: string,
+  ignoreSent = false,
 ): Promise<CampaignListSummary[]> {
   return db
     .select({
@@ -402,7 +426,7 @@ async function campaignListsWithAvailable(
       name: lists.name,
       country: lists.country,
       numbersCount: lists.numbersCount,
-      available: availableSql(),
+      available: availableSql(ignoreSent),
       sent: sentSql(),
       bad: badSql(),
     })
@@ -521,9 +545,10 @@ export async function getCampaign(
     .where(and(eq(campaigns.organisationId, organisationId), eq(campaigns.id, id)))
     .limit(1);
   if (!campaign) return null;
+  const wholeLists = await startsFromWholeLists(db, campaign);
   const [listRows, segmentRows, sidGroup, textRows, linkRows, lapRows, routeRows] =
     await Promise.all([
-      campaignListsWithAvailable(db, id),
+      campaignListsWithAvailable(db, id, wholeLists),
       campaignSegmentsWithAvailable(db, organisationId, id, campaign.country),
       campaignSidGroupWithIds(db, id),
       db.select().from(adTexts).where(eq(adTexts.campaignId, id)).orderBy(asc(adTexts.position)),
@@ -1208,6 +1233,11 @@ export interface CreateLapsInput extends SendOptions {
  * queued laps up, moves them to `sending` and fills in the counters. The campaign becomes
  * `scheduled` when a start time is set in the future and `sending` otherwise, and an
  * audit row `campaign.send` records what was queued.
+ *
+ * The first send of a per campaign campaign flushes its lists in the same transaction, with a
+ * `list.flush` audit row each (D4-25): the team expects a new campaign with that setting to
+ * reach the whole list without flushing by hand. The sent flags stay the row-level guard the
+ * send loop relies on, so two laps of the campaign still never pick the same number.
  */
 export async function createLaps(
   db: Db,
@@ -1229,6 +1259,24 @@ export async function createLaps(
   const scheduled = campaign.scheduledAt !== null && campaign.scheduledAt.getTime() > Date.now();
 
   return db.transaction(async (tx) => {
+    if (await startsFromWholeLists(tx, campaign)) {
+      for (const list of estimate.lists) {
+        const flushed = await tx
+          .update(listMembers)
+          .set({ sentAt: null, flushedAt: new Date() })
+          .where(
+            and(eq(listMembers.listId, list.id), eq(listMembers.organisationId, organisationId)),
+          )
+          .returning({ id: listMembers.id });
+        await recordAudit(tx, organisationId, {
+          actorUserId: input.actorUserId ?? null,
+          action: "list.flush",
+          targetType: "list",
+          targetId: list.id,
+          details: { name: list.name, members: flushed.length, by: "campaign", campaignId },
+        });
+      }
+    }
     const rows = await tx
       .insert(laps)
       .values(

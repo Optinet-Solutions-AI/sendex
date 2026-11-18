@@ -179,7 +179,14 @@ these hold:
 | No live message in this campaign | `NOT EXISTS messages (campaign_id, contact_id, status <> 'cancelled')` | `reused` |
 | `contact_reuse = account_wide` only: not messaged anywhere in the organisation since the member's last flush | `NOT EXISTS messages (organisation_id, contact_id, status IN (sent, delivered), coalesce(sent_at, created_at) > flushed_at)` | `reused` |
 
-`per_campaign` reuse applies only the fourth rule. The "live message in this campaign" rule
+`per_campaign` reuse leaves the last rule out; the sent flag (second rule) applies to both
+settings, because it is the row-level guard that keeps two laps running at the same time
+from claiming the same member. So that a new per campaign campaign still reaches the whole
+list without a flush by hand, `createLaps` flushes the campaign's lists on its first send
+(D4-25), with a `list.flush` audit row per list (`by: "campaign"`), and until that first
+send the campaign's counts leave the sent flag out (`startsFromWholeLists` in
+`queries/campaigns.ts`). Known limits: lists reached through a segment are not flushed, and
+numbers another campaign sends to while this one is running stay marked for it. The "live message in this campaign" rule
 also makes resumes and parallel laps safe: a contact that already has a message in the
 campaign (queued, sent, failed, ...) is not picked again by any lap of that campaign.
 Members are taken in `list_members.id` order, `test_size` at most; when the list runs out

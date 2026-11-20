@@ -29,6 +29,13 @@ export default defineConfig({
   use: {
     baseURL,
     trace: "on-first-retry",
+    // The Performance tour (D5-12) starts by itself on a fresh browser and would cover the
+    // pages the other specs click; this switches its automatic start off. The tour's own spec
+    // starts from an empty storage state instead.
+    storageState: {
+      cookies: [],
+      origins: [{ origin: baseURL, localStorage: [{ name: "sendex-tour-off", value: "1" }] }],
+    },
   },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
   webServer: {

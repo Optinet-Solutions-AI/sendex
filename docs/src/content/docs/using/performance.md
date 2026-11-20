@@ -11,6 +11,16 @@ as before, New adds these screens with your own numbers. The choice is yours alo
 remembered in your browser.
 :::
 
+## Tour
+
+The first time these screens appear in your browser (for an account with the switch, the
+first time you pick **New**), a short guided tour starts by itself. It opens each new page,
+points at what matters there and explains it in a sentence or two: the Performance menu,
+Insight, Sales Results, Trends, List Follow-Up with Create Campaign, Daily Plan and the data
+provider on lists. **Next** and **Back** move through it, **Skip** or Escape ends it, and the
+**Tour** button in the top bar starts it again any time. It only shows you around: it changes
+nothing.
+
 The **Performance** group in the sidebar holds the screens for deciding what to send next.
 They read the same sends, registrations (leads) and first deposits (sales) as the dashboard
 and the Campaigns Log, and follow the same rule: sends, leads and cost belong to the day the

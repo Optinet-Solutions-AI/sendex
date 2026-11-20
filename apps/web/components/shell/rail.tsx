@@ -112,7 +112,7 @@ export function Rail({ tree, brand }: { tree: readonly NavGroup[]; brand: ReactN
               );
             }
             return (
-              <li key={group.label}>
+              <li key={group.label} data-tour-group={group.label}>
                 <button
                   type="button"
                   className={cn(base, tone)}

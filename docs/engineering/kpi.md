@@ -63,6 +63,28 @@ themselves and starts on Existing.
 - On the live database it is one statement, run by whoever operates the platform, after the
   migration: `update organisations set preview_toggle = true where slug = '<organisation slug>';`
 
+## Performance tour (D5-12)
+
+A guided tour of everything the preview features add, for people who already know the rest
+of Sendex. Design: `docs/superpowers/specs/2026-11-20-performance-tour-design.md`.
+
+- **Steps** live in one list, `apps/web/components/tour/steps.ts`: page, route, target (a CSS
+  selector of a marker the page already has, mostly a `data-testid`), title and text. The
+  switch step is only for an organisation with the Existing / New switch. When a page
+  changes, update its step there; `steps.test.ts` checks the order and that every step has a
+  target and text.
+- **Component** `components/tour/performance-tour.tsx`, rendered by the shell whenever
+  `OrgContext.previewFeatures` is true, with the **Tour** button. On each step it opens the
+  step's page, keeps the card hidden until that page is open, waits up to 2 s for the
+  target, darkens the page around it and places the card beside it, inside the screen. No
+  target in time: the card is centred.
+- **Starts by itself** once per organisation per browser: localStorage
+  `sendex-tour-<organisation id>` = `done` after Finish, Skip or Escape. `sendex-tour-off` = `1`
+  stops the automatic start; `playwright.config.ts` sets it for every spec, and
+  `e2e/performance-tour.spec.ts` starts from an empty storage state.
+- The side menu groups carry `data-tour-group="<label>"` for the menu step.
+- Nothing is read from or written to the server.
+
 ## Layers
 
 1. **`packages/core/src/kpi.ts`**, pure: `KpiCounters` (sent, leads, sales, cost, revenue),

@@ -8,6 +8,7 @@ import type { ReactNode } from "react";
 import { flattenNav, visibleNav } from "../../components/shell/nav";
 import { Rail } from "../../components/shell/rail";
 import { SearchPalette } from "../../components/shell/search-palette";
+import { PerformanceTour } from "../../components/tour/performance-tour";
 import { isAuthError, requireOrg } from "../../lib/auth";
 import { authMode, devAuthConfig } from "../../lib/env";
 import type { PreviewView } from "../../lib/preview";
@@ -89,6 +90,12 @@ export default async function DashboardLayout({ children }: { children: ReactNod
             {mode === "dev" ? <DevAuthBanner config={devAuthConfig()} /> : null}
             <div className="ml-auto flex flex-wrap items-center gap-3">
               {shell?.previewView ? <ViewToggle view={shell.previewView} /> : null}
+              {shell?.previewFeatures ? (
+                <PerformanceTour
+                  organisationId={shell.organisationId}
+                  hasSwitch={shell.previewView !== null}
+                />
+              ) : null}
               <SearchPalette pages={pages} />
               {DOCS_URL ? (
                 <a

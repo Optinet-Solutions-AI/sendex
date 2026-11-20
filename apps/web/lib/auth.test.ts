@@ -12,12 +12,27 @@ vi.mock("@clerk/nextjs/server", () => ({
   clerkClient: async () => ({ organizations: { getOrganization: clerk.getOrganization } }),
 }));
 
+/** The request's cookies: the Existing / New choice is read from them (D5-11). */
+const jar = vi.hoisted(() => new Map<string, string>());
+vi.mock("next/headers", () => ({
+  cookies: async () => ({
+    get: (name: string) => (jar.has(name) ? { name, value: jar.get(name) } : undefined),
+  }),
+}));
+
 /** In-memory stand-in for the tenancy queries in `@sendex/db`. */
 const store = vi.hoisted(() => {
   const users = new Map<string, { id: string; clerkUserId: string; email: string }>();
   const orgs = new Map<
     string,
-    { id: string; clerkOrgId: string; name: string; slug: string; previewFeatures?: boolean }
+    {
+      id: string;
+      clerkOrgId: string;
+      name: string;
+      slug: string;
+      previewFeatures?: boolean;
+      previewToggle?: boolean;
+    }
   >();
   const memberships = new Map<string, { organisationId: string; userId: string; role: string }>();
   const key = (o: string, u: string) => `${o}:${u}`;
@@ -92,6 +107,7 @@ function signedIn(overrides: Record<string, unknown> = {}) {
 beforeEach(() => {
   vi.clearAllMocks();
   store.reset();
+  jar.clear();
   clerk.currentUser.mockResolvedValue({
     primaryEmailAddressId: "em_1",
     emailAddresses: [
@@ -121,6 +137,7 @@ describe("development auth stub", () => {
       clerkOrgId: "dev_org_external",
       role: "owner",
       previewFeatures: false,
+      previewView: null,
     });
     expect(store.orgs.get("dev_org_external")?.slug).toBe("external");
     expect(store.memberships.get("o_dev_org_external:u_dev_user_external")?.role).toBe("owner");
@@ -189,6 +206,7 @@ describe("requireOrg", () => {
       clerkOrgId: "org_1",
       role: "owner",
       previewFeatures: false,
+      previewView: null,
     });
     expect(store.users.get("user_1")?.email).toBe("chris@example.com");
     expect(store.orgs.get("org_1")?.slug).toBe("external");
@@ -278,5 +296,48 @@ describe("preview features (D5-09)", () => {
     store.orgs.set("org_1", { ...org, previewFeatures: true });
     const ctx = await requirePreviewAction("campaign.view");
     expect(ctx.previewFeatures).toBe(true);
+  });
+});
+
+describe("Existing / New switch (D5-11)", () => {
+  async function toggleOrg() {
+    signedIn();
+    await requireOrg();
+    const org = store.orgs.get("org_1");
+    if (!org) throw new Error("the organisation was not created");
+    store.orgs.set("org_1", { ...org, previewToggle: true });
+    return org.id;
+  }
+
+  it("starts on Existing: the switch is offered, the preview stays hidden", async () => {
+    await toggleOrg();
+    const ctx = await requireOrg();
+    expect(ctx.previewView).toBe("existing");
+    expect(ctx.previewFeatures).toBe(false);
+    const err = await requirePreviewAction("campaign.view").catch((e: unknown) => e);
+    expect((err as AuthError).status).toBe(403);
+  });
+
+  it("shows the preview once this person picked New for this organisation", async () => {
+    const organisationId = await toggleOrg();
+    jar.set(`sendex-view-${organisationId}`, "new");
+    const ctx = await requirePreviewAction("campaign.view");
+    expect(ctx.previewView).toBe("new");
+    expect(ctx.previewFeatures).toBe(true);
+  });
+
+  it("ignores a choice made for another organisation", async () => {
+    await toggleOrg();
+    jar.set("sendex-view-some-other-organisation", "new");
+    expect((await requireOrg()).previewFeatures).toBe(false);
+  });
+
+  it("offers no switch to an organisation without it, whatever the cookie says", async () => {
+    signedIn();
+    const first = await requireOrg();
+    jar.set(`sendex-view-${first.organisationId}`, "new");
+    const ctx = await requireOrg();
+    expect(ctx.previewView).toBeNull();
+    expect(ctx.previewFeatures).toBe(false);
   });
 });

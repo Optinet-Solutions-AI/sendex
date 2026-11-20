@@ -1,7 +1,13 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import { memberships, users } from "../schema/core.js";
 import { createTestDb, seedOrganisation, type TestDb } from "../test/db.js";
-import { getOrganisationPreview, getTenantByClerkIds, setOrganisationPreview } from "./tenancy.js";
+import {
+  getOrganisationPreview,
+  getOrganisationPreviewToggle,
+  getTenantByClerkIds,
+  setOrganisationPreview,
+  setOrganisationPreviewToggle,
+} from "./tenancy.js";
 
 let t: TestDb;
 let orgA: string;
@@ -73,5 +79,28 @@ describe("preview features switch (D5-09)", () => {
     const missing = "00000000-0000-4000-8000-000000000000";
     expect(await setOrganisationPreview(t.db, missing, true)).toBe(false);
     expect(await getOrganisationPreview(t.db, missing)).toBe(false);
+  });
+});
+
+describe("Existing / New toggle (D5-11)", () => {
+  it("is off until switched on, one organisation at a time, apart from the preview switch", async () => {
+    const qa = await seedOrganisation(t.db, "toggle-qa");
+    const other = await seedOrganisation(t.db, "toggle-other");
+    expect(await getOrganisationPreviewToggle(t.db, qa)).toBe(false);
+
+    expect(await setOrganisationPreviewToggle(t.db, qa, true)).toBe(true);
+    expect(await getOrganisationPreviewToggle(t.db, qa)).toBe(true);
+    expect(await getOrganisationPreviewToggle(t.db, other)).toBe(false);
+    // The toggle only offers the choice: the preview itself stays off.
+    expect(await getOrganisationPreview(t.db, qa)).toBe(false);
+
+    expect(await setOrganisationPreviewToggle(t.db, qa, false)).toBe(true);
+    expect(await getOrganisationPreviewToggle(t.db, qa)).toBe(false);
+  });
+
+  it("reports an organisation that does not exist", async () => {
+    const missing = "00000000-0000-4000-8000-000000000000";
+    expect(await setOrganisationPreviewToggle(t.db, missing, true)).toBe(false);
+    expect(await getOrganisationPreviewToggle(t.db, missing)).toBe(false);
   });
 });

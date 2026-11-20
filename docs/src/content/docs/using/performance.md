@@ -6,6 +6,9 @@ description: The Performance screens. Insight gives a period's totals and where 
 :::note
 These screens, and the **Data provider** field on lists, are in preview. They are shown only
 to organisations that have the preview switched on; everyone else sees the app without them.
+Some organisations get an **Existing / New** switch in the top bar instead: Existing is the app
+as before, New adds these screens with your own numbers. The choice is yours alone and is
+remembered in your browser.
 :::
 
 The **Performance** group in the sidebar holds the screens for deciding what to send next.

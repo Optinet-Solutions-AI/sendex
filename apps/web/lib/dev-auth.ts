@@ -8,6 +8,7 @@ import {
 } from "@sendex/db";
 import type { OrgContext } from "./auth";
 import { type DevAuthConfig, devAuthConfig } from "./env";
+import { previewContext } from "./preview-context";
 
 /**
  * Development-only sign-in stub, active when `authMode()` is `"dev"` (see `env.ts`).
@@ -67,6 +68,6 @@ export async function devOrgContext(
     organisationId: organisation.id,
     clerkOrgId: organisation.clerkOrgId,
     role: config.role,
-    previewFeatures: organisation.previewFeatures === true,
+    ...(await previewContext(organisation)),
   };
 }

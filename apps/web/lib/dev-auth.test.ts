@@ -1,5 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+/** The request's cookies: the Existing / New choice is read from them (D5-11). */
+const jar = vi.hoisted(() => new Map<string, string>());
+vi.mock("next/headers", () => ({
+  cookies: async () => ({
+    get: (name: string) => (jar.has(name) ? { name, value: jar.get(name) } : undefined),
+  }),
+}));
+
 /** In-memory stand-in for the tenancy queries in `@sendex/db`. */
 const store = vi.hoisted(() => {
   const users = new Map<string, { id: string; clerkUserId: string; email: string }>();
@@ -77,6 +85,7 @@ describe("devOrgContext", () => {
       clerkOrgId: "dev_org_external",
       role: "owner",
       previewFeatures: false,
+      previewView: null,
     });
     expect(store.users.get("dev_user_external")?.email).toBe("dev-external@sendex.local");
     expect(store.orgs.get("dev_org_external")).toMatchObject({

@@ -194,3 +194,34 @@ export async function setOrganisationPreview(
     .returning({ id: organisations.id });
   return updated.length > 0;
 }
+
+/** Whether the organisation is offered the Existing / New switch (D5-11); false when unknown. */
+export async function getOrganisationPreviewToggle(
+  db: Db,
+  organisationId: string,
+): Promise<boolean> {
+  const [row] = await db
+    .select({ on: organisations.previewToggle })
+    .from(organisations)
+    .where(eq(organisations.id, organisationId))
+    .limit(1);
+  return row?.on ?? false;
+}
+
+/**
+ * Offer, or stop offering, the Existing / New switch to one organisation (D5-11). Returns false
+ * when the organisation does not exist. Like the preview switch, it is set from the database
+ * by whoever runs the platform.
+ */
+export async function setOrganisationPreviewToggle(
+  db: Db,
+  organisationId: string,
+  on: boolean,
+): Promise<boolean> {
+  const updated = await db
+    .update(organisations)
+    .set({ previewToggle: on, updatedAt: new Date() })
+    .where(eq(organisations.id, organisationId))
+    .returning({ id: organisations.id });
+  return updated.length > 0;
+}

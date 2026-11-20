@@ -14,6 +14,8 @@ import { cache } from "react";
 import { roleFromClerk } from "./clerk-roles";
 import { devOrgContext } from "./dev-auth";
 import { authMode } from "./env";
+import type { PreviewView } from "./preview";
+import { previewContext } from "./preview-context";
 
 export type AuthErrorStatus = 401 | 403;
 export type AuthErrorCode = "unauthenticated" | "no_organisation" | "forbidden" | "reauth_required";
@@ -44,8 +46,14 @@ export interface OrgContext {
   organisationId: string;
   clerkOrgId: string;
   role: Role;
-  /** The organisation sees the features still in preview (D5-09). */
+  /**
+   * The features still in preview are shown in this request (D5-09): always for an
+   * organisation with the preview on, or when this person set the Existing / New switch to
+   * New (D5-11).
+   */
   previewFeatures: boolean;
+  /** Where the Existing / New switch stands, or null when the organisation has no switch. */
+  previewView: PreviewView | null;
 }
 
 async function resolveUser(database: Database, clerkUserId: string) {
@@ -109,7 +117,7 @@ export const requireOrg = cache(async (): Promise<OrgContext> => {
     organisationId: organisation.id,
     clerkOrgId: session.orgId,
     role,
-    previewFeatures: organisation.previewFeatures === true,
+    ...(await previewContext(organisation)),
   };
 });
 

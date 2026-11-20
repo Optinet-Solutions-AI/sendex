@@ -42,6 +42,27 @@ app as it was.
 To open the features to everyone later: either set the flag for every organisation, or remove
 the `preview` marks in a follow-up PR.
 
+## The Existing / New switch (D5-11)
+
+For an organisation that should try the features without them being forced on, there is a
+second flag, `organisations.preview_toggle` (migration `0028_preview_toggle`, false by
+default). It puts an **Existing / New** switch in the top bar; each person picks for
+themselves and starts on Existing.
+
+- `previewState` (`apps/web/lib/preview.ts`) is the rule: `preview_features` on means always
+  on and no switch; `preview_toggle` on means the switch, with the features shown only on New;
+  neither means off.
+- The choice is a cookie per organisation, `sendex-view-<organisation id>`, read by
+  `previewContext` (`lib/preview-context.ts`) when the context is built, so
+  `OrgContext.previewFeatures` already reflects it and every check above (menu, pages, server
+  actions, data provider) follows the switch with no change. `OrgContext.previewView` is the
+  switch's position, or null without a switch.
+- `setPreviewViewAction` (`app/(dashboard)/preview-actions.ts`) sets the cookie (http-only,
+  a year). Any role may use it: it changes nothing in the database or for anyone else.
+- The data shown on New is the organisation's own; nothing is read from another account.
+- On the live database it is one statement, run by whoever operates the platform, after the
+  migration: `update organisations set preview_toggle = true where slug = '<organisation slug>';`
+
 ## Layers
 
 1. **`packages/core/src/kpi.ts`**, pure: `KpiCounters` (sent, leads, sales, cost, revenue),

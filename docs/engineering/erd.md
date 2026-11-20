@@ -315,6 +315,7 @@ erDiagram
     uuid id PK
     text name
     boolean preview_features
+    boolean preview_toggle
     text slug UK
     timestamp_with_time_zone updated_at
   }

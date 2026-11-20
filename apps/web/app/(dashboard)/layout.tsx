@@ -10,9 +10,11 @@ import { Rail } from "../../components/shell/rail";
 import { SearchPalette } from "../../components/shell/search-palette";
 import { isAuthError, requireOrg } from "../../lib/auth";
 import { authMode, devAuthConfig } from "../../lib/env";
+import type { PreviewView } from "../../lib/preview";
 import { AlertsBanner } from "./alerts-banner";
 import { DevAuthBanner } from "./dev-auth-banner";
 import { EmergencyStopBanner } from "./emergency-stop-banner";
+import { ViewToggle } from "./view-toggle";
 
 /** The balance in the header must never be stale; the shell is rendered per request. */
 export const dynamic = "force-dynamic";
@@ -22,6 +24,7 @@ interface Shell {
   role: Role;
   balanceMicro: bigint;
   previewFeatures: boolean;
+  previewView: PreviewView | null;
 }
 
 /**
@@ -37,6 +40,7 @@ async function shellContext(): Promise<Shell | null> {
       role: ctx.role,
       balanceMicro,
       previewFeatures: ctx.previewFeatures,
+      previewView: ctx.previewView,
     };
   } catch (error) {
     if (isAuthError(error)) return null;
@@ -84,6 +88,7 @@ export default async function DashboardLayout({ children }: { children: ReactNod
             </span>
             {mode === "dev" ? <DevAuthBanner config={devAuthConfig()} /> : null}
             <div className="ml-auto flex flex-wrap items-center gap-3">
+              {shell?.previewView ? <ViewToggle view={shell.previewView} /> : null}
               <SearchPalette pages={pages} />
               {DOCS_URL ? (
                 <a

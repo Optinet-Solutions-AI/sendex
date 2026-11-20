@@ -26,6 +26,12 @@ export const organisations = pgTable("organisations", {
    * provider, D5 series) to this organisation only. Off for everyone by default (D5-09).
    */
   previewFeatures: boolean("preview_features").notNull().default(false),
+  /**
+   * Offers the people of this organisation an Existing / New switch in the top bar (D5-11):
+   * Existing (the default) shows the app without the preview features, New shows them, each
+   * person choosing for themselves. Ignored when `previewFeatures` is on. Off by default.
+   */
+  previewToggle: boolean("preview_toggle").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });

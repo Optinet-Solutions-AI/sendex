@@ -118,3 +118,15 @@ export async function setDemoPreview(on: boolean): Promise<void> {
     await sql.end();
   }
 }
+
+/** Offer, or stop offering, the Existing / New switch (D5-11) to the demo organisation. */
+export async function setDemoPreviewToggle(on: boolean): Promise<void> {
+  const url = process.env.DATABASE_URL;
+  if (!url) throw new Error("DATABASE_URL must be set to run the KPI e2e specs");
+  const sql = postgres(url, { max: 1 });
+  try {
+    await sql`update organisations set preview_toggle = ${on} where slug = 'external'`;
+  } finally {
+    await sql.end();
+  }
+}

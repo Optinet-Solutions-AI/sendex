@@ -1,4 +1,4 @@
-import { clicks, laps } from "@sendex/db";
+import { clicks, laps, messages } from "@sendex/db";
 import { createTestDb, type TestDb } from "@sendex/db/test";
 import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, expectTypeOf, it } from "vitest";
@@ -156,6 +156,60 @@ describe("ingestClicks", () => {
       .from(clicks)
       .where(eq(clicks.at, new Date("2026-11-06T12:00:00.000Z")));
     expect(rows).toEqual([{ country: null }]);
+  });
+});
+
+describe("clicks from data-centre networks (D5-13)", () => {
+  it("counts a scanner on a cloud network as a preview: no click, no operator", async () => {
+    const scanned = await seedTrackedMessage(t.db, { shortCode: "cdefghjk" });
+    const result = await ingestClicks(t.db, {
+      clicks: [
+        {
+          shortCode: scanned.shortCode,
+          clickedAt: "2026-11-20T15:20:03.000Z",
+          ip: "203.0.113.200",
+          userAgent:
+            "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36",
+          country: "NL",
+          // The links service sends the browser's class; the network makes it a bot.
+          device: "desktop",
+          asn: "Google LLC",
+        },
+      ],
+    });
+    expect(result).toEqual({ inserted: 0, unknown: 0 });
+    const [lap] = await t.db
+      .select({ clicks: laps.clicks, previews: laps.previews })
+      .from(laps)
+      .where(eq(laps.id, scanned.lapId));
+    expect(lap).toEqual({ clicks: 0, previews: 1 });
+    const [message] = await t.db
+      .select({ operator: messages.operator })
+      .from(messages)
+      .where(eq(messages.id, scanned.messageId));
+    expect(message?.operator).toBeNull();
+  });
+
+  it("still counts a person on a home or mobile network", async () => {
+    const person = await seedTrackedMessage(t.db, { shortCode: "defghjkm" });
+    await ingestClicks(t.db, {
+      clicks: [
+        {
+          shortCode: person.shortCode,
+          clickedAt: "2026-11-20T16:00:00.000Z",
+          ip: "203.0.113.201",
+          userAgent: IPHONE,
+          country: "GB",
+          device: "mobile",
+          asn: "Virgin Media Limited",
+        },
+      ],
+    });
+    const [lap] = await t.db
+      .select({ clicks: laps.clicks, previews: laps.previews })
+      .from(laps)
+      .where(eq(laps.id, person.lapId));
+    expect(lap).toEqual({ clicks: 1, previews: 0 });
   });
 });
 

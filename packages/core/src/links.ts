@@ -58,6 +58,37 @@ export function classifyDevice(userAgent: string | null | undefined): DeviceClas
   return "unknown";
 }
 
+/**
+ * Cloud and hosting networks (Cloudflare's `asOrganization` for the address that opened the
+ * link). A click from one of these is an automated link scanner, not a person: on the first
+ * real campaign (20 November 2026) 108 of 126 clicks came from Google's servers in the
+ * Netherlands and the US within seconds of each SMS, with an ordinary Chrome user agent that
+ * the user-agent check cannot catch (D5-13).
+ *
+ * Deliberately left out: networks that carry real people through a privacy relay or VPN,
+ * such as Akamai Technologies and Fastly (iCloud Private Relay) and Cloudflare (WARP), and
+ * consumer networks of the same companies, such as Google Fiber.
+ */
+const DATA_CENTRE_NETWORKS =
+  /^(google llc|google cloud|google-cloud|youtube|amazon|aws\b|microsoft corp|microsoft-corp|digitalocean|m247|ovh|hetzner|akamai connected cloud|linode|oracle (corporation|cloud|public cloud)|alibaba|tencent|the constant company|vultr|choopa|contabo|leaseweb|scaleway|online s\.a\.s|hostinger|ionos|1&1 ionos|transip|datacamp|hostroyale|g-core|gcore)/i;
+
+/** True when the network that opened a link is a cloud or hosting network (D5-13). */
+export function isDataCentreNetwork(network: string | null | undefined): boolean {
+  const name = network?.trim() ?? "";
+  return name !== "" && DATA_CENTRE_NETWORKS.test(name);
+}
+
+/**
+ * The class of one click: a bot when it came from a data-centre network, whatever browser it
+ * claims to be; otherwise the class of its user agent.
+ */
+export function classifyClick(
+  userAgent: string | null | undefined,
+  network: string | null | undefined,
+): DeviceClass {
+  return isDataCentreNetwork(network) ? "bot" : classifyDevice(userAgent);
+}
+
 /** Placeholders every tracked link may use, in the order the UI lists them. */
 export const LINK_URL_PLACEHOLDERS = [
   "dynamic",

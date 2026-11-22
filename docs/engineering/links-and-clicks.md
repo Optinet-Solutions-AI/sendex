@@ -105,6 +105,18 @@ that is not two letters becomes null, and a missing `device` is classified on th
 - `HEAD /:code` (link previewers probe with it) is redirected and never recorded.
 - A user agent that `classifyDevice()` calls a bot (crawlers, WhatsApp/Telegram/Facebook
   previewers, curl, python-requests, headless Chrome, ...) is redirected and not recorded.
+- **Data-centre networks (D5-13).** A click whose network (`request.cf.asOrganization`, stored
+  as the operator) is a cloud or hosting provider is a bot too, whatever browser it claims:
+  `classifyClick(userAgent, network)` and `isDataCentreNetwork()` in `packages/core/src/links.ts`.
+  On the first real campaign (20 November 2026) 108 of 126 clicks came from Google's servers in
+  the Netherlands and the US within seconds of each SMS, with an ordinary Chrome user agent
+  (automated link scanning). The worker's ingest applies the rule as well, so it holds even when
+  the links service runs older code; such clicks count as lap previews, are not stored and never
+  set the message's operator. Privacy relays and VPN gateways that carry real people (Akamai
+  Technologies and Fastly for iCloud Private Relay, Cloudflare for WARP) and consumer networks of
+  the same companies are deliberately not on the list. Add a provider there when a new scanner
+  shows up; check its clicks first (time after send, device, user agent), as a hosting name can
+  also be a phone's real route.
 - A click whose code matches no message is dropped at ingest (`unknown` in the handler log).
 
 Delivery is at-least-once: a retried batch can insert a click twice. That inflates the

@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
+  classifyClick,
   classifyDevice,
   generateShortCode,
+  isDataCentreNetwork,
   isValidShortCode,
   LINK_URL_PLACEHOLDERS,
   renderLinkUrl,
@@ -230,5 +232,65 @@ describe("shortDomainForLap", () => {
     expect(shortDomainForLap([" CC.test ", "cc.test", "aa.test"], 1)).toBe("cc.test");
     expect(shortDomainForLap(domains, -1)).toBe("aa.test");
     expect(shortDomainForLap(domains, 1.5)).toBe("aa.test");
+  });
+});
+
+describe("data-centre networks (D5-13)", () => {
+  it("recognises the cloud and hosting networks automated link scanners click from", () => {
+    for (const network of [
+      "Google LLC",
+      "GOOGLE-CLOUD-PLATFORM",
+      "YouTube, LLC",
+      "DigitalOcean, LLC",
+      "M247 LTD Manchester Infrastructure",
+      "M247 LTD Tokyo Infrastructure",
+      "Amazon.com, Inc.",
+      "AMAZON-02",
+      "Microsoft Corporation",
+      "OVH SAS",
+      "Hetzner Online GmbH",
+      "Akamai Connected Cloud",
+      "Transip B.V.",
+      "Oracle Corporation",
+      "The Constant Company, LLC",
+      "Contabo GmbH",
+      "LeaseWeb Netherlands B.V.",
+    ]) {
+      expect(isDataCentreNetwork(network), network).toBe(true);
+    }
+  });
+
+  it("leaves home, mobile and privacy networks that real people use alone", () => {
+    for (const network of [
+      "Virgin Media Limited",
+      "Vodafone Spain",
+      "EE Limited",
+      "Verizon Business",
+      "RCN",
+      "Google Fiber Inc.",
+      // iCloud Private Relay and Cloudflare WARP carry real iPhone and app users.
+      "Akamai Technologies, Inc.",
+      "Cloudflare, Inc.",
+      "Fastly, Inc.",
+    ]) {
+      expect(isDataCentreNetwork(network), network).toBe(false);
+    }
+    // "AWS" only as a word: a network whose name merely starts with those letters is not AWS.
+    expect(isDataCentreNetwork("AWS EC2")).toBe(true);
+    expect(isDataCentreNetwork("Awsat Telecom")).toBe(false);
+    expect(isDataCentreNetwork(null)).toBe(false);
+    expect(isDataCentreNetwork(undefined)).toBe(false);
+    expect(isDataCentreNetwork("")).toBe(false);
+  });
+
+  it("classifies a click from a data-centre network as a bot, whatever browser it claims", () => {
+    const linuxChrome =
+      "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36";
+    const android =
+      "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Mobile Safari/537.36";
+    expect(classifyClick(linuxChrome, "Google LLC")).toBe("bot");
+    expect(classifyClick(android, "DigitalOcean, LLC")).toBe("bot");
+    expect(classifyClick(android, "Virgin Media Limited")).toBe("mobile");
+    expect(classifyClick(linuxChrome, null)).toBe("desktop");
   });
 });

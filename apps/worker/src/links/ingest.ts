@@ -1,4 +1,4 @@
-import { classifyDevice } from "@sendex/core";
+import { classifyDevice, isDataCentreNetwork } from "@sendex/core";
 import { type Db, findMessagesByShortCodes, type NewClick, recordClicks } from "@sendex/db";
 import { z } from "zod";
 import { clickSchema } from "../jobs.js";
@@ -52,7 +52,11 @@ function toRow(
         ? click.country.toUpperCase()
         : null,
     userAgent: nullable(click.userAgent),
-    device: click.device ?? classifyDevice(click.userAgent),
+    // A click from a cloud or hosting network is a link scanner, whatever device the edge
+    // saw (D5-13); it then counts as a preview, like any other bot.
+    device: isDataCentreNetwork(click.asn)
+      ? "bot"
+      : (click.device ?? classifyDevice(click.userAgent)),
     operator: nullable(click.asn),
   };
 }

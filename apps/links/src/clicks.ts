@@ -1,4 +1,4 @@
-import { classifyDevice, type DeviceClass } from "@sendex/core/links";
+import { classifyClick, type DeviceClass } from "@sendex/core/links";
 
 /**
  * One recorded redirect, in the shape the worker's `ClickIngestJob` accepts
@@ -50,7 +50,7 @@ export function buildClickRecord(shortCode: string, request: Request, now: Date)
     ip: clientIp(request),
     userAgent,
     ...(country === undefined ? {} : { country }),
-    device: classifyDevice(userAgent),
+    device: classifyClick(userAgent, asn),
     ...(asn === undefined ? {} : { asn }),
   };
 }

@@ -13,7 +13,7 @@ The results page shows one row per campaign, and inside a campaign one row per r
 | **Delivered** | Messages the carrier reported as delivered to the handset.                                        |
 | **Failed**    | Rejected at send, reported failed or expired by the carrier, or no receipt within 24 hours. Sent minus delivered minus failed is pending. |
 | **Delivery**  | Delivered divided by sent, as a percentage.                                                       |
-| **Clicks**    | Unique recipients who opened the short link. Repeat clicks by the same recipient count once.      |
+| **Clicks**    | Unique recipients who opened the short link. Repeat clicks by the same recipient count once. Automated link checks (messaging apps' previews, and scanners on cloud servers such as Google's) are left out. |
 | **CTR**       | Clicks divided by sent, as a percentage: 127 clicks on 2,394 sent is 5.30%.                       |
 | **Cost**      | Total debited for the row: price per SMS times parts, refunds already deducted.                   |
 | **CPC**       | Cost per click: cost divided by clicks.                                                           |

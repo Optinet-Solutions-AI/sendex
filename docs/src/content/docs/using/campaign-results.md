@@ -44,7 +44,7 @@ header: the campaign's country with its local time, a "n laps" pill, the budget 
 | **Route** | Which route carried the lap and its price per SMS, "Route 405 (€0.0250)". |
 | **List** | The list it drew from; the link opens List Details in a new tab. |
 | **Sent, Delivered, Failed, Delivery** | As in the header, for this lap only. |
-| **Previews** | Link-preview bots (messaging apps fetching the page) that hit the lap's links. Never counted as clicks. |
+| **Previews** | Link-preview bots (messaging apps fetching the page) and link scanners on cloud servers that hit the lap's links. Never counted as clicks. |
 | **Clicks, CTR, Cost, CPC, Leads, CPL, Sales, CPS** | As in the header, for this lap only. |
 | **Rank** | 1 is the best route of the test round (highest CTR, then lowest cost per click, then most sent). Empty until the laps are done. |
 | **Sending Period** | When the lap started and finished, in the campaign's timezone. |

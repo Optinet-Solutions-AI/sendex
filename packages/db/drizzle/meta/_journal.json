@@ -204,6 +204,13 @@
       "when": 1795183042464,
       "tag": "0028_preview_toggle",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1795518490380,
+      "tag": "0029_no_route_fee",
+      "breakpoints": true
     }
   ]
 }

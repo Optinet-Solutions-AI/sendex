@@ -339,7 +339,8 @@ describe("custom routes", () => {
 
   it("orders routes for a country by the routing configuration", async () => {
     const config = await getRoutingConfig(t.db, org);
-    expect(config).toEqual({ strategy: "custom_first", feeMicro: 10_000n, exceptions: [] });
+    // No fee on an organisation's own route unless one is set (D5-14).
+    expect(config).toEqual({ strategy: "custom_first", feeMicro: 0n, exceptions: [] });
     const defaultOrder = await orderedRoutesForCountry(t.db, org, "ES");
     expect(defaultOrder.map((r) => r.name)).toEqual(["My SMPP", "405", "136"]);
 

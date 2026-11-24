@@ -34,7 +34,7 @@ import {
   senderIds,
   suppressions,
 } from "../schema/index.js";
-import { organisationSettings } from "../schema/settings.js";
+import { DEFAULT_CUSTOM_ROUTE_FEE_MICRO, organisationSettings } from "../schema/settings.js";
 import type { Db } from "../types.js";
 import { getBalanceMicro } from "./ledger.js";
 import { globalExcludeCondition, segmentCondition } from "./segments.js";
@@ -469,14 +469,14 @@ export async function refundMessages(
   `);
 }
 
-/** The organisation's custom-route fee per part (default EUR 0.01 when nothing was saved). */
+/** The organisation's custom-route fee per part (none when nothing was saved, D5-14). */
 export async function customRouteFeeMicro(db: Db, organisationId: string): Promise<bigint> {
   const [row] = await db
     .select({ fee: organisationSettings.customRouteFeeMicro })
     .from(organisationSettings)
     .where(eq(organisationSettings.organisationId, organisationId))
     .limit(1);
-  return row?.fee ?? 10_000n;
+  return row?.fee ?? DEFAULT_CUSTOM_ROUTE_FEE_MICRO;
 }
 
 export function createSendingStore(db: Db): SendingStore {

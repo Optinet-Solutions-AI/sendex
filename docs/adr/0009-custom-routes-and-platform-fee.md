@@ -15,6 +15,14 @@ The SMS Edge parity plan (phase E) adds Custom Routes: a tenant connects its own
 - **Operator** is a column on `messages`, filled by a delivery receipt that names one or by the first click that resolved a network; Mobile Networks groups the rest as "Unresolved".
 - **Out of this change:** the worker-side provider for custom routes (opening the sealed credentials, building the HTTP or SMPP adapter per route, Test Connection). The send loop cancels a lap on a custom route as "cannot be served" until it lands; the page says so.
 
+**Changed 2026-11-24 (D5-14): no fee by default.** The decisions list of 8 November set the
+fee aside ("SMS Edge's fee to its clients, irrelevant for an internal tool"), but the default
+stayed EUR 0.01 and was charged on every SMS sent on an organisation's own route (the 23Telecom
+route of Emily's Organization). The default is now 0 in the column and in the code
+(`DEFAULT_CUSTOM_ROUTE_FEE_MICRO`), migration `0029_no_route_fee` clears the 10,000 that settings
+rows were created with, and the setting stays for the day a fee is wanted. The `fee` ledger
+entry is still written when a fee is set; with none, no fee entry is written.
+
 ## Consequences
 
 - Custom routes can be created, priced, ordered and reported on today; sending through them waits for the worker adapter, which is a contained change behind `SendLapDeps.customProvider`.

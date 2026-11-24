@@ -21,6 +21,7 @@ import {
   listLinks,
   listSidGroups,
   listsForCountry,
+  renameCampaign,
   routesForCountry,
   setCampaignLists,
   setCampaignRoutes,
@@ -832,5 +833,25 @@ describe("per campaign reuse starts from the whole list (D4-25)", () => {
     expect((await membersOf(list.id)).filter((m) => m.sentAt !== null)).toHaveLength(2);
     const flushes = await t.db.select().from(auditLog).where(eq(auditLog.targetId, list.id));
     expect(flushes).toHaveLength(1);
+  });
+});
+
+describe("renameCampaign (D4-26)", () => {
+  it("renames the organisation's campaign, a duplicate included, and nobody else's", async () => {
+    const original = await createCampaign(t.db, orgA, {
+      name: "Roy Boy UK",
+      country: "ES",
+      timezone: "Europe/Madrid",
+    });
+    const copy = await duplicateCampaign(t.db, orgA, original.id, null);
+    expect(copy.name).toBe("Copy of Roy Boy UK");
+
+    const renamed = await renameCampaign(t.db, orgA, copy.id, "Roy Boy UK Batch 3");
+    expect(renamed?.name).toBe("Roy Boy UK Batch 3");
+    expect((await getCampaign(t.db, orgA, copy.id))?.name).toBe("Roy Boy UK Batch 3");
+    expect((await getCampaign(t.db, orgA, original.id))?.name).toBe("Roy Boy UK");
+
+    expect(await renameCampaign(t.db, orgB, original.id, "Taken over")).toBeNull();
+    expect((await getCampaign(t.db, orgA, original.id))?.name).toBe("Roy Boy UK");
   });
 });

@@ -66,6 +66,9 @@ ISO timestamps). The file is named `campaigns-<date>.csv`.
 - **Duplicate** creates a new draft called "Copy of …" with the same lists, sender id group,
   ad texts, tracked links, routes, test size and contact-reuse setting, and opens it. Change
   whatever needs changing on the copy; nothing is sent until you press **Send**.
+- **Rename:** on the campaign page, the pencil next to the name opens it for editing; Enter
+  or the tick saves, Escape cancels. It works on any campaign, sent ones included, and the
+  change is written to the activity log.
 - **Delete** removes a campaign that is still a draft. Campaigns that have sent cannot be
   deleted, so their history stays on the books.
 

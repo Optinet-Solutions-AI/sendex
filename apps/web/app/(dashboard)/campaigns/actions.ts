@@ -8,6 +8,7 @@ import {
   lapScheduleSchema,
   linkSchema,
   newCampaignSchema,
+  renameCampaignSchema,
   senderIdsInputSchema,
   sendSettingsSchema,
   shortLinkLength,
@@ -32,6 +33,7 @@ import {
   getCampaign,
   listSidGroups,
   recordAudit,
+  renameCampaign,
   rescheduleLap,
   setAllLapsOn,
   setCampaignLists,
@@ -136,6 +138,33 @@ export async function duplicateCampaignAction(
     });
     revalidatePath("/campaigns");
     return { id: copy.id };
+  });
+}
+
+/**
+ * Rename a campaign (D4-26), with a `campaign.rename` audit row naming the old and new name.
+ * Same permission as creating one; any status, since a sent campaign keeps its results.
+ */
+export async function renameCampaignAction(
+  input: unknown,
+): Promise<ActionResult<{ name: string }>> {
+  return run("campaign.create", async (ctx) => {
+    const { campaignId, name } = renameCampaignSchema.parse(input);
+    const database = db();
+    const before = await getCampaign(database, ctx.organisationId, campaignId);
+    if (!before) throw new Error("Campaign not found");
+    const renamed = await renameCampaign(database, ctx.organisationId, campaignId, name);
+    if (!renamed) throw new Error("Campaign not found");
+    await recordAudit(database, ctx.organisationId, {
+      actorUserId: ctx.userId,
+      action: "campaign.rename",
+      targetType: "campaign",
+      targetId: campaignId,
+      details: { from: before.name, to: renamed.name },
+    });
+    revalidatePath("/campaigns");
+    revalidatePath(`/campaigns/${campaignId}`);
+    return { name: renamed.name };
   });
 }
 

@@ -655,6 +655,25 @@ export async function duplicateCampaign(
 }
 
 /** Delete a draft. Returns false when the campaign is not the organisation's; throws when not a draft. */
+/**
+ * Rename one of the organisation's campaigns, whatever its status (D4-26): a duplicate starts
+ * as "Copy of …" and sent campaigns keep their results under the new name. Null when the
+ * organisation has no such campaign.
+ */
+export async function renameCampaign(
+  db: Db,
+  organisationId: string,
+  id: string,
+  name: string,
+): Promise<CampaignRow | null> {
+  const [row] = await db
+    .update(campaigns)
+    .set({ name, updatedAt: new Date() })
+    .where(and(eq(campaigns.organisationId, organisationId), eq(campaigns.id, id)))
+    .returning();
+  return row ?? null;
+}
+
 export async function deleteCampaign(db: Db, organisationId: string, id: string): Promise<boolean> {
   const [row] = await db
     .select({ status: campaigns.status })

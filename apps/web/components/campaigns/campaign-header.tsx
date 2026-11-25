@@ -10,12 +10,13 @@ import {
   PageHeader,
   useToast,
 } from "@sendex/ui";
-import { Copy, MoreVertical, Send, Trash2 } from "lucide-react";
+import { Check, Copy, MoreVertical, Pencil, Send, Trash2, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import {
   deleteCampaignAction,
   duplicateCampaignAction,
+  renameCampaignAction,
 } from "../../app/(dashboard)/campaigns/actions";
 import { CampaignStatusBadge } from "./campaigns-table";
 import {
@@ -48,6 +49,8 @@ export function CampaignHeader({
   const [menuOpen, setMenuOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [pending, start] = useTransition();
+  const [editingName, setEditingName] = useState(false);
+  const [nameDraft, setNameDraft] = useState(campaign.name);
   const totals = results ?? campaignTotals(campaign.laps);
   const contacts =
     campaign.lists.reduce((sum, l) => sum + l.available, 0) +
@@ -70,6 +73,30 @@ export function CampaignHeader({
     });
   }
 
+  function saveName() {
+    const name = nameDraft.trim();
+    if (name === "" || name === campaign.name) {
+      setEditingName(false);
+      setNameDraft(campaign.name);
+      return;
+    }
+    start(async () => {
+      const result = await renameCampaignAction({ campaignId: campaign.id, name });
+      if (!result.ok) {
+        toast({ title: result.error, variant: "error" });
+        return;
+      }
+      setEditingName(false);
+      toast({ title: "Campaign renamed", variant: "success" });
+      router.refresh();
+    });
+  }
+
+  function cancelName() {
+    setEditingName(false);
+    setNameDraft(campaign.name);
+  }
+
   async function remove() {
     const result = await deleteCampaignAction({ campaignId: campaign.id });
     if (!result.ok) throw new Error(result.error);
@@ -85,7 +112,49 @@ export function CampaignHeader({
           { label: "Campaigns", href: "/campaigns" },
           { label: `#${shortId(campaign.id)}` },
         ]}
-        title={<span data-testid="campaign-name">{campaign.name}</span>}
+        title={
+          editingName ? (
+            // A span, not a form: the title sits inside the page's h1.
+            <span className="flex items-center gap-2">
+              <input
+                aria-label="Campaign name"
+                // biome-ignore lint/a11y/noAutofocus: the field opens on purpose, from the pencil.
+                autoFocus
+                maxLength={120}
+                value={nameDraft}
+                disabled={pending}
+                onChange={(event) => setNameDraft(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") saveName();
+                  if (event.key === "Escape") cancelName();
+                }}
+                className="min-w-0 rounded-md border border-rule bg-surface px-2 py-1 text-2xl font-semibold text-ink"
+              />
+              <IconButton
+                type="button"
+                label="Save name"
+                icon={<Check />}
+                disabled={pending}
+                onClick={saveName}
+              />
+              <IconButton type="button" label="Cancel rename" icon={<X />} onClick={cancelName} />
+            </span>
+          ) : (
+            <span className="inline-flex items-center gap-2">
+              <span data-testid="campaign-name">{campaign.name}</span>
+              {canEdit ? (
+                <IconButton
+                  label="Rename campaign"
+                  icon={<Pencil />}
+                  onClick={() => {
+                    setNameDraft(campaign.name);
+                    setEditingName(true);
+                  }}
+                />
+              ) : null}
+            </span>
+          )
+        }
         titleAside={<CampaignStatusBadge status={campaign.status} />}
         meta={
           <>

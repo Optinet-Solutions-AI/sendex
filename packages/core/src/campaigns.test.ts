@@ -14,6 +14,7 @@ import {
   messageParts,
   newCampaignSchema,
   parseSenderIds,
+  renameCampaignSchema,
   renderPreview,
   senderIdsInputSchema,
   sendSettingsSchema,
@@ -262,5 +263,24 @@ describe("lap schemas", () => {
       scheduledAt: "2026-11-08T09:00:00+01:00",
     });
     expect(() => lapScheduleSchema.parse({ scheduledAt: "tomorrow" })).toThrow();
+  });
+});
+
+describe("renameCampaignSchema (D4-26)", () => {
+  const id = "0d4f1f5e-5c3a-4b7e-9b1a-2f6d8c9e0a11";
+  it("takes a campaign and a new name, trimmed", () => {
+    expect(renameCampaignSchema.parse({ campaignId: id, name: "  Roy Boy UK Batch 3  " })).toEqual({
+      campaignId: id,
+      name: "Roy Boy UK Batch 3",
+    });
+  });
+  it("refuses an empty name, one over 120 characters, or no campaign id", () => {
+    expect(renameCampaignSchema.safeParse({ campaignId: id, name: "   " }).success).toBe(false);
+    expect(renameCampaignSchema.safeParse({ campaignId: id, name: "a".repeat(121) }).success).toBe(
+      false,
+    );
+    expect(renameCampaignSchema.safeParse({ campaignId: "nope", name: "Fine" }).success).toBe(
+      false,
+    );
   });
 });

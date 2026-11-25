@@ -121,6 +121,13 @@ export const newCampaignSchema = z.object({
 });
 export type NewCampaign = z.infer<typeof newCampaignSchema>;
 
+/** Rename a campaign (D4-26): same name rule as a new one. */
+export const renameCampaignSchema = z.object({
+  campaignId: z.string().uuid(),
+  name: newCampaignSchema.shape.name,
+});
+export type RenameCampaignInput = z.infer<typeof renameCampaignSchema>;
+
 export const sidGroupSchema = z.object({
   name: z.string().trim().min(1, "Name is required").max(120),
   country: countrySchema,

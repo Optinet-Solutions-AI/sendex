@@ -5,7 +5,7 @@ import { lists } from "../schema/lists.js";
 import type { Db } from "../types.js";
 import { recordAudit } from "./audit.js";
 import { getCampaign, lapPriceSql } from "./campaigns.js";
-import { getBalanceMicro } from "./ledger.js";
+import { getSpendableBalanceMicro } from "./carrier-balances.js";
 import { flushList } from "./lists.js";
 import { setLapOn } from "./results.js";
 
@@ -69,7 +69,7 @@ export async function topUpLaps(
     })),
   });
   if (plan.activeLaps === 0) throw new Error("No active lap to top up");
-  const balance = await getBalanceMicro(db, organisationId);
+  const balance = await getSpendableBalanceMicro(db, organisationId);
   if (balance < BigInt(plan.totalMicro)) {
     const needed = (plan.totalMicro / 1_000_000).toFixed(2);
     const have = (Number(balance) / 1_000_000).toFixed(2);

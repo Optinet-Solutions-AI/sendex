@@ -149,3 +149,18 @@ export const routePrices = pgTable(
   },
   (t) => [index("route_prices_route_country_valid_idx").on(t.routeId, t.country, t.validFrom)],
 );
+
+/**
+ * Our balance at each carrier (D5-17), read by the worker from the carrier's API. One row per
+ * provider adapter key (`routes.provider`): the account is shared by every organisation whose
+ * routes use that carrier. Not a tenant table.
+ */
+export const carrierBalances = pgTable("carrier_balances", {
+  provider: text("provider").primaryKey(),
+  balanceMicro: bigint("balance_micro", { mode: "bigint" }).notNull(),
+  currency: text("currency").notNull().default("EUR"),
+  /** When the carrier says it last updated the balance, if it says. */
+  reportedAt: timestamp("reported_at", { withTimezone: true }),
+  /** When the worker last read it. */
+  checkedAt: timestamp("checked_at", { withTimezone: true }).notNull(),
+});

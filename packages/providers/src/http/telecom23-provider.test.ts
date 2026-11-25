@@ -375,3 +375,41 @@ describe("Telecom23Provider sender ids and prices", () => {
     expect(key).not.toBe(telecom23IdempotencyKey(["a", "c"]));
   });
 });
+
+describe("Telecom23Provider.fetchBalance (D5-17)", () => {
+  it("reads the account balance in micro-EUR with the time 23Telecom last updated it", async () => {
+    const { fetch, calls } = fakeFetch([
+      {
+        status: 200,
+        body: {
+          available_balance: 422.3605,
+          balance: 417.3605,
+          credit_limit: 5,
+          currency: "EUR",
+          updated: "2026.11.23 19:01:30",
+        },
+      },
+    ]);
+    const provider = new Telecom23Provider({ apiKey: "sk_live_x", fetch });
+    await expect(provider.fetchBalance()).resolves.toEqual({
+      balanceMicro: 417_360_500n,
+      currency: "EUR",
+      reportedAt: new Date("2026-11-23T19:01:30Z"),
+    });
+    expect(calls[0]?.url).toBe("https://restlink23telecom.com/api/v1/user/balance");
+    expect((calls[0]?.init.headers as Record<string, string>)["x-api-key"]).toBe("sk_live_x");
+  });
+
+  it("throws when 23Telecom refuses or answers without a balance", async () => {
+    const refused = new Telecom23Provider({
+      apiKey: "k",
+      fetch: fakeFetch([{ status: 401, body: { error_code: "UNAUTHORIZED" } }]).fetch,
+    });
+    await expect(refused.fetchBalance()).rejects.toThrow("23telecom balance answered 401");
+    const empty = new Telecom23Provider({
+      apiKey: "k",
+      fetch: fakeFetch([{ status: 200, body: { currency: "EUR" } }]).fetch,
+    });
+    await expect(empty.fetchBalance()).rejects.toThrow("no balance");
+  });
+});

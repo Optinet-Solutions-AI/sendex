@@ -16,7 +16,7 @@ import {
   type DashboardFilter,
   dashboardKpis,
   db,
-  getBalanceMicro,
+  getSpendableBalanceMicro,
   roiRows,
   segmentsCard,
   sendCountDistribution,
@@ -122,7 +122,7 @@ async function renderTab(
     case "getting-started": {
       const [kpis, balanceMicro] = await Promise.all([
         dashboardKpis(d, org, filter),
-        getBalanceMicro(d, org),
+        getSpendableBalanceMicro(d, org),
       ]);
       return (
         <GettingStarted

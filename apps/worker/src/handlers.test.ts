@@ -134,3 +134,56 @@ describe("createHandlers", () => {
     expect(JSON.stringify(lines)).not.toContain("+34600000001");
   });
 });
+
+describe("carrier balances on the tick (D5-17)", () => {
+  it("reads the carriers' balances on the scheduled tick, at most once a minute", async () => {
+    const { log } = collect();
+    const asked: Array<number | undefined> = [];
+    const store = createFakeStore({
+      ctx: {
+        lap: {
+          id: "lap-1",
+          organisationId: "org-1",
+          campaignId: "cmp-1",
+          listId: "list-1",
+          routeId: "route-1",
+          testSize: 3,
+          status: "queued",
+          sent: 0,
+          failed: 0,
+          costMicro: 0n,
+        },
+        campaign: { id: "cmp-1", status: "sending", contactReuse: "account_wide" },
+        list: { id: "list-1", country: "ES" },
+        route: { id: "route-1", provider: "fake", name: "fake-1", active: true, config: {} },
+        senderIds: ["LUCKY777"],
+        texts: [{ id: "t", text: "hi" }],
+        link: null,
+        priceMicro: 25_000n,
+      },
+      members: [
+        { contactId: "c1", e164: "+34600000001", firstName: null },
+        { contactId: "c2", e164: "+34600000002", firstName: null },
+        { contactId: "c3", e164: "+34600000003", firstName: null },
+      ],
+      balanceMicro: 1_000_000n,
+    });
+    const redis = fakeRedis();
+    const handlers = createHandlers({
+      log,
+      store,
+      providers: createProviderRegistry().register("fake", new FakeProvider()),
+      redis,
+      progress: createProgressTracker(redis),
+      sendQueue: { async add() {} },
+      send: { linksBaseUrl: "http://links.test" },
+      carrierBalance: {
+        async refresh(maxAgeMs) {
+          asked.push(maxAgeMs);
+        },
+      },
+    });
+    await handlers.scheduledSend({ kind: "dispatch-laps" }, meta);
+    expect(asked).toEqual([60_000]);
+  });
+});

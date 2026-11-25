@@ -100,6 +100,13 @@ erDiagram
     text timezone
     timestamp_with_time_zone updated_at
   }
+  carrier_balances {
+    bigint balance_micro
+    timestamp_with_time_zone checked_at
+    text currency
+    text provider PK
+    timestamp_with_time_zone reported_at
+  }
   clicks {
     timestamp_with_time_zone at
     uuid campaign_id FK
@@ -568,4 +575,4 @@ erDiagram
   users ||--o{ verification_requests : "requested_by"
 ```
 
-Generated from the Drizzle schema by `pnpm --filter @sendex/db erd` (40 tables, 81 relationships). Do not edit by hand: regenerate after every schema change. CI runs `pnpm --filter @sendex/db erd:check` and fails when this file is stale.
+Generated from the Drizzle schema by `pnpm --filter @sendex/db erd` (41 tables, 81 relationships). Do not edit by hand: regenerate after every schema change. CI runs `pnpm --filter @sendex/db erd:check` and fails when this file is stale.

@@ -36,7 +36,7 @@ import {
 } from "../schema/index.js";
 import { DEFAULT_CUSTOM_ROUTE_FEE_MICRO, organisationSettings } from "../schema/settings.js";
 import type { Db } from "../types.js";
-import { getBalanceMicro } from "./ledger.js";
+import { getSpendableBalanceMicro } from "./carrier-balances.js";
 import { globalExcludeCondition, segmentCondition } from "./segments.js";
 
 /**
@@ -569,7 +569,7 @@ export function createSendingStore(db: Db): SendingStore {
       return row?.status ?? null;
     },
 
-    getBalanceMicro: (organisationId) => getBalanceMicro(db, organisationId),
+    getBalanceMicro: (organisationId) => getSpendableBalanceMicro(db, organisationId),
 
     getCurrentPriceMicro: (routeId, country) => currentPriceMicro(db, routeId, country, new Date()),
 

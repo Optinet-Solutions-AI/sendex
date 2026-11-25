@@ -7,8 +7,8 @@ import {
 } from "@sendex/core";
 import {
   type Db,
-  getBalanceMicro,
   getSettings,
+  getSpendableBalanceMicro,
   markLowBalanceAlerted,
   organisationsWithLowBalanceRule,
   organisationsWithRecentSends,
@@ -52,7 +52,7 @@ export function createAlertChecksStore(db: Db): AlertChecksStore {
     organisationsWithRecentSends: (since) => organisationsWithRecentSends(db, since),
     organisationsWithLowBalanceRule: () => organisationsWithLowBalanceRule(db),
     sendRate: (organisationId, now) => sendRate(db, organisationId, now),
-    getBalanceMicro: (organisationId) => getBalanceMicro(db, organisationId),
+    getBalanceMicro: (organisationId) => getSpendableBalanceMicro(db, organisationId),
     async getLowBalanceRule(organisationId) {
       const s = await getSettings(db, organisationId);
       return {

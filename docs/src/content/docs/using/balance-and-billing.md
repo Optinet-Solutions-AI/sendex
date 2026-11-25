@@ -3,14 +3,25 @@ title: "Balance and billing"
 description: Check your balance, record deposits, read transactions and set the low balance alert and daily caps.
 ---
 
-Your organisation pays for messages from a prepaid balance. The balance is shown at the top
-of every page (**Balance: EUR 4,988.31**); click it to open **Billing**. Every send is
-charged to the balance as it goes out, and the campaign estimate tells you what a send will
-cost before you press **Send**.
+The balance shown at the top of every page (**Balance: EUR 417.36**) is the money on our
+account at the **carrier** behind your routes: for a route on 23Telecom, 23Telecom's own
+balance. Sendex reads it from the carrier every minute and again just before each send, SMS
+test or verification, and a send that would cost more than it is not started. Click the
+balance to open **Billing**, which names the carrier and when the balance was last read.
 
-## Fund your account
+The account at a carrier is shared: every organisation with a route on 23Telecom sees and
+spends the same balance. With routes on more than one carrier, the balance is the sum of
+those carriers' balances. Top it up at the carrier, not in Sendex.
 
-Card and PayPal payments arrive in stage two; today an **owner** records a payment that has
+Every send still writes what it cost to Sendex's ledger, so **Transactions** and
+**Summary** show the spend per message and per campaign.
+
+Only when none of your carriers reports a balance (a carrier without a balance API, or
+local development) does Sendex fall back to its own prepaid ledger balance, funded as below.
+
+## Fund your account (ledger balance only)
+
+This form is shown only when the balance is not read from a carrier. Card and PayPal payments arrive in stage two; today an **owner** records a payment that has
 reached the platform by bank wire or crypto, or a manual adjustment:
 
 1. Open **Billing** and find **Fund your account** on the right.

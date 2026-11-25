@@ -27,6 +27,14 @@ export interface DeliveryReceipt {
   operator?: string;
 }
 
+/** Our account balance at a carrier. */
+export interface CarrierBalance {
+  balanceMicro: bigint;
+  currency: string;
+  /** When the carrier says it last updated the balance, if it says. */
+  reportedAt: Date | null;
+}
+
 export interface Provider {
   readonly name: string;
   /** Submit a batch. Must never throw for per-message failures; report them in the outcomes. */
@@ -44,6 +52,11 @@ export interface Provider {
    * transport or authentication failure. Optional: push-only carriers (SMPP) leave it out.
    */
   pollReceipts?(providerMessageIds: readonly string[]): Promise<DeliveryReceipt[]>;
+  /**
+   * The money left on our account with this carrier (D5-17). Optional: carriers without a
+   * balance API leave it out, and Sendex then falls back to its own ledger.
+   */
+  fetchBalance?(): Promise<CarrierBalance>;
 }
 
 export type PollingProvider = Provider & { pollReceipts: NonNullable<Provider["pollReceipts"]> };

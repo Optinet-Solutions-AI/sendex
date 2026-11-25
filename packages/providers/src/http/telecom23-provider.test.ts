@@ -397,7 +397,8 @@ describe("Telecom23Provider.fetchBalance (D5-17)", () => {
       reportedAt: new Date("2026-11-23T19:01:30Z"),
     });
     expect(calls[0]?.url).toBe("https://restlink23telecom.com/api/v1/user/balance");
-    expect((calls[0]?.init.headers as Record<string, string>)["x-api-key"]).toBe("sk_live_x");
+    const headers = (calls[0]?.init.headers ?? {}) as Record<string, string>;
+    expect(headers["x-api-key"]).toBe("sk_live_x");
   });
 
   it("throws when 23Telecom refuses or answers without a balance", async () => {

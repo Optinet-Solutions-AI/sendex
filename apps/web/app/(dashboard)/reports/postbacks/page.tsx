@@ -45,6 +45,7 @@ export default async function PostbacksReportPage({
     campaignId: r.campaignId,
     campaignName: r.campaignName,
     valueMicro: r.valueMicro === null ? null : Number(r.valueMicro),
+    revenueMicro: r.revenueMicro === null ? null : Number(r.revenueMicro),
     params: r.params,
     receivedAt: r.receivedAt.toISOString(),
     messageSentAt: r.messageSentAt === null ? null : r.messageSentAt.toISOString(),

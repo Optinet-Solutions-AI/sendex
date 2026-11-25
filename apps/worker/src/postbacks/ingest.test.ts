@@ -92,16 +92,20 @@ describe("postback ingest handler", () => {
     expect(lines[0]?.fields).toMatchObject({ inserted: false, attributed: false });
   });
 
-  it("stores a sale with its value on the lap", async () => {
+  it("stores a sale with the tracker's value, which is not revenue (D5-16)", async () => {
     const { handler } = build();
-    await handler(await payload({ type: "sale", valueMicro: 12_500_000 }), {
-      id: "3",
-      name: "postback",
-      attemptsMade: 0,
-    });
+    const job = await payload({ type: "sale", valueMicro: 12_500_000 });
+    await handler(job, { id: "3", name: "postback", attemptsMade: 0 });
     const row = await lap();
     expect(row.sales).toBe(1);
-    expect(row.revenueMicro).toBe(12_500_000n);
+    // The message's offer has no brand deal, so the deposit earns nothing.
+    expect(row.revenueMicro).toBe(0n);
+    const [stored] = await t.db
+      .select()
+      .from(postbacks)
+      .where(eq(postbacks.eventKey, job.eventKey));
+    expect(stored?.valueMicro).toBe(12_500_000n);
+    expect(stored?.revenueMicro).toBeNull();
   });
 
   it("keeps an unknown dynamic id unattributed and says so in the log", async () => {

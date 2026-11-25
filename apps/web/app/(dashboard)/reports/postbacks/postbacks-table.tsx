@@ -37,6 +37,8 @@ export interface PostbackTableRow {
   campaignId: string | null;
   campaignName: string | null;
   valueMicro: number | null;
+  /** What the deposit earned from its brand deal (D5-16); null when nothing. */
+  revenueMicro: number | null;
   params: Record<string, unknown>;
   receivedAt: string;
   /** When the attributed SMS went out; null when the postback matched no message. */
@@ -349,10 +351,16 @@ export function PostbacksTable({ rows, total, pageSize, query }: PostbacksTableP
                           </dt>
                           <dd className="font-mono">{row.dynamicId}</dd>
                           <dt className="font-mono uppercase tracking-[0.06em] text-muted">
-                            Value
+                            Tracker amount
                           </dt>
                           <dd className="tabular-nums">
                             {row.valueMicro === null ? "—" : formatMicro(row.valueMicro)}
+                          </dd>
+                          <dt className="font-mono uppercase tracking-[0.06em] text-muted">
+                            Revenue (deal)
+                          </dt>
+                          <dd className="tabular-nums">
+                            {row.revenueMicro === null ? "—" : formatMicro(row.revenueMicro)}
                           </dd>
                           <dt className="font-mono uppercase tracking-[0.06em] text-muted">
                             Received

@@ -37,6 +37,20 @@ erDiagram
     text target_id
     text target_type
   }
+  brand_deals {
+    text brand
+    bigint cpa_micro
+    timestamp_with_time_zone created_at
+    text deal
+    text deal_key UK "unique with organisation_id, starts_on"
+    uuid id PK
+    uuid organisation_id FK, UK "unique with deal_key, starts_on"
+    text program
+    text reason
+    date starts_on UK "unique with deal_key, organisation_id"
+    text top_geos
+    text uploaded_by
+  }
   campaign_links {
     boolean active
     uuid campaign_id PK, FK
@@ -175,6 +189,7 @@ erDiagram
   links {
     boolean active
     timestamp_with_time_zone created_at
+    text deal_key
     uuid id PK
     text name
     uuid organisation_id FK
@@ -329,6 +344,7 @@ erDiagram
     uuid organisation_id FK
     jsonb params
     timestamp_with_time_zone received_at
+    bigint revenue_micro
     postback_type type
     bigint value_micro
   }
@@ -498,6 +514,7 @@ erDiagram
   organisations ||--o{ ad_texts : "organisation_id"
   organisations ||--o{ api_tokens : "organisation_id"
   organisations ||--o{ audit_log : "organisation_id"
+  organisations ||--o{ brand_deals : "organisation_id"
   organisations ||--o{ campaign_links : "organisation_id"
   organisations ||--o{ campaign_lists : "organisation_id"
   organisations ||--o{ campaign_routes : "organisation_id"
@@ -551,4 +568,4 @@ erDiagram
   users ||--o{ verification_requests : "requested_by"
 ```
 
-Generated from the Drizzle schema by `pnpm --filter @sendex/db erd` (39 tables, 80 relationships). Do not edit by hand: regenerate after every schema change. CI runs `pnpm --filter @sendex/db erd:check` and fails when this file is stale.
+Generated from the Drizzle schema by `pnpm --filter @sendex/db erd` (40 tables, 81 relationships). Do not edit by hand: regenerate after every schema change. CI runs `pnpm --filter @sendex/db erd:check` and fails when this file is stale.

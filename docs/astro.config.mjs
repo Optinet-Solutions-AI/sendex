@@ -39,6 +39,7 @@ export default defineConfig({
             { label: "Balance and billing", slug: "using/balance-and-billing" },
             { label: "Daily caps and alerts", slug: "using/caps-and-alerts" },
             { label: "Track conversions", slug: "using/track-conversions" },
+            { label: "Brand deals", slug: "using/brand-deals" },
             { label: "API tokens", slug: "using/api-tokens" },
           ],
         },

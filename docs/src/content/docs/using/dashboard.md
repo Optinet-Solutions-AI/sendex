@@ -42,8 +42,8 @@ Profit and ROI by default, plus CtL, CtS and LtS. Click a column to sort, › to
 **Expand** / **Collapse** for everything, **CSV** to download the expanded table. Negative
 profit and ROI are red; "—" means not computable. A bold **Grand Total** closes the table.
 
-Revenue is the sale value your tracker reports or, when it reports none, the offer's
-**profit per sale**; profit is revenue minus cost and ROI is profit over cost.
+Revenue is what first deposits earn from their brand deals (the CPA of each offer's deal,
+see [Brand deals](/using/brand-deals/)); profit is revenue minus cost and ROI is profit over cost.
 
 Under it, **Cost per sale — accumulated over time** draws the cumulative (dashed green) and
 monthly (navy) cost per sale, account-wide.

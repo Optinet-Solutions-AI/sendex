@@ -657,3 +657,37 @@ export async function seedE2eRouteTest(namePrefix: string): Promise<SeededRouteT
     await sql.end();
   }
 }
+
+/** The affiliate programs of `docs/public/examples/brand-deals-example.csv` (D5-16 spec). */
+const EXAMPLE_DEAL_PROGRAMS = ["Example Affiliates", "Sample Partners", "Demo Network"];
+
+/**
+ * An offer of the seeded "external" organisation for the brand deals spec, with no deal yet.
+ * Clean up with `cleanupE2eBrandDeals`. Test-only.
+ */
+export async function seedE2eOffer(name: string): Promise<void> {
+  const url = process.env.DATABASE_URL;
+  if (!url) throw new Error("DATABASE_URL must be set to run the brand deals e2e spec");
+  const sql = postgres(url, { max: 1 });
+  try {
+    await sql`
+      insert into links (organisation_id, name, url)
+      select id, ${name}, 'https://offer.example.com/?sub={{dynamic}}'
+      from organisations where slug = 'external'`;
+  } finally {
+    await sql.end();
+  }
+}
+
+/** Remove the example deals and the spec's offers (names starting with `offerPrefix`). */
+export async function cleanupE2eBrandDeals(offerPrefix: string): Promise<void> {
+  const url = process.env.DATABASE_URL;
+  if (!url) throw new Error("DATABASE_URL must be set to run the brand deals e2e spec");
+  const sql = postgres(url, { max: 1 });
+  try {
+    await sql`delete from brand_deals where program in ${sql(EXAMPLE_DEAL_PROGRAMS)}`;
+    await sql`delete from links where name like ${`${offerPrefix}%`}`;
+  } finally {
+    await sql.end();
+  }
+}

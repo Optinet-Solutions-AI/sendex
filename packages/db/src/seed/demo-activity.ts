@@ -655,6 +655,8 @@ async function seedSend(
           campaignId,
           lapId,
           valueMicro: e.valueMicro,
+          // Made-up data: each first deposit earns the offer's payout as its deal CPA (D5-16).
+          revenueMicro: e.type === "sale" ? e.valueMicro : null,
           params: { source: "demo" },
           receivedAt: e.at,
         })),

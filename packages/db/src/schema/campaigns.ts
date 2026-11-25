@@ -113,8 +113,13 @@ export const links = pgTable("links", {
   name: text("name").notNull(),
   url: text("url").notNull(),
   active: boolean("active").notNull().default(true),
-  /** Revenue per conversion in micro-EUR, for profit and ROI (SMS Edge: Advanced › Profit). */
+  /** SMS Edge's Advanced › Profit per conversion. Not used for revenue since D5-16 (brand deals). */
   profitMicro: bigint("profit_micro", { mode: "bigint" }).notNull().default(sql`0`),
+  /**
+   * The brand deal this offer earns from (`brand_deals.deal_key`, D5-16): each first deposit
+   * on it earns that deal's CPA. Null: no revenue.
+   */
+  dealKey: text("deal_key"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

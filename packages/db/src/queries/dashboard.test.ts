@@ -84,7 +84,8 @@ async function seedMessage(input: {
   bot?: boolean;
   leads?: number;
   sales?: number;
-  saleValue?: bigint | null;
+  /** What the first deposit earns from its brand deal (D5-16); default €50. */
+  saleRevenue?: bigint | null;
   /** When the sale postbacks arrive; two hours after the send by default. */
   saleAt?: Date;
   costMicro?: bigint;
@@ -141,7 +142,10 @@ async function seedMessage(input: {
       messageId: message.id,
       campaignId: input.campaignId,
       lapId: input.lapId,
-      valueMicro: input.saleValue === undefined ? 50_000_000n : input.saleValue,
+      // The tracker's amount is not revenue: only the first deposit's deal CPA is.
+      valueMicro: 7_000_000n,
+      revenueMicro:
+        i > 0 ? null : input.saleRevenue === undefined ? 50_000_000n : input.saleRevenue,
       receivedAt: input.saleAt ?? new Date(input.at.getTime() + 7_200_000),
     });
   }
@@ -267,8 +271,8 @@ beforeAll(async () => {
   });
 
   // GB through the API: two contacts, one message each, one with a first deposit and a
-  // repeat deposit, both without a value. Only the first counts as a sale (FTD); both add
-  // the link's profit to revenue.
+  // repeat deposit. Only the first counts as a sale (FTD) and earns the €80 deal CPA; the
+  // offer's old "profit" field is not revenue.
   const g1 = await seedContact(org, "GB", OCT, lgb.id);
   const g2 = await seedContact(org, "GB", OCT, lgb.id);
   const gb = { campaignId: campaignApi, lapId: lapApi.id, linkId: link.id };
@@ -278,7 +282,7 @@ beforeAll(async () => {
     at: OCT,
     clicked: true,
     sales: 2,
-    saleValue: null,
+    saleRevenue: 80_000_000n,
     costMicro: 38_000n,
   });
   await seedMessage({ ...gb, contactId: g2, at: OCT, bot: true, costMicro: 38_000n });
@@ -371,7 +375,7 @@ describe("roi", () => {
     });
     const gb = rows.find((r) => r.country === "GB");
     // A sale without a value takes the offer's profit per sale.
-    expect(gb?.revenue).toBe(160_000_000n);
+    expect(gb?.revenue).toBe(80_000_000n);
     expect(rows.find((r) => r.month === "2026-09")?.revenue).toBe(50_000_000n);
   });
 

@@ -142,7 +142,8 @@ beforeAll(async () => {
         campaignId,
         lapId: lap.id,
       });
-      // A first deposit and a repeat deposit: one sale (FTD), both values in revenue.
+      // A first deposit and a repeat deposit: one sale (FTD); only the first earns its
+      // brand deal's CPA (D5-16). The tracker's values are not revenue.
       await t.db.insert(postbacks).values([
         {
           organisationId: org,
@@ -153,6 +154,7 @@ beforeAll(async () => {
           campaignId,
           lapId: lap.id,
           valueMicro: 10_000_000n,
+          revenueMicro: 120_000_000n,
         },
         {
           organisationId: org,
@@ -198,7 +200,7 @@ describe("list details", () => {
         leads: 1,
         sales: 1,
         costMicro: 50_000n,
-        revenueMicro: 14_000_000n,
+        revenueMicro: 120_000_000n,
       },
     ]);
     const byCountry = await listAnalytics(t.db, org, listId, ["country"]);

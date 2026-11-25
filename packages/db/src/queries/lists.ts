@@ -307,6 +307,21 @@ export async function createList(
   return row;
 }
 
+/** Rename a list (D4-27). Null when it is not the organisation's. */
+export async function renameList(
+  db: Db,
+  organisationId: string,
+  listId: string,
+  name: string,
+): Promise<ListRow | null> {
+  const [row] = await db
+    .update(lists)
+    .set({ name })
+    .where(and(eq(lists.id, listId), eq(lists.organisationId, organisationId)))
+    .returning();
+  return row ?? null;
+}
+
 /** Set or clear a list's data provider. Returns false when it is not the organisation's. */
 export async function setListProvider(
   db: Db,

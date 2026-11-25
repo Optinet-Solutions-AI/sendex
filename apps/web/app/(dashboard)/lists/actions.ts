@@ -7,6 +7,7 @@ import {
   type ListCountry,
   ListCountrySchema,
   ListProviderSchema,
+  RenameListSchema,
   timezoneForCountry,
   totalDropped,
   UPLOAD_CHUNK_SIZE,
@@ -29,6 +30,7 @@ import {
   getList,
   importContacts,
   recordAudit,
+  renameList,
   setCampaignLists,
   setListArchived,
   setListProvider,
@@ -303,6 +305,29 @@ export async function setListProviderAction(
     revalidatePath("/lists");
     revalidatePath(`/lists/${id}`);
     return { provider: value };
+  });
+}
+
+/** Rename a list (D4-27): the same rights as uploading to it. */
+export async function renameListAction(input: unknown): Promise<ActionResult<{ name: string }>> {
+  return run(async () => {
+    const ctx = await requireAction("list.upload");
+    const { listId, name } = RenameListSchema.parse(input);
+    const database = db();
+    const before = await getList(database, ctx.organisationId, listId);
+    if (!before) throw new Error("List not found");
+    const renamed = await renameList(database, ctx.organisationId, listId, name);
+    if (!renamed) throw new Error("List not found");
+    await recordAudit(database, ctx.organisationId, {
+      actorUserId: ctx.userId,
+      action: "list.rename",
+      targetType: "list",
+      targetId: listId,
+      details: { from: before.name, to: renamed.name },
+    });
+    revalidatePath("/lists");
+    revalidatePath(`/lists/${listId}`);
+    return { name: renamed.name };
   });
 }
 

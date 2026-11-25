@@ -101,6 +101,13 @@ export const NewListSchema = z.object({
 });
 export type NewList = z.infer<typeof NewListSchema>;
 
+/** Rename a list (D4-27): the same name rules as a new list. */
+export const RenameListSchema = z.object({
+  listId: z.uuid(),
+  name: NewListSchema.shape.name,
+});
+export type RenameListInput = z.infer<typeof RenameListSchema>;
+
 export const UploadTargetSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("existing"), listId: z.uuid() }),
   z.object({ kind: z.literal("new"), ...NewListSchema.shape }),

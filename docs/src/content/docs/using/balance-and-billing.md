@@ -11,7 +11,7 @@ balance to open **Billing**, which names the carrier and when the balance was la
 
 The account at a carrier is shared: every organisation with a route on 23Telecom sees and
 spends the same balance. With routes on more than one carrier, the balance is the sum of
-those carriers' balances. Top it up at the carrier, not in Sendex.
+those carriers' balances. Top it up at the carrier, not in Sendex. The Dashboard's balance card and the low balance alert say the same ("Top up at 23Telecom").
 
 Every send still writes what it cost to Sendex's ledger, so **Transactions** and
 **Summary** show the spend per message and per campaign.

@@ -225,3 +225,39 @@ export type LedgerFilter = z.infer<typeof ledgerFilterSchema>;
 export function isLedgerKind(value: unknown): value is LedgerKind {
   return typeof value === "string" && (LEDGER_KINDS as readonly string[]).includes(value);
 }
+
+export interface BalanceTopUp {
+  /** True when the balance is the carriers' own (D5-17), so it is topped up there. */
+  carrierBalance: boolean;
+  /** The link next to the balance on the Dashboard. */
+  linkLabel: string;
+  /** The Dashboard's balance card. */
+  cardTitle: string;
+  cardText: string;
+  /** The link on a low balance alert. */
+  alertLinkLabel: string;
+}
+
+/**
+ * How to top up (D5-19), from the carriers whose balance the organisation spends (route
+ * names, empty when the balance is Sendex's own ledger): at the carrier, or in Billing.
+ */
+export function balanceTopUp(carriers: readonly string[]): BalanceTopUp {
+  if (carriers.length === 0) {
+    return {
+      carrierBalance: false,
+      linkLabel: "Top up",
+      cardTitle: "Add balance",
+      cardText: "Top up the account so campaigns can start sending.",
+      alertLinkLabel: "Fund the account",
+    };
+  }
+  const names = carriers.join(" and ");
+  return {
+    carrierBalance: true,
+    linkLabel: "Billing",
+    cardTitle: `Balance at ${names}`,
+    cardText: `The balance is our account at ${names}. Top it up at ${names}, not in Sendex.`,
+    alertLinkLabel: `Top up at ${names}`,
+  };
+}

@@ -1,6 +1,10 @@
 import type { AutosenderStore, CapsStore, Db, SendingStore } from "@sendex/db";
 import type { LookupProvider, ProviderRegistry } from "@sendex/providers";
 import { type AlertChecksStore, type CheckThrottle, runAlertChecks } from "./alerts/checks.js";
+import {
+  CARRIER_BALANCE_EVERY_MS,
+  type CarrierBalanceRefresher,
+} from "./balance/carrier-balance.js";
 import { createDlrHandler } from "./dlr/handler.js";
 import { createReceiptPollTick } from "./dlr/poll.js";
 import { createClickIngestHandler } from "./links/ingest.js";
@@ -47,6 +51,8 @@ export interface HandlerDeps {
     /** Link shortener in front of our own links (D4-22); without it the SMS carries ours. */
     shortener?: LinkShortener;
   };
+  /** Carrier balances (D5-17), read on the tick; without it the stored ones are not refreshed. */
+  carrierBalance?: CarrierBalanceRefresher;
   /** Daily caps for the send loop (D3-11); without it no cap is enforced. */
   caps?: CapsStore;
   /** Spike and low balance checks run from the dispatcher tick (D3-11). */
@@ -145,6 +151,8 @@ export function createHandlers(deps: HandlerDeps): JobHandlers {
           log("error", "alert checks failed", { jobId: meta.id, err });
         }
       }
+      // Carrier balances (D5-17): read at most once a minute; the refresher never throws.
+      await deps.carrierBalance?.refresh(CARRIER_BALANCE_EVERY_MS);
       // The expiry sweep rides on the same tick; a failure must not fail the dispatch.
       if (expiry) {
         await expiry().catch((err: unknown) =>

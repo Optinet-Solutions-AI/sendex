@@ -4,8 +4,8 @@ import {
   type DailySummaryRow,
   dailySummary,
   db,
-  getBalanceMicro,
   listLedgerEntries,
+  organisationBalance,
   spendByCampaign,
 } from "@sendex/db";
 import {
@@ -338,7 +338,8 @@ export default async function BillingPage({
     throw error;
   }
   const query = parseBillingQuery(await searchParams);
-  const balanceMicro = await getBalanceMicro(db(), ctx.organisationId);
+  const balance = await organisationBalance(db(), ctx.organisationId);
+  const onCarrier = balance.source === "carrier";
   const panel =
     query.tab === "deposits" ? (
       <DepositsPanel organisationId={ctx.organisationId} query={query} />
@@ -356,8 +357,23 @@ export default async function BillingPage({
           <>
             Current balance{" "}
             <span data-testid="billing-balance" className="font-mono font-medium text-ink">
-              {formatEur(balanceMicro)}
+              {formatEur(balance.totalMicro)}
             </span>
+            {onCarrier ? (
+              <span data-testid="billing-balance-source">
+                {" "}
+                at{" "}
+                {balance.carriers
+                  .map(
+                    (c) =>
+                      `${c.routeName} ${formatEur(c.balanceMicro)} (read ${c.checkedAt
+                        .toISOString()
+                        .slice(0, 16)
+                        .replace("T", " ")} UTC)`,
+                  )
+                  .join(", ")}
+              </span>
+            ) : null}
           </>
         }
         actions={
@@ -375,7 +391,15 @@ export default async function BillingPage({
             {panel}
           </div>
         </div>
-        <DepositForm canDeposit={can(ctx.role, "balance.deposit")} />
+        {onCarrier ? (
+          <p className="text-sm text-muted" data-testid="carrier-balance-note">
+            The balance is the money on our account at the carrier, read every minute and again
+            before each send. Top it up at the carrier; deposits here do not change it. The history
+            on the left still lists what each send cost.
+          </p>
+        ) : (
+          <DepositForm canDeposit={can(ctx.role, "balance.deposit")} />
+        )}
       </div>
     </section>
   );

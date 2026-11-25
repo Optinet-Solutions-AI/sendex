@@ -12,8 +12,8 @@ import {
   db,
   finishTest,
   finishVerificationRequest,
-  getBalanceMicro,
   getEnrichmentRuleById,
+  getSpendableBalanceMicro,
   listQueuedTests,
   listQueuedVerificationRequests,
   listScheduledTests,
@@ -23,6 +23,7 @@ import {
   recordTestMessage,
   ruleUsage,
   type SendingStore,
+  saveCarrierBalance,
   scheduledEnrichmentRules,
   verificationTargets,
 } from "@sendex/db";
@@ -32,6 +33,10 @@ import { sql } from "drizzle-orm";
 import { Redis } from "ioredis";
 import { createAlertChecksStore, createRedisThrottle } from "./alerts/checks.js";
 import { createApp } from "./app.js";
+import {
+  CARRIER_BALANCE_BEFORE_SEND_MS,
+  createCarrierBalanceRefresher,
+} from "./balance/carrier-balance.js";
 import { subscribeDeliveryReceipts } from "./dlr/subscribe.js";
 import { createHandlers, createStubHandlers } from "./handlers.js";
 import { cachedQueueDepths, DEFAULT_QUEUE_DEPTH_CACHE_MS, queueDepths } from "./health.js";
@@ -86,11 +91,25 @@ if (redis) {
   const settings = workerSettingsFromEnv();
   queues = createQueues(redis);
   const providers = createDefaultProviderRegistry();
+  // Carrier balances (D5-17): the balance Sendex spends is the money at the carriers. Read
+  // every minute on the tick, and again before a send, test or verification checks it.
+  const carrierBalance = process.env.DATABASE_URL
+    ? createCarrierBalanceRefresher({
+        providers,
+        save: (input) => saveCarrierBalance(db(), input),
+        log,
+      })
+    : null;
+  const freshBalanceMicro = async (organisationId: string): Promise<bigint> => {
+    await carrierBalance?.refresh(CARRIER_BALANCE_BEFORE_SEND_MS);
+    return getSpendableBalanceMicro(db(), organisationId);
+  };
   const handlers =
     store && progress
       ? createHandlers({
           db: db(),
-          store,
+          store: { ...store, getBalanceMicro: freshBalanceMicro },
+          ...(carrierBalance ? { carrierBalance } : {}),
           providers,
           redis,
           progress,
@@ -107,7 +126,7 @@ if (redis) {
               loadTestContext: (id) => loadTestContext(db(), id),
               recordTestMessage: (input) => recordTestMessage(db(), input),
               finishTest: (id, outcome) => finishTest(db(), id, outcome),
-              getBalanceMicro: (organisationId) => getBalanceMicro(db(), organisationId),
+              getBalanceMicro: freshBalanceMicro,
               listQueuedTests: () => listQueuedTests(db()),
               listScheduledTests: () => listScheduledTests(db()),
               claimTest: (id, slotKey) => claimTest(db(), id, slotKey),
@@ -123,7 +142,7 @@ if (redis) {
               finishVerificationRequest: (id, status) =>
                 finishVerificationRequest(db(), id, status),
               lookupPriceFor: (country) => lookupPriceFor(db(), country),
-              getBalanceMicro: (organisationId) => getBalanceMicro(db(), organisationId),
+              getBalanceMicro: freshBalanceMicro,
               ruleIncludesArchived: async (ruleId) =>
                 ruleId
                   ? ((await getEnrichmentRuleById(db(), ruleId))?.includeArchived ?? false)

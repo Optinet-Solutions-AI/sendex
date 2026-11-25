@@ -41,7 +41,7 @@ pnpm --filter @sendex/db erd   regenerate docs/engineering/erd.md after schema c
 3. **Conventional commits**: `feat(web): list upload page (D1-16)`. Put the card key in the subject.
 4. **Tenancy everywhere.** Every tenant table has `organisation_id`. All reads and writes go through `packages/db` helpers that take the organisation id; never a raw query from a page or route.
 5. **Validate at the boundary.** Zod schemas from `packages/core` on every form, server action, API route and queue payload.
-6. **Money is a ledger.** Balance is the sum of `ledger_entries`; never update a balance column. Every send writes its debit in the same transaction, with an idempotency key.
+6. **Money is a ledger.** Spend is the sum of `ledger_entries`; never update a balance column of ours. Every send writes its debit in the same transaction, with an idempotency key. The balance Sendex spends is the carriers' own (`carrier_balances`, read by the worker; ADR 0013), with the ledger sum only as the fallback when no carrier reports one.
 7. **Secrets** only in `.env` (git-ignored), Vercel, Fly.io or GitHub secrets. `.env.example` documents every key. gitleaks runs on commit.
 8. **Docs in the same PR.** A feature PR updates its how-to page under `docs/` and adds an ADR when it makes an architectural choice.
 9. **Biome, strict TypeScript, no `any`, no non-null assertions.** `pnpm lint && pnpm typecheck && pnpm test` must pass before you say a task is done.

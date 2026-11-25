@@ -10,7 +10,13 @@
  */
 
 import { createHash } from "node:crypto";
-import type { DeliveryReceipt, OutboundMessage, Provider, SubmitOutcome } from "../provider.js";
+import type {
+  CarrierBalance,
+  DeliveryReceipt,
+  OutboundMessage,
+  Provider,
+  SubmitOutcome,
+} from "../provider.js";
 
 export const TELECOM23_BASE_URL = "https://restlink23telecom.com/api/v1";
 
@@ -283,6 +289,51 @@ export class Telecom23Provider implements Provider {
     if (message === null || typeof message !== "object") return null;
     const m = message as { timestamp?: unknown; delivered_at?: unknown };
     return this.parseDeliveryReceipt({ ...m, timestamp: m.timestamp ?? m.delivered_at });
+  }
+
+  /**
+   * GET /user/balance (D5-17): `balance` is the money on the account (`available_balance`
+   * adds the credit limit, which Sendex does not spend). `updated` has no time zone; it is
+   * read as UTC.
+   */
+  async fetchBalance(): Promise<CarrierBalance> {
+    let response: Response;
+    try {
+      response = await this.fetchImpl(`${this.baseUrl}/user/balance`, {
+        headers: { "x-api-key": this.apiKey, accept: "application/json" },
+        signal: AbortSignal.timeout(this.timeoutMs),
+      });
+    } catch (err) {
+      const reason = err instanceof Error ? err.message : String(err);
+      throw new Error(`23telecom balance failed: ${reason}`);
+    }
+    let body: unknown = null;
+    try {
+      body = await response.json();
+    } catch {
+      body = null;
+    }
+    if (!response.ok) {
+      const code = errorCodeOf(body, response.statusText || "ERROR");
+      throw new Error(`23telecom balance answered ${response.status} ${code}`);
+    }
+    const b = (body ?? {}) as { balance?: unknown; currency?: unknown; updated?: unknown };
+    if (typeof b.balance !== "number" || !Number.isFinite(b.balance)) {
+      throw new Error("23telecom balance: no balance in the answer");
+    }
+    const updated =
+      typeof b.updated === "string"
+        ? /^(\d{4})\.(\d{2})\.(\d{2}) (\d{2}):(\d{2}):(\d{2})$/.exec(b.updated)
+        : null;
+    return {
+      balanceMicro: BigInt(Math.round(b.balance * 1_000_000)),
+      currency: typeof b.currency === "string" ? b.currency : "EUR",
+      reportedAt: updated
+        ? new Date(
+            `${updated[1]}-${updated[2]}-${updated[3]}T${updated[4]}:${updated[5]}:${updated[6]}Z`,
+          )
+        : null,
+    };
   }
 
   async priceFor(route: string, country: string): Promise<number | null> {

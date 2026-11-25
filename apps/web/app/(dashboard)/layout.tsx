@@ -1,6 +1,6 @@
 import { OrganizationSwitcher, UserButton } from "@clerk/nextjs";
 import { type Action, can, formatEur, type Role } from "@sendex/core";
-import { db, getBalanceMicro } from "@sendex/db";
+import { db, getSpendableBalanceMicro } from "@sendex/db";
 import { ToastProvider, TooltipProvider } from "@sendex/ui";
 import { CircleHelp } from "lucide-react";
 import Link from "next/link";
@@ -35,7 +35,7 @@ interface Shell {
 async function shellContext(): Promise<Shell | null> {
   try {
     const ctx = await requireOrg();
-    const balanceMicro = await getBalanceMicro(db(), ctx.organisationId);
+    const balanceMicro = await getSpendableBalanceMicro(db(), ctx.organisationId);
     return {
       organisationId: ctx.organisationId,
       role: ctx.role,

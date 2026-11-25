@@ -8,6 +8,7 @@ export * from "./queries/audit.js";
 export * from "./queries/campaign-messages.js";
 export * from "./queries/campaigns.js";
 export * from "./queries/caps.js";
+export * from "./queries/carrier-balances.js";
 export * from "./queries/click-stats.js";
 export * from "./queries/clicks.js";
 export * from "./queries/dashboard.js";

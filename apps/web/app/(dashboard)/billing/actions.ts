@@ -9,7 +9,7 @@ import {
 import {
   DuplicateDepositError,
   db,
-  getBalanceMicro,
+  getSpendableBalanceMicro,
   recordAudit,
   recordDeposit,
   updateSettings,
@@ -78,7 +78,7 @@ export async function recordDepositAction(
         reference: deposit.reference,
       },
     });
-    const balanceMicro = await getBalanceMicro(database, ctx.organisationId);
+    const balanceMicro = await getSpendableBalanceMicro(database, ctx.organisationId);
     revalidatePath("/", "layout");
     return {
       entryId: entry.id,

@@ -5,10 +5,11 @@ import {
   type PostbackType,
 } from "@sendex/core";
 import { and, asc, desc, eq, gte, ilike, isNotNull, lte, ne, or, sql } from "drizzle-orm";
-import { adTexts, campaigns, laps } from "../schema/campaigns.js";
+import { adTexts, campaigns, laps, links } from "../schema/campaigns.js";
 import { routes } from "../schema/routes.js";
 import { messages, postbacks } from "../schema/tracking.js";
 import type { Db } from "../types.js";
+import { dealCpaAt } from "./deals.js";
 
 export type PostbackRow = typeof postbacks.$inferSelect;
 
@@ -81,18 +82,24 @@ export interface AttributeResult {
 /**
  * Match the postback to the message that carried its dynamic id (within the organisation),
  * record message / campaign / lap on it and add it to the lap's `leads` or `sales` (plus
- * `revenue_micro` for a sale value), all in one transaction. Idempotent: a postback that is
+ * `revenue_micro`: a first deposit earns its offer's brand deal CPA, D5-16), all in one
+ * transaction. Idempotent: a postback that is
  * already attributed is left alone, so the counters never move twice for one event.
  *
  * Sales count first deposits only (SMS Edge's "Sales (FTD)"): a later sale on the same
- * message (a repeat deposit) adds its value to revenue but not to `sales`. The message row
+ * message (a repeat deposit) adds neither a sale nor revenue. The message row
  * is locked so two sales arriving together cannot both count as the first.
  */
 export async function attributePostback(db: Db, postback: PostbackRow): Promise<AttributeResult> {
   if (postback.messageId !== null) return { attributed: false, postback };
   return db.transaction(async (tx) => {
     const [message] = await tx
-      .select({ id: messages.id, campaignId: messages.campaignId, lapId: messages.lapId })
+      .select({
+        id: messages.id,
+        campaignId: messages.campaignId,
+        lapId: messages.lapId,
+        linkId: messages.linkId,
+      })
       .from(messages)
       .where(
         and(
@@ -115,23 +122,33 @@ export async function attributePostback(db: Db, postback: PostbackRow): Promise<
       return { attributed: false, postback: current ?? postback };
     }
 
-    const value = updated.valueMicro ?? 0n;
+    let firstSale = false;
+    let revenue: bigint | null = null;
+    if (updated.type === "sale") {
+      const [earlier] = await tx
+        .select({ id: postbacks.id })
+        .from(postbacks)
+        .where(
+          and(
+            eq(postbacks.messageId, message.id),
+            eq(postbacks.type, "sale"),
+            ne(postbacks.id, updated.id),
+          ),
+        )
+        .limit(1);
+      firstSale = earlier === undefined;
+      if (firstSale) revenue = await firstDepositRevenue(tx, updated, message.linkId);
+    }
+    let result = updated;
+    if (revenue !== null) {
+      const [withRevenue] = await tx
+        .update(postbacks)
+        .set({ revenueMicro: revenue })
+        .where(eq(postbacks.id, updated.id))
+        .returning();
+      result = withRevenue ?? updated;
+    }
     if (message.lapId !== null) {
-      let firstSale = false;
-      if (updated.type === "sale") {
-        const [earlier] = await tx
-          .select({ id: postbacks.id })
-          .from(postbacks)
-          .where(
-            and(
-              eq(postbacks.messageId, message.id),
-              eq(postbacks.type, "sale"),
-              ne(postbacks.id, updated.id),
-            ),
-          )
-          .limit(1);
-        firstSale = earlier === undefined;
-      }
       await tx
         .update(laps)
         .set(
@@ -139,13 +156,31 @@ export async function attributePostback(db: Db, postback: PostbackRow): Promise<
             ? { leads: sql`${laps.leads} + 1` }
             : {
                 sales: firstSale ? sql`${laps.sales} + 1` : laps.sales,
-                revenueMicro: sql`${laps.revenueMicro} + ${value}`,
+                revenueMicro: sql`${laps.revenueMicro} + ${revenue ?? 0n}`,
               },
         )
         .where(eq(laps.id, message.lapId));
     }
-    return { attributed: true, postback: updated };
+    return { attributed: true, postback: result };
   });
+}
+
+/**
+ * What a first deposit earns (D5-16): the CPA of the brand deal chosen on the message's
+ * offer, in force on the day the deposit came. Null without an offer, a deal or a price.
+ */
+async function firstDepositRevenue(
+  tx: Db,
+  postback: PostbackRow,
+  linkId: string | null,
+): Promise<bigint | null> {
+  if (linkId === null) return null;
+  const [link] = await tx
+    .select({ dealKey: links.dealKey })
+    .from(links)
+    .where(and(eq(links.id, linkId), eq(links.organisationId, postback.organisationId)));
+  if (!link?.dealKey) return null;
+  return dealCpaAt(tx, postback.organisationId, link.dealKey, postback.receivedAt);
 }
 
 export interface ListPostbacksInput {
@@ -326,7 +361,7 @@ export async function conversionStats(
         .mapWith(Number)
         .as("pb_sales"),
       revenueMicro:
-        sql<number>`coalesce(sum(${postbacks.valueMicro}) filter (where ${postbacks.type} = 'sale'), 0)`
+        sql<number>`coalesce(sum(${postbacks.revenueMicro}) filter (where ${postbacks.type} = 'sale'), 0)`
           .mapWith(Number)
           .as("pb_revenue_micro"),
     })

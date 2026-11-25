@@ -92,8 +92,8 @@ function sendFacts(organisationId: string, filter: DashboardFilter, onlyApi = fa
 
 /**
  * One row per first deposit made in the window (`sent` = 0, `sales` = 1): the dimensions of
- * its message, the day and month the deposit was made, and the revenue of the message's sale
- * postbacks (postback value or the offer's profit per sale). Only the first sale postback of
+ * its message, the day and month the deposit was made, and what the deposit earned (the CPA
+ * of the offer's brand deal, `postbacks.revenue_micro`, D5-16; never the tracker's amount). Only the first sale postback of
  * a message counts as a sale, as on the campaign page ("Sales (FTD)"). Same columns as
  * {@link sendFacts}, so the two stack.
  */
@@ -113,7 +113,7 @@ function depositFacts(organisationId: string, filter: DashboardFilter, onlyApi =
       0::bigint as previews,
       0::bigint as leads,
       1 as sales,
-      (select coalesce(sum(coalesce(p.value_micro, lk.profit_micro, 0)), 0) from postbacks p
+      (select coalesce(sum(p.revenue_micro), 0) from postbacks p
          where p.message_id = m.id and p.type = 'sale') as revenue,
       0::numeric as cost
     from (

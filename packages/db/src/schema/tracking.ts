@@ -150,6 +150,12 @@ export const postbacks = pgTable(
     lapId: uuid("lap_id").references(() => laps.id, { onDelete: "set null" }),
     /** Sale value in micro-EUR when the tracker reports one. */
     valueMicro: bigint("value_micro", { mode: "bigint" }),
+    /**
+     * What we earn from this event (D5-16): on a message's first deposit, the CPA of its
+     * offer's brand deal in force that day; null otherwise. The tracker's `value_micro` is
+     * not revenue.
+     */
+    revenueMicro: bigint("revenue_micro", { mode: "bigint" }),
     /** Raw query parameters as received. */
     params: jsonb("params").$type<Record<string, unknown>>().notNull().default({}),
     receivedAt: timestamp("received_at", { withTimezone: true }).notNull().defaultNow(),

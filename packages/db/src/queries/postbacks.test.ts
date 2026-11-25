@@ -1,6 +1,16 @@
 import { eq, inArray } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { adTexts, campaigns, contacts, laps, lists, messages, routes } from "../schema/index.js";
+import {
+  adTexts,
+  brandDeals,
+  campaigns,
+  contacts,
+  laps,
+  links,
+  lists,
+  messages,
+  routes,
+} from "../schema/index.js";
 import { createTestDb, seedOrganisation, type TestDb } from "../test/db.js";
 import {
   attributePostback,
@@ -47,7 +57,21 @@ beforeAll(async () => {
     .insert(contacts)
     .values({ organisationId: org, e164: "+34600000001", country: "ES" })
     .returning({ id: contacts.id });
-  if (!campaign || !list || !route || !contact) throw new Error("setup failed");
+  // Every message carries an offer whose brand deal pays €100 per first deposit (D5-16).
+  const [offer] = await t.db
+    .insert(links)
+    .values({ organisationId: org, name: "Offer", url: "https://o.example/", dealKey: "p|brand" })
+    .returning({ id: links.id });
+  await t.db.insert(brandDeals).values({
+    organisationId: org,
+    dealKey: "p|brand",
+    program: "P",
+    brand: "Brand",
+    deal: "€100 CPA",
+    cpaMicro: 100_000_000n,
+    startsOn: "2026-11-01",
+  });
+  if (!campaign || !list || !route || !contact || !offer) throw new Error("setup failed");
   campaignId = campaign.id;
   const lapRows = await t.db
     .insert(laps)
@@ -112,6 +136,7 @@ beforeAll(async () => {
         status: "sent",
         dynamicId: spec.dyn,
         adTextId: spec.adTextId,
+        linkId: offer.id,
         idempotencyKey: `k-${spec.dyn}`,
       })
       .returning({ id: messages.id });
@@ -208,14 +233,15 @@ describe("attributePostback", () => {
     expect(lap?.leads).toBe(1);
   });
 
-  it("counts a sale with its value on the lap", async () => {
+  it("counts a first deposit on the lap with its brand deal's CPA, not the tracker's value", async () => {
     const stored = await findPostbackByEventKey(t.db, org, "sale_d1");
     if (!stored) throw new Error("missing");
     const result = await attributePostback(t.db, stored);
     expect(result.attributed).toBe(true);
     const [lap] = await t.db.select().from(laps).where(eq(laps.id, lap1));
     expect(lap?.sales).toBe(1);
-    expect(lap?.revenueMicro).toBe(10_000_000n);
+    expect(lap?.revenueMicro).toBe(100_000_000n);
+    expect(result.postback.revenueMicro).toBe(100_000_000n);
   });
 
   it("leaves an unknown dynamic id unattributed and does not match another organisation", async () => {
@@ -355,7 +381,7 @@ describe("listPostbacks timing", () => {
 });
 
 describe("repeat deposits", () => {
-  it("count once: a second sale on the same message adds its value but not a sale", async () => {
+  it("count once: a second sale on the same message adds neither a sale nor revenue", async () => {
     const repeat = await insertPostback(t.db, org, {
       eventKey: "sale_d1_repeat",
       type: "sale",
@@ -368,7 +394,8 @@ describe("repeat deposits", () => {
     expect(result.attributed).toBe(true);
     const [lap] = await t.db.select().from(laps).where(eq(laps.id, lap1));
     expect(lap?.sales).toBe(1);
-    expect(lap?.revenueMicro).toBe(13_000_000n);
+    expect(lap?.revenueMicro).toBe(100_000_000n);
+    expect(result.postback.revenueMicro).toBeNull();
   });
 });
 
@@ -383,7 +410,7 @@ describe("conversionStats", () => {
       leads: 2,
       sales: 2,
       costMicro: 160_000,
-      revenueMicro: 18_000_000,
+      revenueMicro: 200_000_000,
       leadRate: 2 / 6,
       saleRate: 2 / 6,
       cplMicro: 80_000,
@@ -395,8 +422,8 @@ describe("conversionStats", () => {
     expect(stats.timing).toEqual({ lateLeads: 0, lateSales: 1 });
 
     expect(stats.laps.map((l) => [l.key, l.sent, l.leads, l.sales, l.revenueMicro])).toEqual([
-      [lap1, 4, 2, 1, 13_000_000],
-      [lap2, 2, 0, 1, 5_000_000],
+      [lap1, 4, 2, 1, 100_000_000],
+      [lap2, 2, 0, 1, 100_000_000],
     ]);
     expect(stats.laps[0]?.label).toBe("405");
 
@@ -408,7 +435,7 @@ describe("conversionStats", () => {
         leads: 1,
         sales: 2,
         costMicro: 80_000,
-        revenueMicro: 18_000_000,
+        revenueMicro: 200_000_000,
         leadRate: 1 / 3,
         saleRate: 2 / 3,
         cplMicro: 80_000,

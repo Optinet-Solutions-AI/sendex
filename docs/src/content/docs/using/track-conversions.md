@@ -51,7 +51,7 @@ Parameters:
 | ------------ | -------- | ------------------------------------------------------------------------------------------------ |
 | `type`       | yes      | `lead` (also `registration`) or `sale` (also `deposit`, `ftd`)                                   |
 | `dynamic_id` | yes      | the `{{dynamic}}` value from the link; may also be sent as `key`                                  |
-| `value`      | no       | amount in EUR, e.g. `12.50`; shown as revenue and used for sales                                  |
+| `value`      | no       | amount in EUR, e.g. `12.50`; kept as the **Tracker amount**, not revenue (see Brand deals)       |
 | `event_key`  | no       | the tracker's own event id, when one contact can convert several times of the same type           |
 | `sig`        | signed URL only | the signature (below)                                                                     |
 
@@ -89,7 +89,7 @@ Sendex answers:
 
 ## Duplicates
 
-A conversion is identified by your organisation, its type, the dynamic id and, when sent, `event_key`. If the brand's tracker retries a postback (they do, on timeouts) the second call is answered `duplicate` and nothing is counted again. A brand that sends distinct `event_key` values can report more than one deposit for the same message. Sendex stores and lists every one, but **Sales counts first deposits only** (as SMS Edge's "Sales (FTD)"): the first sale on a message is the sale, later ones (repeat deposits) add their value to revenue but not to Sales, CPS or the sale rate.
+A conversion is identified by your organisation, its type, the dynamic id and, when sent, `event_key`. If the brand's tracker retries a postback (they do, on timeouts) the second call is answered `duplicate` and nothing is counted again. A brand that sends distinct `event_key` values can report more than one deposit for the same message. Sendex stores and lists every one, but **Sales counts first deposits only** (as SMS Edge's "Sales (FTD)"): the first sale on a message is the sale, later ones (repeat deposits) count neither as Sales nor as revenue. What a first deposit earns comes from the offer's brand deal, not from `value`: see [Brand deals](/using/brand-deals/).
 
 ## Rotating the secret
 

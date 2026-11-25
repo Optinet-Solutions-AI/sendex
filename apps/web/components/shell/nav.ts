@@ -87,6 +87,7 @@ export const NAV_TREE: readonly NavGroup[] = [
       { label: "Billing", href: "/billing" },
       { label: "API tokens", href: "/settings/api-tokens", action: "settings.view" },
       { label: "Postbacks", href: "/settings/postbacks", action: "settings.view" },
+      { label: "Brand deals", href: "/settings/brand-deals", action: "settings.view" },
       { label: "Emergency stop", href: "/settings/emergency-stop", action: "settings.view" },
       { label: "Logs", href: "/audit", action: "audit.view" },
     ],

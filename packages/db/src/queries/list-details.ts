@@ -121,7 +121,7 @@ export async function listAnalytics(
           where msgs.contact_id = mem.contact_id and p.type = 'lead') as leads,
         (select count(distinct p.message_id) from postbacks p join msgs on msgs.id = p.message_id
           where msgs.contact_id = mem.contact_id and p.type = 'sale') as sales,
-        (select coalesce(sum(p.value_micro), 0) from postbacks p join msgs on msgs.id = p.message_id
+        (select coalesce(sum(p.revenue_micro), 0) from postbacks p join msgs on msgs.id = p.message_id
           where msgs.contact_id = mem.contact_id and p.type = 'sale') as revenue_micro,
         (select coalesce(-sum(le.amount_micro), 0) from ledger_entries le
           join msgs on le.reference_id = msgs.id::text

@@ -211,6 +211,13 @@
       "when": 1795518490380,
       "tag": "0029_no_route_fee",
       "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1795588822343,
+      "tag": "0030_brand_deals",
+      "breakpoints": true
     }
   ]
 }

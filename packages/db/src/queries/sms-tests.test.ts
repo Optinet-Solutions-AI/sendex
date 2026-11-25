@@ -93,7 +93,8 @@ describe("sms tests", () => {
       ["405", 60_000n, true],
       ["Mine", 20_000n, false],
     ]);
-    expect(ctx?.feeMicro).toBe(10_000n);
+    // No fee on an organisation's own route unless one is set (D5-14).
+    expect(ctx?.feeMicro).toBe(0n);
 
     // One accepted message on the custom route: debit plus fee; one failed on the platform route: nothing charged.
     await recordTestMessage(t.db, {

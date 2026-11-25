@@ -21,8 +21,8 @@ organisation and billed at a small platform fee per SMS on top of the carrier's 
 
 ## Custom Routes
 
-**Routes › Custom Routes** lists your own carriers. The header says the platform fee
-(€0.01 per SMS by default) and how many routes are active. Only owners manage routes;
+**Routes › Custom Routes** lists your own carriers. The header says how many routes are
+active, and the fee per SMS when your organisation has one set (none by default). Only owners manage routes;
 campaign managers and viewers can see them.
 
 - **Routes** tab: the status eye (on or off), name and host, an HTTP or SMPP badge, the

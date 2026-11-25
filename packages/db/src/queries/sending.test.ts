@@ -13,6 +13,7 @@ import {
   listMembers,
   lists,
   messages,
+  organisationSettings,
   routePrices,
   routes,
   senderIds,
@@ -22,7 +23,7 @@ import {
 import { createTestDb, seedOrganisation, type TestDb } from "../test/db.js";
 import { getBalanceMicro } from "./ledger.js";
 import { createSegment, deleteSegment } from "./segments.js";
-import { createSendingStore, type SendingStore } from "./sending.js";
+import { createSendingStore, customRouteFeeMicro, type SendingStore } from "./sending.js";
 
 let t: TestDb;
 let store: SendingStore;
@@ -858,5 +859,23 @@ describe("completeIdleCampaigns (D4-23)", () => {
     const claimed = await store.claimQueuedLaps(new Date());
     expect(claimed.map((l) => l.id)).toContain(lap);
     expect(await statusOf(again)).toBe("sending");
+  });
+});
+
+describe("fee on an organisation's own route (D5-14)", () => {
+  it("is nothing unless the organisation sets one", async () => {
+    const none = await seedOrganisation(t.db, "fee-none");
+    expect(await customRouteFeeMicro(t.db, none)).toBe(0n);
+
+    // A settings row created for something else carries no fee either.
+    const withSettings = await seedOrganisation(t.db, "fee-settings");
+    await t.db.insert(organisationSettings).values({ organisationId: withSettings });
+    expect(await customRouteFeeMicro(t.db, withSettings)).toBe(0n);
+
+    const charged = await seedOrganisation(t.db, "fee-set");
+    await t.db
+      .insert(organisationSettings)
+      .values({ organisationId: charged, customRouteFeeMicro: 10_000n });
+    expect(await customRouteFeeMicro(t.db, charged)).toBe(10_000n);
   });
 });

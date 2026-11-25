@@ -9,6 +9,9 @@ import { organisations } from "./core.js";
  * The worker reads these when it evaluates the low balance alert
  * (`shouldAlertLowBalance` in packages/core) and the caps before each send.
  */
+/** Fee per message on an organisation's own route when none is set: nothing (D5-14). */
+export const DEFAULT_CUSTOM_ROUTE_FEE_MICRO = 0n;
+
 export const organisationSettings = pgTable("organisation_settings", {
   organisationId: uuid("organisation_id")
     .primaryKey()
@@ -25,10 +28,14 @@ export const organisationSettings = pgTable("organisation_settings", {
   dailySpendCapMicro: bigint("daily_spend_cap_micro", { mode: "bigint" }),
   /** Routes > Custom Routes > Routing Configuration: custom_first, blended or platform_first. */
   routingStrategy: text("routing_strategy").notNull().default("custom_first"),
-  /** Platform fee per message sent on a custom route, micro-EUR (default EUR 0.01). */
+  /**
+   * Fee per message sent on the organisation's own (custom) route, micro-EUR. SMS Edge charges
+   * its clients EUR 0.01; Sendex is an internal tool, so none by default (D5-14, decisions of
+   * 8 November 2026). Kept as a setting in case a fee is ever wanted.
+   */
   customRouteFeeMicro: bigint("custom_route_fee_micro", { mode: "bigint" })
     .notNull()
-    .default(sql`10000`),
+    .default(sql`0`),
   /**
    * Suggested sending hours (D4-14): a default window and per-country windows in local
    * time. Sending outside them shows a notice on the campaign and never blocks it.

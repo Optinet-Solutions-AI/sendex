@@ -90,6 +90,9 @@ export function allowlistedProvider(inner: Provider, allowlist: SendAllowlist): 
   };
   const poll = inner.pollReceipts?.bind(inner);
   if (poll) guarded.pollReceipts = poll;
+  // The balance read (D5-17) sends nothing, so the allowlist lets it through as it is.
+  const balance = inner.fetchBalance?.bind(inner);
+  if (balance) guarded.fetchBalance = balance;
   return guarded;
 }
 

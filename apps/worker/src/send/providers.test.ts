@@ -120,3 +120,32 @@ describe("send allowlist (SEND_ALLOWLIST_E164)", () => {
     expect(ok[0]?.status).toBe("accepted");
   });
 });
+
+describe("allowlisted 23Telecom keeps its balance (D5-18)", () => {
+  it("passes the carrier's balance read through the allowlist", async () => {
+    const registry = createDefaultProviderRegistry({
+      TELECOM23_API_KEY: "sk_live_x",
+      SEND_ALLOWLIST_E164: "+44*",
+    });
+    const carrier = registry.get("23telecom");
+    expect(typeof carrier.fetchBalance).toBe("function");
+
+    const inner = new FakeProvider();
+    const withBalance = Object.assign(inner, {
+      fetchBalance: async () => ({ balanceMicro: 5n, currency: "EUR", reportedAt: null }),
+    });
+    await expect(
+      allowlistedProvider(
+        withBalance,
+        sendAllowlistFromEnv({ SEND_ALLOWLIST_E164: "+44*" }) ?? allowAll(),
+      ).fetchBalance?.(),
+    ).resolves.toEqual({ balanceMicro: 5n, currency: "EUR", reportedAt: null });
+    expect(allowlistedProvider(new FakeProvider(), allowAll()).fetchBalance).toBeUndefined();
+  });
+});
+
+function allowAll() {
+  const list = sendAllowlistFromEnv({ SEND_ALLOWLIST_E164: "+*" });
+  if (!list) throw new Error("allowlist");
+  return list;
+}

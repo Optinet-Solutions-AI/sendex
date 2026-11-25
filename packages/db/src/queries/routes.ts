@@ -10,7 +10,7 @@ import {
 } from "@sendex/core";
 import { and, asc, desc, eq, inArray, type SQL, sql } from "drizzle-orm";
 import { routeConnectionEvents, routePrices, routes, routingExceptions } from "../schema/routes.js";
-import { organisationSettings } from "../schema/settings.js";
+import { DEFAULT_CUSTOM_ROUTE_FEE_MICRO, organisationSettings } from "../schema/settings.js";
 import { openSecret, sealSecret } from "../secrets.js";
 import type { Db } from "../types.js";
 import { maskRecipient } from "./campaign-messages.js";
@@ -495,7 +495,7 @@ export async function getRoutingConfig(db: Db, organisationId: string): Promise<
     strategy: (STRATEGIES as readonly string[]).includes(strategy)
       ? (strategy as RoutingStrategy)
       : "custom_first",
-    feeMicro: settings?.fee ?? 10_000n,
+    feeMicro: settings?.fee ?? DEFAULT_CUSTOM_ROUTE_FEE_MICRO,
     exceptions,
   };
 }

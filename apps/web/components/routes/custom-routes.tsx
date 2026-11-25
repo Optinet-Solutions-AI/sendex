@@ -98,8 +98,13 @@ export function CustomRoutes({
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="text-sm text-muted">
           Connect any SMS route to the platform and send through it alongside our built-in routes.
-          Custom routes are billed at{" "}
-          <span className="font-semibold text-ink">{eur(feeMicro)} per SMS sent</span>.
+          {feeMicro > 0 ? (
+            <>
+              {" "}
+              A fee of <span className="font-semibold text-ink">{eur(feeMicro)} per SMS sent</span>{" "}
+              is added on custom routes.
+            </>
+          ) : null}
           <div className="mt-1 flex items-center gap-3 text-xs">
             <span data-testid="custom-route-count">
               {int(routes.length)} {routes.length === 1 ? "route" : "routes"}
@@ -563,8 +568,7 @@ function PricingDialog({
       <DialogContent className="max-w-md" data-testid="pricing-dialog">
         <DialogTitle className="text-lg font-semibold">Pricing · {route.name}</DialogTitle>
         <DialogDescription className="mt-1 text-sm text-muted">
-          Price per SMS part in EUR for each country the route covers. The platform fee is added on
-          top.
+          Price per SMS part in EUR for each country the route covers.
         </DialogDescription>
         <form onSubmit={save} className="mt-4 space-y-2">
           {rows.map((r, i) => (

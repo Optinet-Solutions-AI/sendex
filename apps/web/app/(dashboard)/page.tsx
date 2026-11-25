@@ -1,4 +1,5 @@
 import {
+  balanceTopUp,
   cpsOverTime,
   cumulativeByCountry,
   foldSeries,
@@ -16,7 +17,7 @@ import {
   type DashboardFilter,
   dashboardKpis,
   db,
-  getSpendableBalanceMicro,
+  organisationBalance,
   roiRows,
   segmentsCard,
   sendCountDistribution,
@@ -120,14 +121,15 @@ async function renderTab(
   const d = db();
   switch (query.tab) {
     case "getting-started": {
-      const [kpis, balanceMicro] = await Promise.all([
+      const [kpis, balance] = await Promise.all([
         dashboardKpis(d, org, filter),
-        getSpendableBalanceMicro(d, org),
+        organisationBalance(d, org),
       ]);
       return (
         <GettingStarted
           kpis={{ ...kpis, spendMicro: Number(kpis.spendMicro) }}
-          balanceMicro={Number(balanceMicro)}
+          balanceMicro={Number(balance.totalMicro)}
+          topUp={balanceTopUp(balance.carriers.map((c) => c.routeName))}
           apiDocsUrl={apiDocsUrl}
           docsUrl={process.env.NEXT_PUBLIC_DOCS_URL ?? null}
           supportUrl={process.env.NEXT_PUBLIC_SUPPORT_URL ?? null}

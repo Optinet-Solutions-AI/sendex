@@ -1,3 +1,4 @@
+import type { BalanceTopUp } from "@sendex/core";
 import { compactNumber } from "@sendex/core";
 import { Button, Card, KpiStrip } from "@sendex/ui";
 import {
@@ -18,6 +19,8 @@ import { eur, int } from "./format";
 export interface GettingStartedProps {
   kpis: { contacts: number; sent: number; spendMicro: number; sales: number };
   balanceMicro: number;
+  /** Where the balance is topped up (D5-19): at the carrier, or in Billing. */
+  topUp: BalanceTopUp;
   /** The worker's public address for the API reference, when deployed. */
   apiDocsUrl: string | null;
   docsUrl: string | null;
@@ -31,6 +34,7 @@ export interface GettingStartedProps {
 export function GettingStarted({
   kpis,
   balanceMicro,
+  topUp,
   apiDocsUrl,
   docsUrl,
   supportUrl,
@@ -71,7 +75,7 @@ export function GettingStarted({
             {eur(balanceMicro)}
           </span>
           <Link href="/billing" className="text-navy underline-offset-2 hover:underline">
-            Top up
+            {topUp.linkLabel}
           </Link>
         </div>
       </Card>
@@ -117,8 +121,8 @@ export function GettingStarted({
           />
           <ActionCard
             icon={<Wallet />}
-            title="Add balance"
-            text="Top up the account so campaigns can start sending."
+            title={topUp.cardTitle}
+            text={topUp.cardText}
             links={[{ href: "/billing", label: "Billing" }]}
           />
         </div>

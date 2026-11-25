@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  balanceTopUp,
   billingSettingsSchema,
   depositSchema,
   eurToMicro,
@@ -228,5 +229,28 @@ describe("ledgerFilterSchema", () => {
   it("rejects unknown kinds and malformed dates", () => {
     expect(ledgerFilterSchema.safeParse({ kind: "bonus" }).success).toBe(false);
     expect(ledgerFilterSchema.safeParse({ from: "06/11/2026" }).success).toBe(false);
+  });
+});
+
+describe("balanceTopUp (D5-19)", () => {
+  it("points to topping up at the carrier when the balance is the carrier's", () => {
+    expect(balanceTopUp(["23Telecom"])).toEqual({
+      carrierBalance: true,
+      linkLabel: "Billing",
+      cardTitle: "Balance at 23Telecom",
+      cardText: "The balance is our account at 23Telecom. Top it up at 23Telecom, not in Sendex.",
+      alertLinkLabel: "Top up at 23Telecom",
+    });
+    expect(balanceTopUp(["23Telecom", "Other"]).cardTitle).toBe("Balance at 23Telecom and Other");
+  });
+
+  it("keeps the in-app top-up for a balance kept in Sendex", () => {
+    expect(balanceTopUp([])).toEqual({
+      carrierBalance: false,
+      linkLabel: "Top up",
+      cardTitle: "Add balance",
+      cardText: "Top up the account so campaigns can start sending.",
+      alertLinkLabel: "Fund the account",
+    });
   });
 });

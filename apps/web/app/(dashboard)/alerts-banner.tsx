@@ -1,5 +1,5 @@
-import { type AlertKind, can, isAlertKind, type Role } from "@sendex/core";
-import { db, listOpenAlerts } from "@sendex/db";
+import { type AlertKind, balanceTopUp, can, isAlertKind, type Role } from "@sendex/core";
+import { db, listOpenAlerts, organisationBalance } from "@sendex/db";
 import Link from "next/link";
 import { formatDateTime } from "../../lib/format";
 import { AcknowledgeAlertButton } from "./acknowledge-alert-button";
@@ -30,6 +30,12 @@ export async function AlertsBanner({
   const alerts = await listOpenAlerts(db(), organisationId);
   if (alerts.length === 0) return null;
   const canAcknowledge = can(role, "settings.manage");
+  // A low balance is topped up at the carrier when the balance is the carrier's (D5-19).
+  const topUp = alerts.some((a) => a.kind === "low_balance")
+    ? balanceTopUp(
+        (await organisationBalance(db(), organisationId)).carriers.map((c) => c.routeName),
+      )
+    : null;
   return (
     <section
       aria-label="Alerts"
@@ -60,9 +66,9 @@ export async function AlertsBanner({
                   Raise the cap
                 </Link>
               ) : null}
-              {alert.kind === "low_balance" ? (
+              {alert.kind === "low_balance" && topUp ? (
                 <Link href="/billing" className="text-xs underline">
-                  Fund the account
+                  {topUp.alertLinkLabel}
                 </Link>
               ) : null}
               {canAcknowledge ? <AcknowledgeAlertButton alertId={alert.id} /> : null}

@@ -1,9 +1,10 @@
 "use client";
 
-import { countryName, flagEmoji } from "@sendex/core";
+import { countryName, FORMULAS, flagEmoji } from "@sendex/core";
 import {
   Card,
   CardHeader,
+  Explained,
   KpiStrip,
   Table,
   TableBody,
@@ -12,6 +13,7 @@ import {
   TableHeader,
   TableRow,
 } from "@sendex/ui";
+import { explainCpc, explainCtr, LOCAL_FORMULAS } from "../../lib/explain";
 import { describeRouteRange, type RoutesQuery } from "../../lib/routes-params";
 import { eur, int, pct } from "../dashboard/format";
 import { RoutesFilterBar } from "./filters";
@@ -32,6 +34,8 @@ export interface DeliveryRow {
   clicks: number;
   costMicro: number;
 }
+
+const CPC_NOTE = "Worked out on the exact cost and rounded to the cent.";
 
 function price4(micro: number): string {
   return `€${(micro / 1_000_000).toFixed(4)}`;
@@ -89,8 +93,20 @@ export function PlatformRoutes({
           },
           { label: "Sent", value: int(sent), testId: "kpi-sent" },
           { label: "Clicks", value: int(clicks), testId: "kpi-clicks" },
-          { label: "CTR", value: pct(sent > 0 ? clicks / sent : 0), testId: "kpi-ctr" },
-          { label: "Total cost", value: eur(cost), testId: "kpi-cost" },
+          {
+            label: <Explained formula={FORMULAS.ctr}>CTR</Explained>,
+            value: (
+              <Explained {...explainCtr(clicks, sent, pct(sent > 0 ? clicks / sent : 0))}>
+                {pct(sent > 0 ? clicks / sent : 0)}
+              </Explained>
+            ),
+            testId: "kpi-ctr",
+          },
+          {
+            label: <Explained formula={LOCAL_FORMULAS.routeCost}>Total cost</Explained>,
+            value: <Explained formula={LOCAL_FORMULAS.routeCost}>{eur(cost)}</Explained>,
+            testId: "kpi-cost",
+          },
         ]}
       />
       <div className="grid gap-4 lg:grid-cols-2">
@@ -141,9 +157,15 @@ export function PlatformRoutes({
                   <TableHead>Gateway</TableHead>
                   <TableHead className="text-right">Sent ↓</TableHead>
                   <TableHead className="text-right">Clicks</TableHead>
-                  <TableHead className="text-right">CTR</TableHead>
-                  <TableHead className="text-right">Total Cost</TableHead>
-                  <TableHead className="text-right">CPC</TableHead>
+                  <TableHead className="text-right">
+                    <Explained formula={FORMULAS.ctr}>CTR</Explained>
+                  </TableHead>
+                  <TableHead className="text-right">
+                    <Explained formula={LOCAL_FORMULAS.routeCost}>Total Cost</Explained>
+                  </TableHead>
+                  <TableHead className="text-right">
+                    <Explained formula={FORMULAS.cpc}>CPC</Explained>
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -175,13 +197,26 @@ export function PlatformRoutes({
                         {int(r.clicks)}
                       </TableCell>
                       <TableCell className="text-right font-mono tabular-nums">
-                        {pct(r.sent > 0 ? r.clicks / r.sent : 0)}
+                        <Explained
+                          {...explainCtr(r.clicks, r.sent, pct(r.sent > 0 ? r.clicks / r.sent : 0))}
+                        >
+                          {pct(r.sent > 0 ? r.clicks / r.sent : 0)}
+                        </Explained>
                       </TableCell>
                       <TableCell className="text-right font-mono tabular-nums">
-                        {eur(r.costMicro)}
+                        <Explained formula={LOCAL_FORMULAS.routeCost}>{eur(r.costMicro)}</Explained>
                       </TableCell>
                       <TableCell className="text-right font-mono tabular-nums">
-                        {r.clicks > 0 ? eur(r.costMicro / r.clicks) : "—"}
+                        <Explained
+                          {...explainCpc(
+                            eur(r.costMicro),
+                            r.clicks,
+                            r.clicks > 0 ? eur(r.costMicro / r.clicks) : "—",
+                            { costWord: "cost", note: CPC_NOTE },
+                          )}
+                        >
+                          {r.clicks > 0 ? eur(r.costMicro / r.clicks) : "—"}
+                        </Explained>
                       </TableCell>
                     </TableRow>
                   ))

@@ -1,9 +1,10 @@
 "use client";
 
-import { countryName } from "@sendex/core";
-import { Button, Card } from "@sendex/ui";
+import { countryName, FORMULAS, workingPerSale } from "@sendex/core";
+import { Button, Card, Explained } from "@sendex/ui";
 import { BarChart3, Plus, RefreshCw, X } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { explainCtr, LOCAL_FORMULAS } from "../../lib/explain";
 import { formatNumber } from "../../lib/format";
 
 export type AnalyticsDimensionView = "country" | "device";
@@ -28,6 +29,10 @@ const ALL_DIMENSIONS: ReadonlyArray<{ value: AnalyticsDimensionView; label: stri
 const TH =
   "whitespace-nowrap px-3 py-2.5 text-right font-mono text-[11px] font-semibold uppercase tracking-[0.07em] text-muted";
 const TD = "px-3 py-2 text-right font-mono text-sm tabular-nums";
+
+/** What this tab counts differently from the Campaigns Log. */
+const ANALYTICS_CLICKS_NOTE =
+  "Sent = SMS of this list's laps sent to these members; clicks = those SMS clicked, link previews included.";
 
 const eur = (micro: number) =>
   `€${(micro / 1_000_000).toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -120,11 +125,21 @@ export function AnalyticsTab({
               <th className={TH}>Audience</th>
               <th className={TH}>Sent</th>
               <th className={TH}>Clicks</th>
-              <th className={TH}>CTR</th>
+              <th className={TH}>
+                <Explained formula={FORMULAS.ctr} note={ANALYTICS_CLICKS_NOTE}>
+                  CTR
+                </Explained>
+              </th>
               <th className={TH}>Leads</th>
-              <th className={TH}>Sales</th>
-              <th className={TH}>Cost</th>
-              <th className={TH}>Revenue</th>
+              <th className={TH}>
+                <Explained formula={LOCAL_FORMULAS.analyticsSales}>Sales</Explained>
+              </th>
+              <th className={TH}>
+                <Explained formula={LOCAL_FORMULAS.ledgerCost}>Cost</Explained>
+              </th>
+              <th className={TH}>
+                <Explained formula={LOCAL_FORMULAS.analyticsRevenue}>Revenue</Explained>
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -138,11 +153,35 @@ export function AnalyticsTab({
                 <td className={TD}>{formatNumber(row.audience)}</td>
                 <td className={TD}>{formatNumber(row.sent)}</td>
                 <td className={TD}>{formatNumber(row.clicks)}</td>
-                <td className={TD}>{(row.ctr * 100).toFixed(1)}%</td>
+                <td className={TD}>
+                  <Explained
+                    {...explainCtr(row.clicks, row.sent, `${(row.ctr * 100).toFixed(1)}%`)}
+                    note={ANALYTICS_CLICKS_NOTE}
+                  >
+                    {(row.ctr * 100).toFixed(1)}%
+                  </Explained>
+                </td>
                 <td className={TD}>{formatNumber(row.leads)}</td>
-                <td className={TD}>{formatNumber(row.sales)}</td>
-                <td className={TD}>{eur(row.costMicro)}</td>
-                <td className={TD}>{eur(row.revenueMicro)}</td>
+                <td className={TD}>
+                  <Explained formula={LOCAL_FORMULAS.analyticsSales}>
+                    {formatNumber(row.sales)}
+                  </Explained>
+                </td>
+                <td className={TD}>
+                  <Explained formula={LOCAL_FORMULAS.ledgerCost}>{eur(row.costMicro)}</Explained>
+                </td>
+                <td className={TD}>
+                  <Explained
+                    formula={LOCAL_FORMULAS.analyticsRevenue}
+                    working={workingPerSale(
+                      row.sales,
+                      eur(row.revenueMicro),
+                      row.sales > 0 ? eur(row.revenueMicro / row.sales) : eur(0),
+                    )}
+                  >
+                    {eur(row.revenueMicro)}
+                  </Explained>
+                </td>
               </tr>
             ))}
           </tbody>

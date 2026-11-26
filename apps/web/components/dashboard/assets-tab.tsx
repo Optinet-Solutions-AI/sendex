@@ -1,8 +1,10 @@
 "use client";
 
+import { FORMULAS } from "@sendex/core";
 import {
   Card,
   CardHeader,
+  Explained,
   Input,
   Table,
   TableBody,
@@ -20,7 +22,9 @@ import {
   dashboardQueryString,
 } from "../../lib/dashboard-params";
 import { timeAgo } from "../../lib/format";
-import { eur, int, pct } from "./format";
+import { assetRowFigures, DASHBOARD_FORMULAS } from "./explain";
+import { FigureText } from "./figure";
+import { eur, int } from "./format";
 
 export interface AssetRowView {
   key: string;
@@ -132,15 +136,33 @@ export function AssetsTab({ query, rows, total, now }: AssetsTabProps) {
             <TableHeader className="sticky top-0 z-10">
               <TableRow className="hover:bg-transparent">
                 <TableHead>{copy.column}</TableHead>
-                <TableHead className="text-right">↓ Sent</TableHead>
-                <TableHead className="text-right">Delivered</TableHead>
-                <TableHead className="text-right">Clicks</TableHead>
-                <TableHead className="text-right">CTR</TableHead>
-                <TableHead className="text-right">CPC</TableHead>
-                <TableHead className="text-right">Signups</TableHead>
-                <TableHead className="text-right">Sales</TableHead>
-                <TableHead className="text-right">Cost / sale</TableHead>
-                <TableHead className="text-right">Spend</TableHead>
+                <TableHead className="text-right">
+                  <Explained formula={FORMULAS.sent}>↓ Sent</Explained>
+                </TableHead>
+                <TableHead className="text-right">
+                  <Explained formula={FORMULAS.deliveryRate}>Delivered</Explained>
+                </TableHead>
+                <TableHead className="text-right">
+                  <Explained formula={FORMULAS.clicks}>Clicks</Explained>
+                </TableHead>
+                <TableHead className="text-right">
+                  <Explained formula={FORMULAS.ctr}>CTR</Explained>
+                </TableHead>
+                <TableHead className="text-right">
+                  <Explained formula={FORMULAS.cpc}>CPC</Explained>
+                </TableHead>
+                <TableHead className="text-right">
+                  <Explained formula={DASHBOARD_FORMULAS.signupsRaw}>Signups</Explained>
+                </TableHead>
+                <TableHead className="text-right">
+                  <Explained formula={FORMULAS.sales}>Sales</Explained>
+                </TableHead>
+                <TableHead className="text-right">
+                  <Explained formula={FORMULAS.costPerSale}>Cost / sale</Explained>
+                </TableHead>
+                <TableHead className="text-right">
+                  <Explained formula={DASHBOARD_FORMULAS.cost}>Spend</Explained>
+                </TableHead>
                 <TableHead>Last sent</TableHead>
               </TableRow>
             </TableHeader>
@@ -152,54 +174,57 @@ export function AssetsTab({ query, rows, total, now }: AssetsTabProps) {
                   </TableCell>
                 </TableRow>
               ) : (
-                rows.map((r) => (
-                  <TableRow key={r.key} data-testid="asset-row">
-                    <TableCell className="max-w-[20rem] whitespace-normal">
-                      <div className="truncate text-ink" title={r.label}>
-                        {r.label}
-                      </div>
-                      {r.sublabel ? (
-                        <div
-                          className="truncate font-mono text-[11px] text-muted"
-                          title={r.sublabel}
-                        >
-                          {r.sublabel}
+                rows.map((r) => {
+                  const f = assetRowFigures(r);
+                  return (
+                    <TableRow key={r.key} data-testid="asset-row">
+                      <TableCell className="max-w-[20rem] whitespace-normal">
+                        <div className="truncate text-ink" title={r.label}>
+                          {r.label}
                         </div>
-                      ) : null}
-                    </TableCell>
-                    <TableCell
-                      className="text-right font-mono tabular-nums"
-                      data-testid="asset-sent"
-                    >
-                      {int(r.sent)}
-                    </TableCell>
-                    <TableCell className="text-right font-mono tabular-nums">
-                      {pct(r.sent > 0 ? r.delivered / r.sent : 0, 1)}
-                    </TableCell>
-                    <TableCell className="text-right font-mono tabular-nums">
-                      {int(r.clicks)}
-                    </TableCell>
-                    <TableCell className="text-right font-mono tabular-nums">
-                      {pct(r.sent > 0 ? r.clicks / r.sent : 0)}
-                    </TableCell>
-                    <TableCell className="text-right font-mono tabular-nums">
-                      {r.clicks > 0 ? eur(r.spendMicro / r.clicks) : "—"}
-                    </TableCell>
-                    <TableCell className="text-right font-mono tabular-nums">
-                      {int(r.leads)}
-                    </TableCell>
-                    <TableCell className="text-right font-mono tabular-nums">
-                      {int(r.sales)}
-                    </TableCell>
-                    <TableCell className="text-right font-mono tabular-nums">
-                      {r.sales > 0 ? eur(r.spendMicro / r.sales) : "—"}
-                    </TableCell>
-                    <TableCell className="text-right font-mono tabular-nums">
-                      {eur(r.spendMicro)}
-                    </TableCell>
-                    <TableCell className="text-muted">{timeAgo(r.lastSentAt, nowDate)}</TableCell>
-                  </TableRow>
-                ))
+                        {r.sublabel ? (
+                          <div
+                            className="truncate font-mono text-[11px] text-muted"
+                            title={r.sublabel}
+                          >
+                            {r.sublabel}
+                          </div>
+                        ) : null}
+                      </TableCell>
+                      <TableCell
+                        className="text-right font-mono tabular-nums"
+                        data-testid="asset-sent"
+                      >
+                        {int(r.sent)}
+                      </TableCell>
+                      <TableCell className="text-right font-mono tabular-nums">
+                        <FigureText figure={f.delivered} />
+                      </TableCell>
+                      <TableCell className="text-right font-mono tabular-nums">
+                        {int(r.clicks)}
+                      </TableCell>
+                      <TableCell className="text-right font-mono tabular-nums">
+                        <FigureText figure={f.ctr} />
+                      </TableCell>
+                      <TableCell className="text-right font-mono tabular-nums">
+                        <FigureText figure={f.cpc} />
+                      </TableCell>
+                      <TableCell className="text-right font-mono tabular-nums">
+                        {int(r.leads)}
+                      </TableCell>
+                      <TableCell className="text-right font-mono tabular-nums">
+                        {int(r.sales)}
+                      </TableCell>
+                      <TableCell className="text-right font-mono tabular-nums">
+                        <FigureText figure={f.costPerSale} />
+                      </TableCell>
+                      <TableCell className="text-right font-mono tabular-nums">
+                        {eur(r.spendMicro)}
+                      </TableCell>
+                      <TableCell className="text-muted">{timeAgo(r.lastSentAt, nowDate)}</TableCell>
+                    </TableRow>
+                  );
+                })
               )}
             </TableBody>
           </Table>

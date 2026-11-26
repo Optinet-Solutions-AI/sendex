@@ -1,5 +1,7 @@
 import { countryName, flagEmoji } from "@sendex/core";
+import { Explained } from "@sendex/ui";
 import Link from "next/link";
+import { LOCAL_FORMULAS } from "./explain";
 import type { CampaignStatus } from "./types";
 import { StatusBadge } from "./ui";
 
@@ -62,7 +64,9 @@ export function ScheduledList({ days }: { days: ScheduledDayView[] }) {
                   <th className="px-3 py-2">Country</th>
                   <th className="px-3 py-2">Status</th>
                   <th className="px-3 py-2 text-right">Laps</th>
-                  <th className="px-3 py-2 text-right">SMS</th>
+                  <th className="px-3 py-2 text-right">
+                    <Explained formula={LOCAL_FORMULAS.scheduledSms}>SMS</Explained>
+                  </th>
                 </tr>
               </thead>
               <tbody>

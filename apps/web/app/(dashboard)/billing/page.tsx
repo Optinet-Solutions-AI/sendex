@@ -9,6 +9,7 @@ import {
   spendByCampaign,
 } from "@sendex/db";
 import {
+  Explained,
   PageHeader,
   Table,
   TableBody,
@@ -29,6 +30,13 @@ import {
   defaultSummaryRange,
   parseBillingQuery,
 } from "../../../lib/billing-params";
+import {
+  explainBalance,
+  explainCampaignSpend,
+  explainNet,
+  explainTotal,
+  LOCAL_FORMULAS,
+} from "../../../lib/explain";
 import { formatNumber } from "../../../lib/format";
 import type { SearchParams } from "../../../lib/lists-params";
 import { Pagination } from "../pagination";
@@ -187,12 +195,24 @@ function SummaryTable({ rows }: { rows: DailySummaryRow[] }) {
       <TableHeader>
         <TableRow>
           <TableHead>Date</TableHead>
-          <TableHead className="text-right">Deposits</TableHead>
-          <TableHead className="text-right">Debits</TableHead>
-          <TableHead className="text-right">Refunds</TableHead>
-          <TableHead className="text-right">Adjustments</TableHead>
-          <TableHead className="text-right">Net</TableHead>
-          <TableHead className="text-right">Entries</TableHead>
+          <TableHead className="text-right">
+            <Explained formula={LOCAL_FORMULAS.deposits}>Deposits</Explained>
+          </TableHead>
+          <TableHead className="text-right">
+            <Explained formula={LOCAL_FORMULAS.debits}>Debits</Explained>
+          </TableHead>
+          <TableHead className="text-right">
+            <Explained formula={LOCAL_FORMULAS.refunds}>Refunds</Explained>
+          </TableHead>
+          <TableHead className="text-right">
+            <Explained formula={LOCAL_FORMULAS.adjustments}>Adjustments</Explained>
+          </TableHead>
+          <TableHead className="text-right">
+            <Explained formula={LOCAL_FORMULAS.net}>Net</Explained>
+          </TableHead>
+          <TableHead className="text-right">
+            <Explained formula={LOCAL_FORMULAS.entries}>Entries</Explained>
+          </TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -207,10 +227,16 @@ function SummaryTable({ rows }: { rows: DailySummaryRow[] }) {
             <TableRow key={row.day} data-testid={`summary-row-${row.day}`}>
               <TableCell className="whitespace-nowrap">{row.day}</TableCell>
               <TableCell className={num}>{signed(row.depositsMicro)}</TableCell>
-              <TableCell className={num}>{signed(row.debitsMicro)}</TableCell>
+              <TableCell className={num}>
+                <Explained formula={row.debitsMicro === 0n ? null : LOCAL_FORMULAS.debits}>
+                  {signed(row.debitsMicro)}
+                </Explained>
+              </TableCell>
               <TableCell className={num}>{signed(row.refundsMicro)}</TableCell>
               <TableCell className={num}>{signed(row.adjustmentsMicro)}</TableCell>
-              <TableCell className={`${num} font-medium`}>{formatEur(row.netMicro)}</TableCell>
+              <TableCell className={`${num} font-medium`}>
+                <Explained {...explainNet(row)}>{formatEur(row.netMicro)}</Explained>
+              </TableCell>
               <TableCell className={num}>{formatNumber(row.entries)}</TableCell>
             </TableRow>
           ))
@@ -218,12 +244,47 @@ function SummaryTable({ rows }: { rows: DailySummaryRow[] }) {
         {rows.length > 0 ? (
           <TableRow className="bg-neutral-50 font-medium">
             <TableCell>Total</TableCell>
-            <TableCell className={num}>{signed(totals.depositsMicro)}</TableCell>
-            <TableCell className={num}>{signed(totals.debitsMicro)}</TableCell>
-            <TableCell className={num}>{signed(totals.refundsMicro)}</TableCell>
-            <TableCell className={num}>{signed(totals.adjustmentsMicro)}</TableCell>
-            <TableCell className={num}>{formatEur(totals.netMicro)}</TableCell>
-            <TableCell className={num}>{formatNumber(totals.entries)}</TableCell>
+            {(["depositsMicro", "debitsMicro", "refundsMicro", "adjustmentsMicro"] as const).map(
+              (key) => (
+                <TableCell key={key} className={num}>
+                  <Explained
+                    formula={totals[key] === 0n ? null : LOCAL_FORMULAS.total}
+                    working={explainTotal(
+                      rows.filter((r) => r[key] !== 0n).map((r) => signed(r[key])),
+                      signed(totals[key]),
+                      "days",
+                    )}
+                  >
+                    {signed(totals[key])}
+                  </Explained>
+                </TableCell>
+              ),
+            )}
+            <TableCell className={num}>
+              <Explained
+                formula={LOCAL_FORMULAS.total}
+                working={explainTotal(
+                  rows.map((r) => formatEur(r.netMicro)),
+                  formatEur(totals.netMicro),
+                  "days",
+                )}
+                note={explainNet(totals).working}
+              >
+                {formatEur(totals.netMicro)}
+              </Explained>
+            </TableCell>
+            <TableCell className={num}>
+              <Explained
+                formula={LOCAL_FORMULAS.total}
+                working={explainTotal(
+                  rows.map((r) => formatNumber(r.entries)),
+                  formatNumber(totals.entries),
+                  "days",
+                )}
+              >
+                {formatNumber(totals.entries)}
+              </Explained>
+            </TableCell>
           </TableRow>
         ) : null}
       </TableBody>
@@ -238,10 +299,18 @@ function CampaignSpendTable({ rows }: { rows: CampaignSpendRow[] }) {
       <TableHeader>
         <TableRow>
           <TableHead>Campaign</TableHead>
-          <TableHead className="text-right">Messages</TableHead>
-          <TableHead className="text-right">Debits</TableHead>
-          <TableHead className="text-right">Refunds</TableHead>
-          <TableHead className="text-right">Spend</TableHead>
+          <TableHead className="text-right">
+            <Explained formula={LOCAL_FORMULAS.campaignMessages}>Messages</Explained>
+          </TableHead>
+          <TableHead className="text-right">
+            <Explained formula={LOCAL_FORMULAS.campaignDebits}>Debits</Explained>
+          </TableHead>
+          <TableHead className="text-right">
+            <Explained formula={LOCAL_FORMULAS.campaignRefunds}>Refunds</Explained>
+          </TableHead>
+          <TableHead className="text-right">
+            <Explained formula={LOCAL_FORMULAS.campaignSpend}>Spend</Explained>
+          </TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -262,7 +331,9 @@ function CampaignSpendTable({ rows }: { rows: CampaignSpendRow[] }) {
               <TableCell className={num}>{formatNumber(row.messages)}</TableCell>
               <TableCell className={num}>{signed(row.debitsMicro)}</TableCell>
               <TableCell className={num}>{signed(row.refundsMicro)}</TableCell>
-              <TableCell className={`${num} font-medium`}>{formatEur(-row.netMicro)}</TableCell>
+              <TableCell className={`${num} font-medium`}>
+                <Explained {...explainCampaignSpend(row)}>{formatEur(-row.netMicro)}</Explained>
+              </TableCell>
             </TableRow>
           ))
         )}
@@ -340,6 +411,14 @@ export default async function BillingPage({
   const query = parseBillingQuery(await searchParams);
   const balance = await organisationBalance(db(), ctx.organisationId);
   const onCarrier = balance.source === "carrier";
+  const balanceExplained = explainBalance({
+    source: balance.source,
+    carriers: balance.carriers.map((c) => ({
+      label: c.routeName,
+      shown: formatEur(c.balanceMicro),
+    })),
+    shown: formatEur(balance.totalMicro),
+  });
   const panel =
     query.tab === "deposits" ? (
       <DepositsPanel organisationId={ctx.organisationId} query={query} />
@@ -355,9 +434,9 @@ export default async function BillingPage({
         title="Billing"
         subtitle={
           <>
-            Current balance{" "}
+            <Explained formula={balanceExplained.formula}>Current balance</Explained>{" "}
             <span data-testid="billing-balance" className="font-mono font-medium text-ink">
-              {formatEur(balance.totalMicro)}
+              <Explained {...balanceExplained}>{formatEur(balance.totalMicro)}</Explained>
             </span>
             {onCarrier ? (
               <span data-testid="billing-balance-source">

@@ -1,11 +1,20 @@
 "use client";
 
-import { countryName, type RouteResult } from "@sendex/core";
-import { Badge, Button, EmptyState, SegmentedControl, Tooltip } from "@sendex/ui";
+import { countryName, FORMULAS, type RouteResult } from "@sendex/core";
+import { Badge, Button, EmptyState, Explained, SegmentedControl, Tooltip } from "@sendex/ui";
 import { Radio, Zap } from "lucide-react";
 import { useState } from "react";
+import { explainCostPer, explainRate, LOCAL_FORMULAS } from "./explain";
+import { Figure } from "./figure";
 import { formatMicro, formatPer, formatPercent, formatPricePerSms } from "./format";
 import type { PerformancePeriodView, RoutePerformanceView, RouteView } from "./types";
+
+/** What each period covers, for the hover notes (route-performance.ts PERIOD_MS). */
+const PERIOD_NOTE: Record<PerformancePeriodView, string> = {
+  daily: "SMS sent in the last 24 hours, for lists of this country.",
+  weekly: "SMS sent in the last 7 days, for lists of this country.",
+  monthly: "SMS sent in the last 30 days, for lists of this country.",
+};
 
 const PERIODS: ReadonlyArray<{ value: PerformancePeriodView; label: string }> = [
   { value: "daily", label: "Daily" },
@@ -164,9 +173,30 @@ export function RoutesPanel({
                   <tr>
                     <th className={TH}>Route</th>
                     <th className={`${TH} text-right`}>Price</th>
-                    <th className={`${TH} text-right`}>CTR Rank</th>
-                    <th className={`${TH} text-right`}>CPC Rank</th>
-                    <th className={`${TH} text-right`}>Overall</th>
+                    <th className={`${TH} text-right`}>
+                      <Explained
+                        formula={LOCAL_FORMULAS.ctrRankPlatform}
+                        note={PERIOD_NOTE[platformPeriod]}
+                      >
+                        CTR Rank
+                      </Explained>
+                    </th>
+                    <th className={`${TH} text-right`}>
+                      <Explained
+                        formula={LOCAL_FORMULAS.cpcRankPlatform}
+                        note={PERIOD_NOTE[platformPeriod]}
+                      >
+                        CPC Rank
+                      </Explained>
+                    </th>
+                    <th className={`${TH} text-right`}>
+                      <Explained
+                        formula={LOCAL_FORMULAS.overallRankPlatform}
+                        note={PERIOD_NOTE[platformPeriod]}
+                      >
+                        Overall
+                      </Explained>
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -219,11 +249,24 @@ export function RoutesPanel({
                   <tr>
                     <th className={TH}>Route</th>
                     <th className={`${TH} text-right`}>Price</th>
-                    <th className={`${TH} text-right`}>Cost</th>
+                    <th className={`${TH} text-right`}>
+                      <Explained
+                        formula={LOCAL_FORMULAS.ledgerCost}
+                        note={PERIOD_NOTE[accountPeriod]}
+                      >
+                        Cost
+                      </Explained>
+                    </th>
                     <th className={`${TH} text-right`}>Sent</th>
-                    <th className={`${TH} text-right`}>Clicks</th>
-                    <th className={`${TH} text-right`}>CTR</th>
-                    <th className={`${TH} text-right`}>CPC</th>
+                    <th className={`${TH} text-right`}>
+                      <Explained formula={FORMULAS.clicks}>Clicks</Explained>
+                    </th>
+                    <th className={`${TH} text-right`}>
+                      <Explained formula={FORMULAS.ctr}>CTR</Explained>
+                    </th>
+                    <th className={`${TH} text-right`}>
+                      <Explained formula={FORMULAS.cpc}>CPC</Explained>
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -239,8 +282,18 @@ export function RoutesPanel({
                       <td className={NUM}>{formatMicro(r.costMicro)}</td>
                       <td className={NUM}>{r.sent.toLocaleString("en-GB")}</td>
                       <td className={NUM}>{r.clicks.toLocaleString("en-GB")}</td>
-                      <td className={NUM}>{formatPercent(r.ctr)}</td>
-                      <td className={NUM}>{formatPer(r.cpcMicro)}</td>
+                      <td className={NUM}>
+                        <Figure explanation={explainRate("ctr", r.clicks, r.sent, r.ctr)}>
+                          {formatPercent(r.ctr)}
+                        </Figure>
+                      </td>
+                      <td className={NUM}>
+                        <Figure
+                          explanation={explainCostPer("cpc", r.costMicro, r.clicks, r.cpcMicro)}
+                        >
+                          {formatPer(r.cpcMicro)}
+                        </Figure>
+                      </td>
                     </tr>
                   ))}
                 </tbody>

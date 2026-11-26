@@ -150,3 +150,26 @@ describe("CountPill", () => {
     expect(screen.getByText("2 entries")).toBeInTheDocument();
   });
 });
+
+function CircularLabel({ text }: { text: string; data?: unknown }) {
+  return <span>{text}</span>;
+}
+
+describe("KpiStrip with explained labels (D5-20)", () => {
+  it("renders tiles whose label is an element and that have no test id", () => {
+    // On a page, element labels carry React internals that refer back to themselves, so
+    // they cannot be turned into text; this label does the same with a circular prop.
+    const circular: Record<string, unknown> = {};
+    circular.self = circular;
+    render(
+      <KpiStrip
+        items={[
+          { label: <CircularLabel text="CTR" data={circular} />, value: "4.74%" },
+          { label: <CircularLabel text="CPC" data={circular} />, value: "€0.21" },
+        ]}
+      />,
+    );
+    expect(screen.getByText("4.74%")).toBeInTheDocument();
+    expect(screen.getByText("€0.21")).toBeInTheDocument();
+  });
+});

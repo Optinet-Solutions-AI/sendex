@@ -2,6 +2,7 @@
 
 import {
   countryName,
+  FORMULAS,
   flagEmoji,
   resultRates,
   TOP_UP_AMOUNTS_EUR,
@@ -16,6 +17,7 @@ import {
   DialogContent,
   DialogDescription,
   DialogTitle,
+  Explained,
   IconButton,
   Toggle,
   Tooltip,
@@ -43,6 +45,14 @@ import {
   toggleLapAction,
   topUpLapsAction,
 } from "../../app/(dashboard)/campaigns/actions";
+import {
+  explainCostPer,
+  explainLapCost,
+  explainRank,
+  explainRate,
+  LOCAL_FORMULAS,
+} from "./explain";
+import { Figure } from "./figure";
 import {
   formatDateTime,
   formatMicro,
@@ -154,21 +164,22 @@ export function sortLaps(rows: readonly LapRow[], key: LapSortKey, dir: "asc" | 
     .map((x) => x.row);
 }
 
-const SORTABLE: ReadonlyArray<{ key: LapSortKey; label: string }> = [
+/** `formula`: the hover explanation of a computed column's header (D5-20). */
+const SORTABLE: ReadonlyArray<{ key: LapSortKey; label: string; formula?: string }> = [
   { key: "sent", label: "Sent" },
   { key: "delivered", label: "Delivered" },
   { key: "failed", label: "Failed" },
-  { key: "delivery", label: "Delivery" },
+  { key: "delivery", label: "Delivery", formula: FORMULAS.deliveryRate },
   { key: "previews", label: "Previews" },
-  { key: "clicks", label: "Clicks" },
-  { key: "ctr", label: "CTR" },
-  { key: "cost", label: "Cost" },
-  { key: "cpc", label: "CPC" },
+  { key: "clicks", label: "Clicks", formula: FORMULAS.clicks },
+  { key: "ctr", label: "CTR", formula: FORMULAS.ctr },
+  { key: "cost", label: "Cost", formula: LOCAL_FORMULAS.lapCost },
+  { key: "cpc", label: "CPC", formula: FORMULAS.cpc },
   { key: "leads", label: "Leads" },
-  { key: "cpl", label: "CPL" },
-  { key: "sales", label: "Sales" },
-  { key: "cps", label: "CPS" },
-  { key: "rank", label: "Rank" },
+  { key: "cpl", label: "CPL", formula: FORMULAS.cpl },
+  { key: "sales", label: "Sales", formula: FORMULAS.sales },
+  { key: "cps", label: "CPS", formula: FORMULAS.cps },
+  { key: "rank", label: "Rank", formula: LOCAL_FORMULAS.rank },
 ];
 
 const TH =
@@ -178,12 +189,14 @@ const TD = "whitespace-nowrap px-3 py-2 text-sm";
 function SortHeader({
   sortable,
   label,
+  formula,
   sortKey,
   dir,
   onSort,
 }: {
   sortable: LapSortKey;
   label: string;
+  formula?: string | undefined;
   sortKey: LapSortKey | null;
   dir: "asc" | "desc";
   onSort: (key: LapSortKey) => void;
@@ -200,7 +213,9 @@ function SortHeader({
         data-testid={`sort-${sortable}`}
         className={`uppercase hover:text-ink ${active ? "font-semibold text-ink" : ""}`}
       >
-        {label}
+        <Explained formula={formula} inButton>
+          {label}
+        </Explained>
         {active ? (dir === "asc" ? " ▲" : " ▼") : ""}
       </button>
     </th>
@@ -290,6 +305,7 @@ export function LapsTable({
   if (laps.length === 0) return null;
 
   const rows = sortKey ? sortLaps(laps.map(toRow), sortKey, dir) : laps.map(toRow);
+  const ranked = rows.filter((r) => r.rank !== null).length;
   const activeRows = rows.filter((r) => r.on && r.status !== "done");
   const allOn = rows.filter((r) => r.status !== "done").every((r) => r.on);
   const remaining =
@@ -460,6 +476,7 @@ export function LapsTable({
                   key={c.key}
                   sortable={c.key}
                   label={c.label}
+                  formula={c.formula}
                   sortKey={sortKey}
                   dir={dir}
                   onSort={sortBy}
@@ -489,6 +506,8 @@ export function LapsTable({
               <LapTr
                 key={lap.id}
                 lap={lap}
+                parts={campaign.partsPerMessage}
+                ranked={ranked}
                 timezone={timezone}
                 canToggle={canToggle}
                 canFlush={canFlush}
@@ -582,6 +601,8 @@ export function LapsTable({
 
 function LapTr({
   lap,
+  parts,
+  ranked,
   timezone,
   canToggle,
   canFlush,
@@ -593,6 +614,10 @@ function LapTr({
   onAction,
 }: {
   lap: LapRow;
+  /** SMS parts per message, for the cost explanation. */
+  parts: number;
+  /** How many laps have a rank, for the rank explanation. */
+  ranked: number;
   timezone: string;
   canToggle: boolean;
   canFlush: boolean;
@@ -643,7 +668,11 @@ function LapTr({
           ) : null}
           {lap.priceMicro !== null ? (
             <span className="ml-1 font-mono text-xs text-muted">
-              ({formatPricePerSms(lap.priceMicro)})
+              (
+              <Explained formula={LOCAL_FORMULAS.price}>
+                {formatPricePerSms(lap.priceMicro)}
+              </Explained>
+              )
             </span>
           ) : null}
         </td>
@@ -687,7 +716,11 @@ function LapTr({
           {lap.failed}
         </td>
         <td className={`${TD} text-right tabular-nums`} data-testid="lap-delivery-rate">
-          {formatPercent(lap.deliveryRate)}
+          <Figure
+            explanation={explainRate("deliveryRate", lap.delivered, lap.sent, lap.deliveryRate)}
+          >
+            {formatPercent(lap.deliveryRate)}
+          </Figure>
         </td>
         <td className={`${TD} text-right tabular-nums`} data-testid="lap-previews">
           {lap.previews}
@@ -696,16 +729,41 @@ function LapTr({
           {lap.clicks}
         </td>
         <td className={`${TD} text-right tabular-nums`} data-testid="lap-ctr">
-          {formatPercent(lap.ctr)}
+          <Figure explanation={explainRate("ctr", lap.clicks, lap.sent, lap.ctr)}>
+            {formatPercent(lap.ctr)}
+          </Figure>
         </td>
-        <td className={`${TD} text-right tabular-nums`}>{formatMicro(lap.costMicro)}</td>
-        <td className={`${TD} text-right tabular-nums`}>{formatPer(lap.cpcMicro)}</td>
+        <td className={`${TD} text-right tabular-nums`}>
+          <Figure
+            explanation={explainLapCost({
+              sent: lap.sent,
+              parts,
+              priceMicro: lap.priceMicro,
+              costMicro: lap.costMicro,
+            })}
+          >
+            {formatMicro(lap.costMicro)}
+          </Figure>
+        </td>
+        <td className={`${TD} text-right tabular-nums`}>
+          <Figure explanation={explainCostPer("cpc", lap.costMicro, lap.clicks, lap.cpcMicro)}>
+            {formatPer(lap.cpcMicro)}
+          </Figure>
+        </td>
         <td className={`${TD} text-right tabular-nums`}>{lap.leads}</td>
-        <td className={`${TD} text-right tabular-nums`}>{formatPer(lap.cplMicro)}</td>
+        <td className={`${TD} text-right tabular-nums`}>
+          <Figure explanation={explainCostPer("cpl", lap.costMicro, lap.leads, lap.cplMicro)}>
+            {formatPer(lap.cplMicro)}
+          </Figure>
+        </td>
         <td className={`${TD} text-right tabular-nums`}>{lap.sales}</td>
-        <td className={`${TD} text-right tabular-nums`}>{formatPer(lap.cpsMicro)}</td>
+        <td className={`${TD} text-right tabular-nums`}>
+          <Figure explanation={explainCostPer("cps", lap.costMicro, lap.sales, lap.cpsMicro)}>
+            {formatPer(lap.cpsMicro)}
+          </Figure>
+        </td>
         <td className={`${TD} text-right tabular-nums`} data-testid="lap-rank">
-          {lap.rank ?? "–"}
+          <Figure explanation={explainRank(lap.rank, ranked)}>{lap.rank ?? "–"}</Figure>
         </td>
         <td className={`${TD} text-xs text-muted`}>
           {formatPeriod(lap.startedAt, lap.finishedAt, timezone)}

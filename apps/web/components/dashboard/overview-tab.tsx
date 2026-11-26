@@ -1,9 +1,18 @@
 "use client";
 
-import { compactNumber, type FoldedSeries } from "@sendex/core";
-import { ChartFrame, ChartTable, KpiStrip, SegmentedControl, StackedBars } from "@sendex/ui";
+import { compactNumber, FORMULAS, type FoldedSeries } from "@sendex/core";
+import {
+  ChartFrame,
+  ChartTable,
+  Explained,
+  KpiStrip,
+  SegmentedControl,
+  StackedBars,
+} from "@sendex/ui";
 import { useState } from "react";
-import { countryLabel, eur, int, monthLabel, weekLabel } from "./format";
+import { blendedCpsFigure, DASHBOARD_FORMULAS, spendFigure } from "./explain";
+import { FigureText } from "./figure";
+import { countryLabel, int, monthLabel, weekLabel } from "./format";
 
 export interface OverviewProps {
   kpis: {
@@ -42,23 +51,39 @@ export function OverviewTab({ kpis, contactsByMonth, sentByMonth, sentByWeek }: 
   const [grain, setGrain] = useState<"month" | "week">("month");
   const sent = grain === "month" ? sentByMonth : sentByWeek;
   const sentLabel = grain === "month" ? monthLabel : weekLabel;
+  const spend = spendFigure(kpis.spendMicro);
+  const blended = blendedCpsFigure(kpis.spendMicro, kpis.sales, kpis.blendedCpsMicro);
   return (
     <div className="space-y-4" data-testid="overview-tab">
       <KpiStrip
         items={[
           {
-            label: "Contacts on file",
+            label: (
+              <Explained formula={DASHBOARD_FORMULAS.contactsInPeriod}>Contacts on file</Explained>
+            ),
             value: compactNumber(kpis.contacts),
             testId: "kpi-contacts",
           },
-          { label: "Messages sent", value: compactNumber(kpis.sent), testId: "kpi-sent" },
           {
-            label: "Spend",
-            value: `€${compactNumber(Math.round(kpis.spendMicro / 1_000_000))}`,
+            label: <Explained formula={FORMULAS.sent}>Messages sent</Explained>,
+            value: compactNumber(kpis.sent),
+            testId: "kpi-sent",
+          },
+          {
+            label: <Explained formula={spend.formula}>Spend</Explained>,
+            value: <FigureText figure={spend} />,
             testId: "kpi-spend",
           },
-          { label: "Sales (FTD)", value: int(kpis.sales), testId: "kpi-sales" },
-          { label: "Blended cost / sale", value: eur(kpis.blendedCpsMicro), testId: "kpi-cps" },
+          {
+            label: <Explained formula={FORMULAS.sales}>Sales (FTD)</Explained>,
+            value: int(kpis.sales),
+            testId: "kpi-sales",
+          },
+          {
+            label: <Explained formula={blended.formula}>Blended cost / sale</Explained>,
+            value: <FigureText figure={blended} />,
+            testId: "kpi-cps",
+          },
         ]}
       />
       <ChartFrame

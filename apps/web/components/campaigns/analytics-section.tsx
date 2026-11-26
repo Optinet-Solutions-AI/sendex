@@ -1,3 +1,8 @@
+import { FORMULAS } from "@sendex/core";
+import { Explained } from "@sendex/ui";
+import type { ReactNode } from "react";
+import { explainRate, LOCAL_FORMULAS } from "./explain";
+import { Figure } from "./figure";
 import { formatDateTime, formatMicro, formatPercent } from "./format";
 import type { CampaignResultsView } from "./types";
 
@@ -6,6 +11,15 @@ import type { CampaignResultsView } from "./types";
  * provider, counted from the message table), clicks per hour since the first send and clicks
  * per tracked link (both from the click table). Conversions keep their own section.
  */
+
+/** A right-aligned header; a computed column's label explains itself on hover. */
+function Th({ formula, children }: { formula?: string; children: ReactNode }) {
+  return (
+    <th className="px-2 py-2 text-right">
+      <Explained formula={formula}>{children}</Explained>
+    </th>
+  );
+}
 
 function NetworksTable({ results }: { results: CampaignResultsView }) {
   const rows = results.networks.rows;
@@ -22,13 +36,13 @@ function NetworksTable({ results }: { results: CampaignResultsView }) {
             <tr>
               <th className="px-2 py-2">Route</th>
               <th className="px-2 py-2">Provider</th>
-              <th className="px-2 py-2 text-right">Sent</th>
-              <th className="px-2 py-2 text-right">Delivered</th>
-              <th className="px-2 py-2 text-right">Delivery rate</th>
-              <th className="px-2 py-2 text-right">Failed</th>
-              <th className="px-2 py-2 text-right">Clicks</th>
-              <th className="px-2 py-2 text-right">CTR</th>
-              <th className="px-2 py-2 text-right">Cost</th>
+              <Th formula={LOCAL_FORMULAS.networkSent}>Sent</Th>
+              <Th>Delivered</Th>
+              <Th formula={FORMULAS.deliveryRate}>Delivery rate</Th>
+              <Th>Failed</Th>
+              <Th formula={LOCAL_FORMULAS.clickRedirects}>Clicks</Th>
+              <Th formula={LOCAL_FORMULAS.ctrRedirects}>CTR</Th>
+              <Th formula={LOCAL_FORMULAS.routeCost}>Cost</Th>
             </tr>
           </thead>
           <tbody>
@@ -51,13 +65,31 @@ function NetworksTable({ results }: { results: CampaignResultsView }) {
                   <td className="px-2 py-1.5 text-right tabular-nums">{r.sent}</td>
                   <td className="px-2 py-1.5 text-right tabular-nums">{r.delivered}</td>
                   <td className="px-2 py-1.5 text-right tabular-nums">
-                    {formatPercent(r.deliveryRate)}
+                    <Figure
+                      explanation={explainRate("deliveryRate", r.delivered, r.sent, r.deliveryRate)}
+                    >
+                      {formatPercent(r.deliveryRate)}
+                    </Figure>
                   </td>
                   <td className="px-2 py-1.5 text-right tabular-nums">{r.failed}</td>
                   <td className="px-2 py-1.5 text-right tabular-nums">{r.clicks}</td>
-                  <td className="px-2 py-1.5 text-right tabular-nums">{formatPercent(r.ctr)}</td>
                   <td className="px-2 py-1.5 text-right tabular-nums">
-                    {formatMicro(r.costMicro)}
+                    <Figure
+                      explanation={explainRate(
+                        "ctr",
+                        r.clicks,
+                        r.sent,
+                        r.ctr,
+                        LOCAL_FORMULAS.ctrRedirects,
+                      )}
+                    >
+                      {formatPercent(r.ctr)}
+                    </Figure>
+                  </td>
+                  <td className="px-2 py-1.5 text-right tabular-nums">
+                    <Explained formula={LOCAL_FORMULAS.routeCost}>
+                      {formatMicro(r.costMicro)}
+                    </Explained>
                   </td>
                 </tr>
               ))
@@ -126,9 +158,9 @@ function ClicksPerLink({ results }: { results: CampaignResultsView }) {
             <tr>
               <th className="px-2 py-2">Link</th>
               <th className="px-2 py-2">URL</th>
-              <th className="px-2 py-2 text-right">Sent</th>
-              <th className="px-2 py-2 text-right">Clicks</th>
-              <th className="px-2 py-2 text-right">CTR</th>
+              <Th>Sent</Th>
+              <Th formula={LOCAL_FORMULAS.clickRedirects}>Clicks</Th>
+              <Th formula={LOCAL_FORMULAS.ctrRedirects}>CTR</Th>
             </tr>
           </thead>
           <tbody>
@@ -154,7 +186,19 @@ function ClicksPerLink({ results }: { results: CampaignResultsView }) {
                   </td>
                   <td className="px-2 py-1.5 text-right tabular-nums">{l.sent}</td>
                   <td className="px-2 py-1.5 text-right tabular-nums">{l.clicks}</td>
-                  <td className="px-2 py-1.5 text-right tabular-nums">{formatPercent(l.ctr)}</td>
+                  <td className="px-2 py-1.5 text-right tabular-nums">
+                    <Figure
+                      explanation={explainRate(
+                        "ctr",
+                        l.clicks,
+                        l.sent,
+                        l.ctr,
+                        LOCAL_FORMULAS.ctrRedirects,
+                      )}
+                    >
+                      {formatPercent(l.ctr)}
+                    </Figure>
+                  </td>
                 </tr>
               ))
             )}

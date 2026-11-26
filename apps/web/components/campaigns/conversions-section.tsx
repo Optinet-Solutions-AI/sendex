@@ -1,4 +1,15 @@
+import { FORMULAS } from "@sendex/core";
 import type { ConversionRow, ConversionStats } from "@sendex/db";
+import { Explained } from "@sendex/ui";
+import type { ReactNode } from "react";
+import {
+  type Explanation,
+  explainCostPer,
+  explainRate,
+  explainRevenue,
+  LOCAL_FORMULAS,
+} from "./explain";
+import { Figure } from "./figure";
 import { formatMicro, formatPer, formatPercent } from "./format";
 
 /** The conversion breakdowns of a campaign (Analytics tab): totals, per sender id, per ad text. */
@@ -8,17 +19,22 @@ function Stat({
   value,
   hint,
   testId,
+  explanation,
 }: {
   label: string;
   value: string;
   hint?: string;
   testId?: string;
+  /** A computed figure explains itself on hover (D5-20): the label with the formula, the value with the working. */
+  explanation?: Explanation;
 }) {
   return (
     <div className="rounded border border-neutral-200 bg-white px-3 py-2">
-      <dt className="text-xs uppercase text-neutral-500">{label}</dt>
+      <dt className="text-xs uppercase text-neutral-500">
+        <Explained formula={explanation?.formula}>{label}</Explained>
+      </dt>
       <dd className="mt-0.5 text-lg font-semibold tabular-nums" data-testid={testId}>
-        {value}
+        {explanation ? <Figure explanation={explanation}>{value}</Figure> : value}
       </dd>
       {hint ? (
         <dd
@@ -41,6 +57,18 @@ export function splitHint(total: number, late: number): string {
   return `${Math.max(0, total - late)} same day · ${late} late`;
 }
 
+/** The cost of a sender id or ad text row is not billed per row but shared out from the laps. */
+const SPLIT_COST_NOTE = LOCAL_FORMULAS.splitCost;
+
+/** A right-aligned header; a computed column's label explains itself on hover. */
+function Th({ formula, children }: { formula?: string; children: ReactNode }) {
+  return (
+    <th className="px-2 py-2 text-right">
+      <Explained formula={formula}>{children}</Explained>
+    </th>
+  );
+}
+
 function BreakdownTable({
   title,
   keyLabel,
@@ -60,14 +88,14 @@ function BreakdownTable({
           <thead className="bg-neutral-50 text-left text-xs uppercase text-neutral-500">
             <tr>
               <th className="px-2 py-2">{keyLabel}</th>
-              <th className="px-2 py-2 text-right">Sent</th>
-              <th className="px-2 py-2 text-right">Leads</th>
-              <th className="px-2 py-2 text-right">Lead rate</th>
-              <th className="px-2 py-2 text-right">CPL</th>
-              <th className="px-2 py-2 text-right">Sales</th>
-              <th className="px-2 py-2 text-right">Sale rate</th>
-              <th className="px-2 py-2 text-right">CPS</th>
-              <th className="px-2 py-2 text-right">Revenue</th>
+              <Th formula={LOCAL_FORMULAS.conversionSent}>Sent</Th>
+              <Th>Leads</Th>
+              <Th formula={FORMULAS.leadRate}>Lead rate</Th>
+              <Th formula={FORMULAS.cpl}>CPL</Th>
+              <Th formula={FORMULAS.sales}>Sales</Th>
+              <Th formula={FORMULAS.saleRate}>Sale rate</Th>
+              <Th formula={FORMULAS.cps}>CPS</Th>
+              <Th formula={FORMULAS.revenue}>Revenue</Th>
             </tr>
           </thead>
           <tbody>
@@ -90,16 +118,50 @@ function BreakdownTable({
                   <td className="px-2 py-1.5 text-right tabular-nums">{row.sent}</td>
                   <td className="px-2 py-1.5 text-right tabular-nums">{row.leads}</td>
                   <td className="px-2 py-1.5 text-right tabular-nums">
-                    {formatPercent(row.leadRate)}
+                    <Figure
+                      explanation={explainRate("leadRate", row.leads, row.sent, row.leadRate)}
+                    >
+                      {formatPercent(row.leadRate)}
+                    </Figure>
                   </td>
-                  <td className="px-2 py-1.5 text-right tabular-nums">{formatPer(row.cplMicro)}</td>
+                  <td className="px-2 py-1.5 text-right tabular-nums">
+                    <Figure
+                      explanation={explainCostPer(
+                        "cpl",
+                        row.costMicro,
+                        row.leads,
+                        row.cplMicro,
+                        SPLIT_COST_NOTE,
+                      )}
+                    >
+                      {formatPer(row.cplMicro)}
+                    </Figure>
+                  </td>
                   <td className="px-2 py-1.5 text-right tabular-nums">{row.sales}</td>
                   <td className="px-2 py-1.5 text-right tabular-nums">
-                    {formatPercent(row.saleRate)}
+                    <Figure
+                      explanation={explainRate("saleRate", row.sales, row.sent, row.saleRate)}
+                    >
+                      {formatPercent(row.saleRate)}
+                    </Figure>
                   </td>
-                  <td className="px-2 py-1.5 text-right tabular-nums">{formatPer(row.cpsMicro)}</td>
                   <td className="px-2 py-1.5 text-right tabular-nums">
-                    {formatMicro(row.revenueMicro)}
+                    <Figure
+                      explanation={explainCostPer(
+                        "cps",
+                        row.costMicro,
+                        row.sales,
+                        row.cpsMicro,
+                        SPLIT_COST_NOTE,
+                      )}
+                    >
+                      {formatPer(row.cpsMicro)}
+                    </Figure>
+                  </td>
+                  <td className="px-2 py-1.5 text-right tabular-nums">
+                    <Figure explanation={explainRevenue(row.sales, row.revenueMicro)}>
+                      {formatMicro(row.revenueMicro)}
+                    </Figure>
                   </td>
                 </tr>
               ))
@@ -124,16 +186,33 @@ export function ConversionsSection({ stats }: { stats: ConversionStats | null })
           hint={splitHint(c.leads, stats.timing.lateLeads)}
           testId="conversions-leads"
         />
-        <Stat label="Lead rate" value={formatPercent(c.leadRate)} />
-        <Stat label="CPL" value={formatPer(c.cplMicro)} />
+        <Stat
+          label="Lead rate"
+          value={formatPercent(c.leadRate)}
+          explanation={explainRate("leadRate", c.leads, c.sent, c.leadRate)}
+        />
+        <Stat
+          label="CPL"
+          value={formatPer(c.cplMicro)}
+          explanation={explainCostPer("cpl", c.costMicro, c.leads, c.cplMicro)}
+        />
         <Stat
           label="Sales"
           value={String(c.sales)}
           hint={splitHint(c.sales, stats.timing.lateSales)}
           testId="conversions-sales"
+          explanation={{ formula: FORMULAS.sales }}
         />
-        <Stat label="Sale rate" value={formatPercent(c.saleRate)} />
-        <Stat label="CPS" value={formatPer(c.cpsMicro)} />
+        <Stat
+          label="Sale rate"
+          value={formatPercent(c.saleRate)}
+          explanation={explainRate("saleRate", c.sales, c.sent, c.saleRate)}
+        />
+        <Stat
+          label="CPS"
+          value={formatPer(c.cpsMicro)}
+          explanation={explainCostPer("cps", c.costMicro, c.sales, c.cpsMicro)}
+        />
       </dl>
       <BreakdownTable
         title="By sender id"

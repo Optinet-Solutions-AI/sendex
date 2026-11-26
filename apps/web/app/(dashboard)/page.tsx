@@ -129,6 +129,11 @@ async function renderTab(
         <GettingStarted
           kpis={{ ...kpis, spendMicro: Number(kpis.spendMicro) }}
           balanceMicro={Number(balance.totalMicro)}
+          balanceSource={balance.source}
+          balanceCarriers={balance.carriers.map((c) => ({
+            name: c.routeName,
+            balanceMicro: Number(c.balanceMicro),
+          }))}
           topUp={balanceTopUp(balance.carriers.map((c) => c.routeName))}
           apiDocsUrl={apiDocsUrl}
           docsUrl={process.env.NEXT_PUBLIC_DOCS_URL ?? null}
@@ -166,6 +171,8 @@ async function renderTab(
           rows={rows.map((r) => ({ ...r, cost: r.cost.toString(), revenue: r.revenue.toString() }))}
           cps={cpsOverTime(monthly).map((p) => ({
             month: p.month,
+            costMicro: Number(monthly.find((m) => m.month === p.month)?.cost ?? 0n),
+            sales: monthly.find((m) => m.month === p.month)?.sales ?? 0,
             monthlyCpsMicro: p.monthlyCpsMicro === null ? null : Number(p.monthlyCpsMicro),
             cumulativeCpsMicro: p.cumulativeCpsMicro === null ? null : Number(p.cumulativeCpsMicro),
           }))}
@@ -231,10 +238,12 @@ async function renderTab(
         return row as (typeof folded.rows)[number];
       });
       const ctr: Record<string, number> = {};
+      const ctrCounts: Record<string, { sent: number; clicks: number }> = {};
       for (const bucket of SEND_BUCKETS) {
         const sent = buckets.filter((b) => b.bucket === bucket).reduce((t, b) => t + b.sent, 0);
         const clicks = buckets.filter((b) => b.bucket === bucket).reduce((t, b) => t + b.clicks, 0);
         ctr[bucket] = sent > 0 ? clicks / sent : 0;
+        ctrCounts[bucket] = { sent, clicks };
       }
       return (
         <ContactsTab
@@ -244,7 +253,12 @@ async function renderTab(
           pool={pool
             .filter((r) => r.contacts > 0 || r.sent > 0)
             .map((r) => ({ country: r.country, contacts: r.contacts, sent: r.sent }))}
-          buckets={{ series: folded.series, rows: buckets.length === 0 ? [] : bucketRows, ctr }}
+          buckets={{
+            series: folded.series,
+            rows: buckets.length === 0 ? [] : bucketRows,
+            ctr,
+            ctrCounts,
+          }}
           underSent={{
             rows: under,
             good: under.reduce((t, r) => t + r.good, 0),

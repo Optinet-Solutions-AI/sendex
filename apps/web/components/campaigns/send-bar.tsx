@@ -2,6 +2,8 @@
 
 import { Button } from "@sendex/ui";
 import { Send } from "lucide-react";
+import { type Explanation, explainEstimate, explainSmsPlanned } from "./explain";
+import { Figure } from "./figure";
 import { formatMicro } from "./format";
 import type { CampaignView, EstimateView } from "./types";
 
@@ -31,14 +33,25 @@ export function sendBlocker(
   return null;
 }
 
-function Counter({ label, value, testId }: { label: string; value: string; testId: string }) {
+function Counter({
+  label,
+  value,
+  testId,
+  explanation,
+}: {
+  label: string;
+  value: string;
+  testId: string;
+  /** A computed counter explains itself on hover (D5-20). */
+  explanation?: Explanation | null;
+}) {
   return (
     <div className="flex items-baseline gap-1.5">
       <span className="font-mono text-[10px] uppercase tracking-[0.08em] text-neutral-400">
         {label}
       </span>
       <span className="font-mono text-sm font-medium text-white" data-testid={testId}>
-        {value}
+        {explanation ? <Figure explanation={explanation}>{value}</Figure> : value}
       </span>
     </div>
   );
@@ -85,11 +98,21 @@ export function SendBar({
         value={estimate?.sendAll ? "all" : n(estimate?.testSize)}
         testId="footer-test-size"
       />
-      <Counter label="SMS" value={n(estimate?.smsCount)} testId="footer-sms" />
+      <Counter
+        label="SMS"
+        value={n(estimate?.smsCount)}
+        testId="footer-sms"
+        explanation={estimate ? explainSmsPlanned(estimate.laps, estimate.smsCount) : null}
+      />
       <Counter
         label="Cost"
         value={estimate ? `~${formatMicro(estimate.costMicro)}` : "–"}
         testId="footer-cost"
+        explanation={
+          estimate
+            ? explainEstimate(estimate.laps, campaign.partsPerMessage, estimate.costMicro)
+            : null
+        }
       />
       <div className="ml-auto flex items-center gap-3">
         {loading ? <span className="text-xs text-neutral-400">Updating…</span> : null}

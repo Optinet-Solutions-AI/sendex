@@ -2,6 +2,7 @@
 
 import {
   countryName,
+  FORMULAS,
   type TrendBreakdownRow,
   type TrendDimension,
   type TrendPoint,
@@ -12,6 +13,7 @@ import {
   ChartFrame,
   Checkbox,
   cn,
+  Explained,
   KpiStrip,
   Lines,
   PageHeader,
@@ -34,7 +36,31 @@ import {
   type TrendsQuery,
   trendsQueryString,
 } from "../../lib/kpi-params";
+import {
+  changeText,
+  explainChange,
+  explainConversionChange,
+  explainHalf,
+  explainLeadToSale,
+  explainTrend,
+  KPI_FORMULAS,
+} from "./explain";
 import { percent } from "./format";
+
+/** A breakdown row with each half's leads and sales, for the hover explanations (D5-20). */
+export interface TrendBreakdownView extends TrendBreakdownRow {
+  firstLeads: number;
+  firstSales: number;
+  secondLeads: number;
+  secondSales: number;
+}
+
+/** The month before over the same days, for the explanation of the change. */
+export interface TrendBefore {
+  leads: number;
+  sales: number;
+  conversion: number | null;
+}
 
 const DIMENSIONS: ReadonlyArray<{ value: TrendDimension; label: string; column: string }> = [
   { value: "route", label: "By route", column: "Route" },
@@ -48,15 +74,6 @@ const MODES: ReadonlyArray<{ value: "daily" | "cumulative"; label: string }> = [
   { value: "cumulative", label: "Cumulative" },
 ];
 
-/** "+60.5%" or "-5.3 pts"; null when there is nothing to compare with. */
-function changeText(value: number | null, unit: "percent" | "points"): string | null {
-  if (value === null) return null;
-  const sign = value > 0 ? "+" : "";
-  return unit === "percent"
-    ? `${sign}${(value * 100).toFixed(1)}%`
-    : `${sign}${value.toFixed(1)} pts`;
-}
-
 /**
  * Trends (D5-06), after the screen of that name in the Business KPIs Manager walkthrough:
  * how the month is doing against the month before. Leads sit on the day their SMS went out,
@@ -67,6 +84,7 @@ export function Trends({
   thisYear,
   through,
   summary,
+  before,
   points,
   breakdown,
 }: {
@@ -75,8 +93,9 @@ export function Trends({
   /** The last day of the month there are figures for; 0 for a month that has not started. */
   through: number;
   summary: TrendSummary;
+  before: TrendBefore;
   points: readonly TrendPoint[];
-  breakdown: readonly TrendBreakdownRow[];
+  breakdown: readonly TrendBreakdownView[];
 }) {
   const router = useRouter();
   const compareId = useId();
@@ -155,21 +174,63 @@ export function Trends({
         label="The month so far"
         items={[
           {
-            label: "Leads",
+            label: <Explained formula={KPI_FORMULAS.leads}>Leads</Explained>,
             value: formatNumber(summary.leads),
-            hint: versus(changeText(summary.leadsChange, "percent")),
+            hint: (
+              <Explained
+                {...explainChange({
+                  now: summary.leads,
+                  before: before.leads,
+                  change: summary.leadsChange,
+                  noun: "leads",
+                })}
+              >
+                {versus(changeText(summary.leadsChange, "percent"))}
+              </Explained>
+            ),
             testId: "trends-leads",
           },
           {
-            label: "Sales (FTD)",
+            label: <Explained formula={FORMULAS.sales}>Sales (FTD)</Explained>,
             value: formatNumber(summary.sales),
-            hint: versus(changeText(summary.salesChange, "percent")),
+            hint: (
+              <Explained
+                {...explainChange({
+                  now: summary.sales,
+                  before: before.sales,
+                  change: summary.salesChange,
+                  noun: "sales",
+                })}
+              >
+                {versus(changeText(summary.salesChange, "percent"))}
+              </Explained>
+            ),
             testId: "trends-sales",
           },
           {
-            label: "Lead → sale",
-            value: percent(summary.conversion),
-            hint: versus(changeText(summary.conversionChangePoints, "points")),
+            label: <Explained formula={FORMULAS.lts}>Lead → sale</Explained>,
+            value: (
+              <Explained
+                {...explainLeadToSale({
+                  leads: summary.leads,
+                  sales: summary.sales,
+                  leadToSale: summary.conversion,
+                })}
+              >
+                {percent(summary.conversion)}
+              </Explained>
+            ),
+            hint: (
+              <Explained
+                {...explainConversionChange({
+                  now: summary.conversion,
+                  before: before.conversion,
+                  points: summary.conversionChangePoints,
+                })}
+              >
+                {versus(changeText(summary.conversionChangePoints, "points"))}
+              </Explained>
+            ),
             testId: "trends-conversion",
           },
         ]}
@@ -226,12 +287,24 @@ export function Trends({
               <TableHeader>
                 <TableRow className="hover:bg-transparent">
                   <TableHead>{dimension?.column}</TableHead>
-                  <TableHead className="text-right">Leads</TableHead>
-                  <TableHead className="text-right">Sales</TableHead>
-                  <TableHead className="text-right">Lead → sale</TableHead>
-                  <TableHead className="text-right">Days 1–15</TableHead>
-                  <TableHead className="text-right">Day 16–end</TableHead>
-                  <TableHead className="text-right">Trend</TableHead>
+                  <TableHead className="text-right">
+                    <Explained formula={KPI_FORMULAS.leads}>Leads</Explained>
+                  </TableHead>
+                  <TableHead className="text-right">
+                    <Explained formula={FORMULAS.sales}>Sales</Explained>
+                  </TableHead>
+                  <TableHead className="text-right">
+                    <Explained formula={FORMULAS.lts}>Lead → sale</Explained>
+                  </TableHead>
+                  <TableHead className="text-right">
+                    <Explained formula={KPI_FORMULAS.firstHalf}>Days 1–15</Explained>
+                  </TableHead>
+                  <TableHead className="text-right">
+                    <Explained formula={KPI_FORMULAS.secondHalf}>Day 16–end</Explained>
+                  </TableHead>
+                  <TableHead className="text-right">
+                    <Explained formula={KPI_FORMULAS.trend}>Trend</Explained>
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -240,11 +313,49 @@ export function Trends({
                     <TableCell className="font-medium text-ink">{groupLabel(row.key)}</TableCell>
                     <NumCell>{formatNumber(row.leads)}</NumCell>
                     <NumCell>{formatNumber(row.sales)}</NumCell>
-                    <NumCell>{percent(row.conversion)}</NumCell>
-                    <NumCell>{percent(row.firstHalf)}</NumCell>
-                    <NumCell>{percent(row.secondHalf)}</NumCell>
+                    <NumCell>
+                      <Explained
+                        {...explainLeadToSale({
+                          leads: row.leads,
+                          sales: row.sales,
+                          leadToSale: row.conversion,
+                        })}
+                      >
+                        {percent(row.conversion)}
+                      </Explained>
+                    </NumCell>
+                    <NumCell>
+                      <Explained
+                        {...explainHalf("first", {
+                          leads: row.firstLeads,
+                          sales: row.firstSales,
+                          rate: row.firstHalf,
+                        })}
+                      >
+                        {percent(row.firstHalf)}
+                      </Explained>
+                    </NumCell>
+                    <NumCell>
+                      <Explained
+                        {...explainHalf("second", {
+                          leads: row.secondLeads,
+                          sales: row.secondSales,
+                          rate: row.secondHalf,
+                        })}
+                      >
+                        {percent(row.secondHalf)}
+                      </Explained>
+                    </NumCell>
                     <TableCell className="text-right">
-                      <TrendMark trend={row.trend} />
+                      <Explained
+                        {...explainTrend({
+                          first: row.firstHalf,
+                          second: row.secondHalf,
+                          trend: row.trend,
+                        })}
+                      >
+                        <TrendMark trend={row.trend} />
+                      </Explained>
                     </TableCell>
                   </TableRow>
                 ))}

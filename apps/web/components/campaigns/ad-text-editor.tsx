@@ -4,6 +4,8 @@ import { adTextProblem, analyseAdText, splitAdTexts } from "@sendex/core";
 import { Button, Toggle, Tooltip } from "@sendex/ui";
 import { ChevronDown, Info } from "lucide-react";
 import { useId, useRef, useState } from "react";
+import { explainParts } from "./explain";
+import { Figure } from "./figure";
 import { ErrorText, inputClass } from "./ui";
 
 /** The insert chips of the spec, in its order. */
@@ -178,22 +180,25 @@ export function AdTextEditor({
         data-testid="ad-text-counter"
       >
         {entries.length <= 1 ? (
-          <span>
+          <Figure explanation={explainParts(first, linkLength)}>
             {first.encoding} · {first.chars} chars ·{" "}
             <span data-testid="ad-text-parts-1">
               {first.parts} {first.parts === 1 ? "part" : "parts"}
             </span>{" "}
             · {first.left} left
-          </span>
+          </Figure>
         ) : (
           <ul className="space-y-0.5">
             {entries.map(({ key, analysis: a }, i) => (
               <li key={key}>
-                Text {i + 1}: {a.encoding} · {a.chars} chars ·{" "}
-                <span data-testid={`ad-text-parts-${i + 1}`}>
-                  {a.parts} {a.parts === 1 ? "part" : "parts"}
-                </span>{" "}
-                · {a.left} left
+                Text {i + 1}:{" "}
+                <Figure explanation={explainParts(a, linkLength)}>
+                  {a.encoding} · {a.chars} chars ·{" "}
+                  <span data-testid={`ad-text-parts-${i + 1}`}>
+                    {a.parts} {a.parts === 1 ? "part" : "parts"}
+                  </span>{" "}
+                  · {a.left} left
+                </Figure>
               </li>
             ))}
           </ul>

@@ -5,6 +5,8 @@ description: What each column on the results page means and how to use them to r
 
 The results page shows one row per campaign, and inside a campaign one row per route, so you can compare like with like. Counts come from carrier delivery receipts, clicks from the short-link service, and leads and sales from postbacks your landing page sends back to Sendex.
 
+**See how a figure is worked out.** Every computed figure in Sendex explains itself: hover a column header or a tile label for its formula (for example "CTR = Clicks ÷ Sent"), or hover the figure itself for the sum with the numbers on screen (for example "9 clicks ÷ 190 sent = 4.74%"). Keyboard users get the same by tabbing to the figure. Where a figure cannot be worked out (shown as "—"), the hover says why, and where sends and deposits fall on different days a short note says which day each one counts on.
+
 ## Columns
 
 | Column        | Meaning                                                                                           |

@@ -8,6 +8,7 @@ import {
   topOffersByCountry,
 } from "@sendex/core";
 import { db, kpiByOfferCountry } from "@sendex/db";
+import { explainRoi } from "../../../../components/kpi/explain";
 import { type BarItem, Insight } from "../../../../components/kpi/insight";
 import { insightWindow, parseInsightQuery } from "../../../../lib/kpi-params";
 import type { SearchParams } from "../../../../lib/lists-params";
@@ -42,7 +43,14 @@ export default async function InsightPage({
               const value = roi(item);
               return value === null
                 ? []
-                : [{ label: label(item.label), value, display: percentText(value) }];
+                : [
+                    {
+                      label: label(item.label),
+                      value,
+                      display: percentText(value),
+                      explanation: explainRoi({ ...item, roi: value }),
+                    },
+                  ];
             })
             .sort((a, b) => b.value - a.value)
             .slice(0, TOP_BARS);
@@ -86,7 +94,10 @@ export default async function InsightPage({
                 roi: roi(o),
               })),
             }))}
-            efficiency={efficiencySnapshot(rows)}
+            efficiency={efficiencySnapshot(rows).map((e) => ({
+              ...e,
+              sent: offers.find((o) => o.label === e.offer)?.sent ?? 0,
+            }))}
           />
         );
       }}

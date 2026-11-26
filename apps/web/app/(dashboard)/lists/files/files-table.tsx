@@ -6,6 +6,7 @@ import {
   Button,
   ConfirmDialog,
   CountPill,
+  Explained,
   IconButton,
   Input,
   PageHeader,
@@ -18,6 +19,7 @@ import { ChevronDown, ChevronRight, Copy, FileText, Mail, Trash2, Upload } from 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { type FormEvent, Fragment, useState } from "react";
+import { explainProgress, LOCAL_FORMULAS } from "../../../../lib/explain";
 import { formatDateTime, formatNumber } from "../../../../lib/format";
 import { deleteListImportAction } from "../actions";
 
@@ -268,7 +270,9 @@ export function FilesTable({
               <th className={TH}>File</th>
               <th className={TH}>Type</th>
               <th className={TH}>Status</th>
-              <th className={TH}>Progress</th>
+              <th className={TH}>
+                <Explained formula={LOCAL_FORMULAS.progress}>Progress</Explained>
+              </th>
               <th className={TH}>List</th>
               <th className={TH}>Uploaded</th>
               <th className={`${TH} text-right`}>Actions</th>
@@ -316,9 +320,12 @@ export function FilesTable({
                           <div className="h-2 w-24 overflow-hidden rounded bg-neutral-200">
                             <div className="h-full bg-good" style={{ width: `${pct}%` }} />
                           </div>
-                          <span className="font-mono text-xs text-muted">
+                          <Explained
+                            {...explainProgress(job.valid, job.rowsInFile, `${pct}%`)}
+                            className="font-mono text-xs text-muted"
+                          >
                             {formatNumber(job.valid)} / {formatNumber(job.rowsInFile)}
-                          </span>
+                          </Explained>
                         </div>
                       </td>
                       <td className={TD}>

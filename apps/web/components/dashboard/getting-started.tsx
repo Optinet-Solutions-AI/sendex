@@ -1,6 +1,6 @@
 import type { BalanceTopUp } from "@sendex/core";
-import { compactNumber } from "@sendex/core";
-import { Button, Card, KpiStrip } from "@sendex/ui";
+import { compactNumber, FORMULAS } from "@sendex/core";
+import { Button, Card, Explained, KpiStrip } from "@sendex/ui";
 import {
   BookOpen,
   CodeXml,
@@ -14,11 +14,16 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { eur, int } from "./format";
+import { balanceFigure, DASHBOARD_FORMULAS, spendFigure } from "./explain";
+import { FigureText } from "./figure";
+import { int } from "./format";
 
 export interface GettingStartedProps {
   kpis: { contacts: number; sent: number; spendMicro: number; sales: number };
   balanceMicro: number;
+  /** Where the balance comes from and, for carriers, each one's share (D5-20 hover). */
+  balanceSource: "carrier" | "ledger";
+  balanceCarriers: ReadonlyArray<{ name: string; balanceMicro: number }>;
   /** Where the balance is topped up (D5-19): at the carrier, or in Billing. */
   topUp: BalanceTopUp;
   /** The worker's public address for the API reference, when deployed. */
@@ -34,27 +39,45 @@ export interface GettingStartedProps {
 export function GettingStarted({
   kpis,
   balanceMicro,
+  balanceSource,
+  balanceCarriers,
   topUp,
   apiDocsUrl,
   docsUrl,
   supportUrl,
 }: GettingStartedProps) {
+  const spend = spendFigure(kpis.spendMicro);
+  const balance = balanceFigure({
+    source: balanceSource,
+    totalMicro: balanceMicro,
+    carriers: balanceCarriers,
+  });
   return (
     <div className="space-y-6" data-testid="getting-started">
       <KpiStrip
         items={[
           {
-            label: "Contacts on file",
+            label: (
+              <Explained formula={DASHBOARD_FORMULAS.contactsInPeriod}>Contacts on file</Explained>
+            ),
             value: compactNumber(kpis.contacts),
             testId: "kpi-contacts",
           },
-          { label: "Messages sent", value: compactNumber(kpis.sent), testId: "kpi-sent" },
           {
-            label: "Spend",
-            value: `€${compactNumber(Math.round(kpis.spendMicro / 1_000_000))}`,
+            label: <Explained formula={FORMULAS.sent}>Messages sent</Explained>,
+            value: compactNumber(kpis.sent),
+            testId: "kpi-sent",
+          },
+          {
+            label: <Explained formula={spend.formula}>Spend</Explained>,
+            value: <FigureText figure={spend} />,
             testId: "kpi-spend",
           },
-          { label: "Sales (FTD)", value: int(kpis.sales), testId: "kpi-sales" },
+          {
+            label: <Explained formula={FORMULAS.sales}>Sales (FTD)</Explained>,
+            value: int(kpis.sales),
+            testId: "kpi-sales",
+          },
         ]}
       />
       <Card className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
@@ -70,9 +93,11 @@ export function GettingStarted({
           </div>
         </div>
         <div className="flex items-center gap-3 text-sm">
-          <span className="text-muted">Balance</span>
+          <span className="text-muted">
+            <Explained formula={balance.formula}>Balance</Explained>
+          </span>
           <span className="font-mono font-medium" data-testid="dashboard-balance">
-            {eur(balanceMicro)}
+            <FigureText figure={balance} />
           </span>
           <Link href="/billing" className="text-navy underline-offset-2 hover:underline">
             {topUp.linkLabel}

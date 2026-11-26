@@ -1,6 +1,14 @@
 "use client";
 
 import { countryName } from "@sendex/core";
+import { Explained } from "@sendex/ui";
+import {
+  type Explanation,
+  explainCtr,
+  explainGood,
+  explainUnresolved,
+  LOCAL_FORMULAS,
+} from "../../lib/explain";
 import { formatNumber } from "../../lib/format";
 import { HlrVerifyButton } from "./hlr-verify-button";
 
@@ -41,6 +49,18 @@ const COLUMNS: ReadonlyArray<{ key: keyof LookupRowView; label: string; tone?: s
   { key: "sent", label: "Sent" },
   { key: "clicks", label: "Clicks" },
 ];
+
+/** The computed columns explain themselves; the rest are plain counts. */
+function explainCell(key: keyof LookupRowView, row: LookupRowView): Explanation | null {
+  if (key === "good") return explainGood(row.total, row.bad);
+  if (key === "unresolved") return explainUnresolved(row);
+  return null;
+}
+
+const HEADER_FORMULA: Partial<Record<keyof LookupRowView, string>> = {
+  good: LOCAL_FORMULAS.good,
+  unresolved: LOCAL_FORMULAS.unresolved,
+};
 
 function totals(rows: LookupRowView[]): LookupRowView {
   const sum = (key: keyof LookupRowView) => rows.reduce((n, r) => n + Number(r[key]), 0);
@@ -90,12 +110,30 @@ export function LookupTab({
       <td className="px-3 py-2 text-sm text-ink">
         {bold ? row.country : `${row.country} ${countryName(row.country)}`}
       </td>
-      {COLUMNS.map((c) => (
-        <td key={c.key} className={`${TD} ${c.tone ?? ""}`}>
-          {formatNumber(Number(row[c.key]))}
-        </td>
-      ))}
-      <td className={TD}>{(row.ctr * 100).toFixed(0)}%</td>
+      {COLUMNS.map((c) => {
+        const explained = explainCell(c.key, row);
+        return (
+          <td key={c.key} className={`${TD} ${c.tone ?? ""}`}>
+            {explained ? (
+              <Explained {...explained}>{formatNumber(Number(row[c.key]))}</Explained>
+            ) : (
+              formatNumber(Number(row[c.key]))
+            )}
+          </td>
+        );
+      })}
+      <td className={TD}>
+        <Explained
+          {...explainCtr(
+            row.clicks,
+            row.sent,
+            `${(row.ctr * 100).toFixed(0)}%`,
+            LOCAL_FORMULAS.lookupCtr,
+          )}
+        >
+          {(row.ctr * 100).toFixed(0)}%
+        </Explained>
+      </td>
     </tr>
   );
   return (
@@ -111,10 +149,12 @@ export function LookupTab({
               <th className={`${TH} text-left`}>Country</th>
               {COLUMNS.map((c) => (
                 <th key={c.key} className={TH}>
-                  {c.label}
+                  <Explained formula={HEADER_FORMULA[c.key]}>{c.label}</Explained>
                 </th>
               ))}
-              <th className={TH}>CTR</th>
+              <th className={TH}>
+                <Explained formula={LOCAL_FORMULAS.lookupCtr}>CTR</Explained>
+              </th>
             </tr>
           </thead>
           <tbody>

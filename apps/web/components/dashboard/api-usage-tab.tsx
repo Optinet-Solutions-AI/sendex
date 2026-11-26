@@ -1,6 +1,6 @@
 "use client";
 
-import { countryName, flagEmoji, type SeriesRow } from "@sendex/core";
+import { countryName, FORMULAS, flagEmoji, type SeriesRow } from "@sendex/core";
 import {
   Badge,
   Button,
@@ -9,6 +9,7 @@ import {
   ChartFrame,
   ChartTable,
   EmptyState,
+  Explained,
   KpiStrip,
   StackedBars,
   Table,
@@ -20,7 +21,9 @@ import {
 } from "@sendex/ui";
 import { CodeXml } from "lucide-react";
 import { formatDateTime, timeAgo } from "../../lib/format";
-import { countryLabel, eur, int, monthLabel, pct } from "./format";
+import { ctrFigure, DASHBOARD_FORMULAS, perFigure, sumFigure } from "./explain";
+import { FigureText } from "./figure";
+import { countryLabel, eur, int, monthLabel } from "./format";
 
 export interface ApiUsageProps {
   kpis: { sent: number; previews: number; clicks: number; spendMicro: number };
@@ -64,6 +67,12 @@ export function ApiUsageTab({ kpis, perCountry, countries, log, apiDocsUrl, now 
     { sent: 0, previews: 0, clicks: 0, leads: 0, sales: 0, spendMicro: 0 },
   );
   const empty = kpis.sent === 0;
+  const kpiCtr = ctrFigure(kpis.clicks, kpis.sent);
+  const totalOf = (
+    formula: string,
+    pick: (c: (typeof countries)[number]) => string,
+    result: string,
+  ) => <FigureText figure={sumFigure(formula, countries.map(pick), result)} />;
   return (
     <div className="space-y-4" data-testid="api-usage-tab">
       <div className="flex items-center justify-between gap-3">
@@ -79,14 +88,26 @@ export function ApiUsageTab({ kpis, perCountry, countries, log, apiDocsUrl, now 
       <KpiStrip
         items={[
           { label: "Messages sent", value: int(kpis.sent), testId: "api-kpi-sent" },
-          { label: "Previews", value: int(kpis.previews), testId: "api-kpi-previews" },
-          { label: "Clicks", value: int(kpis.clicks), testId: "api-kpi-clicks" },
           {
-            label: "CTR",
-            value: pct(kpis.sent > 0 ? kpis.clicks / kpis.sent : 0),
+            label: <Explained formula={DASHBOARD_FORMULAS.previews}>Previews</Explained>,
+            value: int(kpis.previews),
+            testId: "api-kpi-previews",
+          },
+          {
+            label: <Explained formula={FORMULAS.clicks}>Clicks</Explained>,
+            value: int(kpis.clicks),
+            testId: "api-kpi-clicks",
+          },
+          {
+            label: <Explained formula={kpiCtr.formula}>CTR</Explained>,
+            value: <FigureText figure={kpiCtr} />,
             testId: "api-kpi-ctr",
           },
-          { label: "Spend", value: eur(kpis.spendMicro), testId: "api-kpi-spend" },
+          {
+            label: <Explained formula={DASHBOARD_FORMULAS.cost}>Spend</Explained>,
+            value: eur(kpis.spendMicro),
+            testId: "api-kpi-spend",
+          },
         ]}
       />
       {empty ? (
@@ -126,14 +147,30 @@ export function ApiUsageTab({ kpis, perCountry, countries, log, apiDocsUrl, now 
               <TableHeader>
                 <TableRow className="hover:bg-transparent">
                   <TableHead>Country</TableHead>
-                  <TableHead className="text-right">Sent</TableHead>
-                  <TableHead className="text-right">Previews</TableHead>
-                  <TableHead className="text-right">Clicks</TableHead>
-                  <TableHead className="text-right">CTR</TableHead>
-                  <TableHead className="text-right">CPC</TableHead>
-                  <TableHead className="text-right">Signups</TableHead>
-                  <TableHead className="text-right">Sales</TableHead>
-                  <TableHead className="text-right">Spend</TableHead>
+                  <TableHead className="text-right">
+                    <Explained formula={FORMULAS.sent}>Sent</Explained>
+                  </TableHead>
+                  <TableHead className="text-right">
+                    <Explained formula={DASHBOARD_FORMULAS.previews}>Previews</Explained>
+                  </TableHead>
+                  <TableHead className="text-right">
+                    <Explained formula={FORMULAS.clicks}>Clicks</Explained>
+                  </TableHead>
+                  <TableHead className="text-right">
+                    <Explained formula={FORMULAS.ctr}>CTR</Explained>
+                  </TableHead>
+                  <TableHead className="text-right">
+                    <Explained formula={FORMULAS.cpc}>CPC</Explained>
+                  </TableHead>
+                  <TableHead className="text-right">
+                    <Explained formula={DASHBOARD_FORMULAS.signupsRaw}>Signups</Explained>
+                  </TableHead>
+                  <TableHead className="text-right">
+                    <Explained formula={FORMULAS.sales}>Sales</Explained>
+                  </TableHead>
+                  <TableHead className="text-right">
+                    <Explained formula={DASHBOARD_FORMULAS.cost}>Spend</Explained>
+                  </TableHead>
                   <TableHead>Last sent</TableHead>
                 </TableRow>
               </TableHeader>
@@ -154,10 +191,12 @@ export function ApiUsageTab({ kpis, perCountry, countries, log, apiDocsUrl, now 
                       {int(c.clicks)}
                     </TableCell>
                     <TableCell className="text-right font-mono tabular-nums">
-                      {pct(c.sent > 0 ? c.clicks / c.sent : 0)}
+                      <FigureText figure={ctrFigure(c.clicks, c.sent)} />
                     </TableCell>
                     <TableCell className="text-right font-mono tabular-nums">
-                      {c.clicks > 0 ? eur(c.spendMicro / c.clicks) : "—"}
+                      <FigureText
+                        figure={perFigure(FORMULAS.cpc, c.spendMicro, c.clicks, "click", "spend")}
+                      />
                     </TableCell>
                     <TableCell className="text-right font-mono tabular-nums">
                       {int(c.leads)}
@@ -174,28 +213,40 @@ export function ApiUsageTab({ kpis, perCountry, countries, log, apiDocsUrl, now 
                 <TableRow className="bg-page font-semibold hover:bg-page">
                   <TableCell>Total</TableCell>
                   <TableCell className="text-right font-mono tabular-nums">
-                    {int(total.sent)}
+                    {totalOf(DASHBOARD_FORMULAS.total, (c) => int(c.sent), int(total.sent))}
                   </TableCell>
                   <TableCell className="text-right font-mono tabular-nums">
-                    {int(total.previews)}
+                    {totalOf(DASHBOARD_FORMULAS.total, (c) => int(c.previews), int(total.previews))}
                   </TableCell>
                   <TableCell className="text-right font-mono tabular-nums">
-                    {int(total.clicks)}
+                    {totalOf(DASHBOARD_FORMULAS.total, (c) => int(c.clicks), int(total.clicks))}
                   </TableCell>
                   <TableCell className="text-right font-mono tabular-nums">
-                    {pct(total.sent > 0 ? total.clicks / total.sent : 0)}
+                    <FigureText figure={ctrFigure(total.clicks, total.sent)} />
                   </TableCell>
                   <TableCell className="text-right font-mono tabular-nums">
-                    {total.clicks > 0 ? eur(total.spendMicro / total.clicks) : "—"}
+                    <FigureText
+                      figure={perFigure(
+                        FORMULAS.cpc,
+                        total.spendMicro,
+                        total.clicks,
+                        "click",
+                        "spend",
+                      )}
+                    />
                   </TableCell>
                   <TableCell className="text-right font-mono tabular-nums">
-                    {int(total.leads)}
+                    {totalOf(DASHBOARD_FORMULAS.total, (c) => int(c.leads), int(total.leads))}
                   </TableCell>
                   <TableCell className="text-right font-mono tabular-nums">
-                    {int(total.sales)}
+                    {totalOf(DASHBOARD_FORMULAS.total, (c) => int(c.sales), int(total.sales))}
                   </TableCell>
                   <TableCell className="text-right font-mono tabular-nums">
-                    {eur(total.spendMicro)}
+                    {totalOf(
+                      DASHBOARD_FORMULAS.total,
+                      (c) => eur(c.spendMicro),
+                      eur(total.spendMicro),
+                    )}
                   </TableCell>
                   <TableCell />
                 </TableRow>

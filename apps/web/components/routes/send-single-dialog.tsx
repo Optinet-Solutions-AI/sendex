@@ -21,6 +21,7 @@ import {
   DialogContent,
   DialogDescription,
   DialogTitle,
+  Explained,
   Toggle,
   Tooltip,
   useToast,
@@ -33,6 +34,7 @@ import {
   type RouteChoice,
   routesForCountryAction,
 } from "../../app/(dashboard)/routes/actions";
+import { explainEstimate, LOCAL_FORMULAS } from "../../lib/explain";
 import { OPEN_COUNTRIES } from "../../lib/open-countries";
 import { ErrorText, inputClass } from "../campaigns/ui";
 import { eur } from "../dashboard/format";
@@ -108,6 +110,14 @@ export function SendSingleForm({
     })),
     cascade,
     label: mode === "single" ? "Single SMS" : "Handset test",
+  });
+
+  const estimateExplained = explainEstimate({
+    combos,
+    priceMicros: chosen.map((r) => (r.priceMicro === null ? null : Number(r.priceMicro))),
+    cascade,
+    tests: estimate.tests,
+    shown: estimate.tests > 0 ? eur(Number(estimate.totalMicro)) : "-",
   });
 
   const toggle = <T,>(list: T[], value: T, set: (next: T[]) => void) =>
@@ -427,7 +437,9 @@ export function SendSingleForm({
                 <tr className="text-left font-mono text-[11px] uppercase tracking-[0.06em] text-muted">
                   <th className="px-3 py-1">Type</th>
                   <th className="px-3 py-1 text-right">Tests</th>
-                  <th className="px-3 py-1 text-right">Cost</th>
+                  <th className="px-3 py-1 text-right">
+                    <Explained formula={LOCAL_FORMULAS.testEstimate}>Cost</Explained>
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -436,7 +448,7 @@ export function SendSingleForm({
                     <td className="px-3 py-1">{r.type}</td>
                     <td className="px-3 py-1 text-right font-mono tabular-nums">{r.tests}</td>
                     <td className="px-3 py-1 text-right font-mono tabular-nums">
-                      {eur(Number(r.costMicro))}
+                      <Explained {...estimateExplained}>{eur(Number(r.costMicro))}</Explained>
                     </td>
                   </tr>
                 ))}
@@ -449,7 +461,9 @@ export function SendSingleForm({
                     {estimate.tests}
                   </td>
                   <td className="px-3 py-1 text-right font-mono tabular-nums">
-                    {estimate.tests > 0 ? eur(Number(estimate.totalMicro)) : "-"}
+                    <Explained {...estimateExplained}>
+                      {estimate.tests > 0 ? eur(Number(estimate.totalMicro)) : "-"}
+                    </Explained>
                   </td>
                 </tr>
               </tbody>

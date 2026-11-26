@@ -4,6 +4,7 @@ import {
   type CountryLine,
   countryName,
   type DayCell,
+  FORMULAS,
   flagEmoji,
   formatDayLong,
   formatMonth,
@@ -16,6 +17,7 @@ import {
   Dialog,
   DialogContent,
   DialogTitle,
+  Explained,
   SegmentedControl,
   Skeleton,
   Table,
@@ -38,6 +40,8 @@ import {
   shiftCalendar,
 } from "../../lib/calendar-params";
 import { formatNumber } from "../../lib/format";
+import { explainDaySent, explainRate } from "../campaigns/explain";
+import { Figure } from "../campaigns/figure";
 
 const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] as const;
 const VIEWS: ReadonlyArray<{ value: CalendarView; label: string }> = [
@@ -96,6 +100,8 @@ export function SendCalendar({ query, grid, cells, today, countryDays }: SendCal
   };
   const go = (next: CalendarQuery) =>
     router.push(`/campaigns/scheduled${calendarQueryString(next)}`);
+  // The bars scale to the busiest day of the set (`dayCells`), whichever days are in view.
+  const busiest = Object.values(cells).reduce((max, c) => Math.max(max, c.sent), 0);
   const title =
     query.view === "week"
       ? `Week of ${formatDayLong(grid[0]?.[0]?.day ?? query.day)}`
@@ -174,6 +180,7 @@ export function SendCalendar({ query, grid, cells, today, countryDays }: SendCal
                 isToday={cell.day === today}
                 lineLimit={query.view === "week" ? Number.POSITIVE_INFINITY : MONTH_LINES}
                 tall={query.view === "week"}
+                busiest={busiest}
                 onOpen={(country) => openDay(cell.day, country)}
               />
             ))}
@@ -192,6 +199,7 @@ function DayCellView({
   isToday,
   lineLimit,
   tall,
+  busiest,
   onOpen,
 }: {
   cell: GridCell;
@@ -199,8 +207,11 @@ function DayCellView({
   isToday: boolean;
   lineLimit: number;
   tall: boolean;
+  /** The busiest day's sent, which the bar is scaled to. */
+  busiest: number;
   onOpen: (country: string) => void;
 }) {
+  const barPercent = stats ? Math.max(4, Math.round(stats.barFraction * 100)) : 0;
   const dayNumber = Number.parseInt(cell.day.slice(8, 10), 10);
   const lines = stats?.countries ?? [];
   const shown = lines.slice(0, lineLimit);
@@ -229,7 +240,16 @@ function DayCellView({
         </span>
         {stats && stats.sent > 0 ? (
           <span className="font-mono tabular-nums text-ink" data-testid="calendar-day-sent">
-            {formatNumber(stats.sent)}
+            <Figure
+              explanation={explainDaySent(
+                stats.countries.map((c) => c.sent),
+                stats.sent,
+                busiest,
+                barPercent,
+              )}
+            >
+              {formatNumber(stats.sent)}
+            </Figure>
           </span>
         ) : null}
       </div>
@@ -237,7 +257,7 @@ function DayCellView({
         <div className="h-0.5 w-full rounded bg-neutral-200">
           <div
             className="h-0.5 rounded bg-navy"
-            style={{ width: `${Math.max(4, Math.round(stats.barFraction * 100))}%` }}
+            style={{ width: `${barPercent}%` }}
             aria-hidden="true"
           />
         </div>
@@ -324,7 +344,9 @@ function DayModal({
                       <TableHead>Account</TableHead>
                       <TableHead className="text-right">Sent</TableHead>
                       <TableHead className="text-right">Clicks</TableHead>
-                      <TableHead className="text-right">CTR</TableHead>
+                      <TableHead className="text-right">
+                        <Explained formula={FORMULAS.ctr}>CTR</Explained>
+                      </TableHead>
                       <TableHead className="text-right">Leads</TableHead>
                       <TableHead className="text-right">Sales</TableHead>
                     </TableRow>
@@ -356,7 +378,11 @@ function DayModal({
                         <TableCell className="text-right tabular-nums">
                           {formatNumber(r.clicks)}
                         </TableCell>
-                        <TableCell className="text-right tabular-nums">{percent(r.ctr)}</TableCell>
+                        <TableCell className="text-right tabular-nums">
+                          <Figure explanation={explainRate("ctr", r.clicks, r.sent, r.ctr)}>
+                            {percent(r.ctr)}
+                          </Figure>
+                        </TableCell>
                         <TableCell className="text-right tabular-nums">
                           {formatNumber(r.leads)}
                         </TableCell>
@@ -383,7 +409,16 @@ function DayModal({
                         {formatNumber(totals.clicks)}
                       </TableCell>
                       <TableCell className="text-right tabular-nums">
-                        {percent(totals.sent > 0 ? totals.clicks / totals.sent : 0)}
+                        <Figure
+                          explanation={explainRate(
+                            "ctr",
+                            totals.clicks,
+                            totals.sent,
+                            totals.sent > 0 ? totals.clicks / totals.sent : 0,
+                          )}
+                        >
+                          {percent(totals.sent > 0 ? totals.clicks / totals.sent : 0)}
+                        </Figure>
                       </TableCell>
                       <TableCell className="text-right tabular-nums">
                         {formatNumber(totals.leads)}

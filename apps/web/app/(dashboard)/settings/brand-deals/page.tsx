@@ -5,6 +5,7 @@ import {
   Card,
   CardHeader,
   EmptyState,
+  Explained,
   PageHeader,
   Table,
   TableBody,
@@ -16,6 +17,7 @@ import {
 import { Handshake } from "lucide-react";
 import { formatMicro } from "../../../../components/campaigns/format";
 import { AuthError, requireAction } from "../../../../lib/auth";
+import { explainCpaCounted, LOCAL_FORMULAS } from "../../../../lib/explain";
 import { AuthErrorView } from "../../require-org";
 import { DealsUpload } from "./deals-upload";
 import { OfferDeals } from "./offer-deals";
@@ -105,7 +107,9 @@ export default async function BrandDealsPage() {
                   <TableHead>Brand</TableHead>
                   <TableHead>Program</TableHead>
                   <TableHead>Deal</TableHead>
-                  <TableHead className="text-right">CPA counted</TableHead>
+                  <TableHead className="text-right">
+                    <Explained formula={LOCAL_FORMULAS.cpaCounted}>CPA counted</Explained>
+                  </TableHead>
                   <TableHead>From</TableHead>
                   <TableHead>Top geos</TableHead>
                 </TableRow>
@@ -117,13 +121,19 @@ export default async function BrandDealsPage() {
                     <TableCell>{d.program || "—"}</TableCell>
                     <TableCell className="max-w-xs whitespace-normal">{d.deal || "—"}</TableCell>
                     <TableCell className="text-right tabular-nums">
-                      {d.cpaMicro === null ? (
-                        <Badge variant="amber" title={d.reason ?? undefined}>
-                          {d.reason ?? "No price"}
-                        </Badge>
-                      ) : (
-                        formatMicro(Number(d.cpaMicro))
-                      )}
+                      <Explained
+                        {...explainCpaCounted(
+                          d.deal,
+                          d.cpaMicro === null ? null : formatMicro(Number(d.cpaMicro)),
+                          d.reason,
+                        )}
+                      >
+                        {d.cpaMicro === null ? (
+                          <Badge variant="amber">{d.reason ?? "No price"}</Badge>
+                        ) : (
+                          formatMicro(Number(d.cpaMicro))
+                        )}
+                      </Explained>
                     </TableCell>
                     <TableCell className="tabular-nums">{d.startsOn}</TableCell>
                     <TableCell className="max-w-[12rem] whitespace-normal">

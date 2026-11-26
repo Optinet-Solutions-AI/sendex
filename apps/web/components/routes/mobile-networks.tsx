@@ -1,9 +1,16 @@
 "use client";
 
-import { countryName, flagEmoji, type MobileNetworksView, NETWORK_MIN_SENT } from "@sendex/core";
+import {
+  countryName,
+  FORMULAS,
+  flagEmoji,
+  type MobileNetworksView,
+  NETWORK_MIN_SENT,
+} from "@sendex/core";
 import {
   Card,
   cn,
+  Explained,
   KpiStrip,
   Table,
   TableBody,
@@ -15,6 +22,7 @@ import {
 import { ChevronDown, ChevronRight, Info } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
+import { explainCtr, explainCtrDelta, explainShare, LOCAL_FORMULAS } from "../../lib/explain";
 import { type RoutesQuery, routesQueryString } from "../../lib/routes-params";
 import { int, pct } from "../dashboard/format";
 import { RoutesFilterBar } from "./filters";
@@ -24,6 +32,9 @@ export interface MobileNetworksProps {
   view: MobileNetworksView;
   routes: Array<{ id: string; name: string }>;
 }
+
+/** Country figures count every operator, the hidden low-volume ones too. */
+const COUNTRY_NOTE = "Counts every operator in the country, low-volume ones hidden below included.";
 
 /** Mobile Networks: KPIs, the low-volume note and one collapsible card per country with operator rows that expand into their routes. */
 export function MobileNetworks({ query, view, routes }: MobileNetworksProps) {
@@ -69,9 +80,19 @@ export function MobileNetworks({ query, view, routes }: MobileNetworksProps) {
           { label: "Networks", value: int(view.kpis.networks), testId: "net-kpi-networks" },
           { label: "Sent", value: int(view.kpis.sent), testId: "net-kpi-sent" },
           { label: "Clicks", value: int(view.kpis.clicks) },
-          { label: "CTR", value: pct(view.kpis.ctr) },
+          {
+            label: <Explained formula={FORMULAS.ctr}>CTR</Explained>,
+            value: (
+              <Explained {...explainCtr(view.kpis.clicks, view.kpis.sent, pct(view.kpis.ctr))}>
+                {pct(view.kpis.ctr)}
+              </Explained>
+            ),
+          },
           { label: "Leads", value: int(view.kpis.leads) },
-          { label: "Sales", value: int(view.kpis.sales) },
+          {
+            label: <Explained formula={LOCAL_FORMULAS.networkSales}>Sales</Explained>,
+            value: int(view.kpis.sales),
+          },
         ]}
       />
       <p className="flex flex-wrap items-center gap-1 text-sm text-muted">
@@ -118,7 +139,14 @@ export function MobileNetworks({ query, view, routes }: MobileNetworksProps) {
                 </span>
                 <span className="text-sm text-muted">
                   Sent <span className="font-mono text-ink">{int(c.sent)}</span> · Country CTR{" "}
-                  <span className="font-mono text-ink">{pct(c.ctr)}</span>
+                  <Explained
+                    {...explainCtr(c.clicks, c.sent, pct(c.ctr))}
+                    note={COUNTRY_NOTE}
+                    inButton
+                    className="font-mono text-ink"
+                  >
+                    {pct(c.ctr)}
+                  </Explained>
                 </span>
               </button>
               {isClosed ? null : (
@@ -129,10 +157,18 @@ export function MobileNetworks({ query, view, routes }: MobileNetworksProps) {
                       <TableHead className="text-right">Sent ↓</TableHead>
                       <TableHead className="text-right">Previews</TableHead>
                       <TableHead className="text-right">Clicks</TableHead>
-                      <TableHead className="text-right">CTR</TableHead>
+                      <TableHead className="text-right">
+                        <Explained formula={FORMULAS.ctr} note={LOCAL_FORMULAS.ctrDelta}>
+                          CTR
+                        </Explained>
+                      </TableHead>
                       <TableHead className="text-right">Leads</TableHead>
-                      <TableHead className="text-right">Sales</TableHead>
-                      <TableHead>Share of Country</TableHead>
+                      <TableHead className="text-right">
+                        <Explained formula={LOCAL_FORMULAS.networkSales}>Sales</Explained>
+                      </TableHead>
+                      <TableHead>
+                        <Explained formula={LOCAL_FORMULAS.share}>Share of Country</Explained>
+                      </TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -140,6 +176,7 @@ export function MobileNetworks({ query, view, routes }: MobileNetworksProps) {
                       const key = `${c.country}:${n.operator}`;
                       const expanded = open.has(key);
                       const delta = n.ctrDelta * 100;
+                      const deltaShown = `${delta >= 0 ? "+" : "−"}${Math.abs(delta).toFixed(1)}`;
                       return (
                         <RowGroup key={key}>
                           <TableRow
@@ -178,19 +215,23 @@ export function MobileNetworks({ query, view, routes }: MobileNetworksProps) {
                               {int(n.clicks)}
                             </TableCell>
                             <TableCell className="text-right font-mono tabular-nums">
-                              {pct(n.ctr)}{" "}
-                              <span
+                              <Explained {...explainCtr(n.clicks, n.sent, pct(n.ctr))}>
+                                {pct(n.ctr)}
+                              </Explained>{" "}
+                              <Explained
+                                {...explainCtrDelta(pct(n.ctr), pct(c.ctr), deltaShown)}
                                 className={cn("text-xs", delta >= 0 ? "text-good" : "text-signal")}
                               >
-                                {delta >= 0 ? "+" : "−"}
-                                {Math.abs(delta).toFixed(1)}
-                              </span>
+                                {deltaShown}
+                              </Explained>
                             </TableCell>
                             <TableCell className="text-right font-mono tabular-nums">
                               {int(n.leads)}
                             </TableCell>
                             <TableCell className="text-right font-mono tabular-nums">
-                              {int(n.sales)}
+                              <Explained formula={LOCAL_FORMULAS.networkSales}>
+                                {int(n.sales)}
+                              </Explained>
                             </TableCell>
                             <TableCell>
                               <span className="inline-flex items-center gap-2">
@@ -200,9 +241,12 @@ export function MobileNetworks({ query, view, routes }: MobileNetworksProps) {
                                     style={{ width: `${Math.round(n.share * 100)}%` }}
                                   />
                                 </span>
-                                <span className="font-mono text-xs tabular-nums">
+                                <Explained
+                                  {...explainShare(n.sent, c.sent, pct(n.share, 1))}
+                                  className="font-mono text-xs tabular-nums"
+                                >
                                   {pct(n.share, 1)}
-                                </span>
+                                </Explained>
                               </span>
                             </TableCell>
                           </TableRow>
@@ -237,7 +281,9 @@ export function MobileNetworks({ query, view, routes }: MobileNetworksProps) {
                                           {int(r.clicks)}
                                         </td>
                                         <td className="py-0.5 text-right font-mono tabular-nums">
-                                          {pct(r.ctr)}
+                                          <Explained {...explainCtr(r.clicks, r.sent, pct(r.ctr))}>
+                                            {pct(r.ctr)}
+                                          </Explained>
                                         </td>
                                         <td className="py-0.5 text-right font-mono tabular-nums">
                                           {int(r.leads)}

@@ -10,6 +10,8 @@ import {
   updateAdTextAction,
 } from "../../app/(dashboard)/campaigns/actions";
 import { AdTextEditor, type AdTextSave } from "./ad-text-editor";
+import { explainParts } from "./explain";
+import { Figure } from "./figure";
 import type { AdTextView, CampaignView } from "./types";
 import { ErrorText, Modal } from "./ui";
 
@@ -103,7 +105,9 @@ export function AdTextsPanel({
                     {renderPreview(t.text, SAMPLE)}
                   </div>
                   <div className="mt-0.5 font-mono text-[11px] text-muted">
-                    {sent.encoding} · {sent.parts} {sent.parts === 1 ? "part" : "parts"}
+                    <Figure explanation={explainParts(sent, linkLength)}>
+                      {sent.encoding} · {sent.parts} {sent.parts === 1 ? "part" : "parts"}
+                    </Figure>
                   </div>
                 </div>
                 <Toggle

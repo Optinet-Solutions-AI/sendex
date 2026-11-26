@@ -1,6 +1,20 @@
-import { calendarKpis, type DayCell, dayCells, monthGrid, weekGrid } from "@sendex/core";
+import {
+  calendarKpis,
+  countryName,
+  type DayCell,
+  dayCells,
+  FORMULAS,
+  monthGrid,
+  weekGrid,
+} from "@sendex/core";
 import { db, listScheduledCampaigns, sendCalendar } from "@sendex/db";
-import { CountPill, KpiStrip, PageHeader } from "@sendex/ui";
+import { CountPill, Explained, KpiStrip, PageHeader } from "@sendex/ui";
+import {
+  explainCountries,
+  explainRate,
+  LOCAL_FORMULAS,
+} from "../../../../components/campaigns/explain";
+import { Figure } from "../../../../components/campaigns/figure";
 import {
   type ScheduledDayView,
   ScheduledList,
@@ -44,6 +58,7 @@ export default async function SendCalendarPage({
         ]);
         const kpis = calendarKpis(stats);
         const cells: Record<string, DayCell> = Object.fromEntries(dayCells(stats));
+        const countryNames = [...new Set(stats.map((s) => s.country))].map(countryName).sort();
         const upcoming: ScheduledDayView[] = groups.map((g) => ({
           day: g.day,
           campaigns: g.campaigns.map((c) => ({
@@ -80,18 +95,32 @@ export default async function SendCalendarPage({
                   testId: "calendar-kpi-clicks",
                 },
                 {
-                  label: "CTR",
-                  value: `${(kpis.ctr * 100).toFixed(2)}%`,
+                  label: <Explained formula={FORMULAS.ctr}>CTR</Explained>,
+                  value: (
+                    <Figure explanation={explainRate("ctr", kpis.clicks, kpis.sent, kpis.ctr)}>
+                      {`${(kpis.ctr * 100).toFixed(2)}%`}
+                    </Figure>
+                  ),
                   testId: "calendar-kpi-ctr",
                 },
                 {
-                  label: "Countries",
-                  value: formatNumber(kpis.countries),
+                  label: <Explained formula={LOCAL_FORMULAS.countries}>Countries</Explained>,
+                  value: (
+                    <Figure explanation={explainCountries(countryNames, kpis.countries)}>
+                      {formatNumber(kpis.countries)}
+                    </Figure>
+                  ),
                   testId: "calendar-kpi-countries",
                 },
                 {
-                  label: "Campaign sends",
-                  value: formatNumber(kpis.campaignSends),
+                  label: (
+                    <Explained formula={LOCAL_FORMULAS.campaignSends}>Campaign sends</Explained>
+                  ),
+                  value: (
+                    <Explained formula={LOCAL_FORMULAS.campaignSends}>
+                      {formatNumber(kpis.campaignSends)}
+                    </Explained>
+                  ),
                   testId: "calendar-kpi-campaign-sends",
                 },
               ]}

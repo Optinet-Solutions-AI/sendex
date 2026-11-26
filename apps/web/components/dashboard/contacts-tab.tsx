@@ -6,6 +6,7 @@ import {
   CardHeader,
   ChartFrame,
   ChartTable,
+  Explained,
   GroupedHBars,
   Input,
   PaginationBar,
@@ -22,6 +23,8 @@ import { useRouter } from "next/navigation";
 import { type FormEvent, useState } from "react";
 import { type DashboardQuery, dashboardQueryString } from "../../lib/dashboard-params";
 import { formatDateTime } from "../../lib/format";
+import { bucketCtrFigure, DASHBOARD_FORMULAS, pctOfGoodFigure } from "./explain";
+import { FigureText } from "./figure";
 import { countryLabel, int, pct } from "./format";
 
 export interface ContactsTabProps {
@@ -35,7 +38,13 @@ export interface ContactsTabProps {
   /** Per country: contacts on file and messages sent, sorted by contacts. */
   pool: Array<{ country: string; contacts: number; sent: number }>;
   /** One row per bucket with a column per country series, plus the bucket CTR. */
-  buckets: { series: string[]; rows: SeriesRow[]; ctr: Record<string, number> };
+  buckets: {
+    series: string[];
+    rows: SeriesRow[];
+    ctr: Record<string, number>;
+    /** The SMS sent to each bucket and how many were clicked, for the CTR's working. */
+    ctrCounts: Record<string, { sent: number; clicks: number }>;
+  };
   underSent: {
     rows: Array<{ country: string; good: number; under: number }>;
     good: number;
@@ -74,7 +83,7 @@ export function ContactsTab({
     ...r,
     ctr: buckets.ctr[r.period] ?? 0,
   }));
-  const pctOfGood = underSent.good > 0 ? underSent.under / underSent.good : 0;
+  const pctOfGood = pctOfGoodFigure(underSent.under, underSent.good, query.threshold);
 
   return (
     <div className="space-y-4" data-testid="contacts-tab">
@@ -199,7 +208,13 @@ export function ContactsTab({
             columns={["Sent", "CTR", ...buckets.series.map(countryLabel)]}
             rows={bucketData.map((r) => [
               String(r.period),
-              pct(Number(r.ctr)),
+              <FigureText
+                key="ctr"
+                figure={bucketCtrFigure(
+                  buckets.ctrCounts[String(r.period)]?.clicks ?? 0,
+                  buckets.ctrCounts[String(r.period)]?.sent ?? 0,
+                )}
+              />,
               ...buckets.series.map((s) => int(Number(r[s] ?? 0))),
             ])}
           />
@@ -241,7 +256,15 @@ export function ContactsTab({
           Sendable contacts on file that receive too few messages · {underSent.rows.length}{" "}
           countries · {int(underSent.under)} of {int(underSent.good)} good contacts sent fewer than{" "}
           {query.threshold} times
-          {underSent.good > 0 ? ` (${pct(pctOfGood, 0)})` : ""}.
+          {underSent.good > 0 ? (
+            <>
+              {" ("}
+              <FigureText figure={pctOfGood} />)
+            </>
+          ) : (
+            ""
+          )}
+          .
         </p>
         <Table>
           <TableHeader>
@@ -249,7 +272,9 @@ export function ContactsTab({
               <TableHead>Country</TableHead>
               <TableHead className="text-right">Good contacts</TableHead>
               <TableHead className="text-right">Sent &lt; {query.threshold} times</TableHead>
-              <TableHead className="text-right">% of good</TableHead>
+              <TableHead className="text-right">
+                <Explained formula={DASHBOARD_FORMULAS.pctOfGood}>% of good</Explained>
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -273,7 +298,7 @@ export function ContactsTab({
                     {int(r.under)}
                   </TableCell>
                   <TableCell className="text-right font-mono tabular-nums">
-                    {pct(r.good > 0 ? r.under / r.good : 0, 0)}
+                    <FigureText figure={pctOfGoodFigure(r.under, r.good, query.threshold)} />
                   </TableCell>
                 </TableRow>
               ))

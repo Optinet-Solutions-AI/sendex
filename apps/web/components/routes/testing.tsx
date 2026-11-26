@@ -6,6 +6,7 @@ import {
   Button,
   Card,
   cn,
+  Explained,
   IconButton,
   PaginationBar,
   Popover,
@@ -25,6 +26,7 @@ import { Plus, Receipt, RefreshCw, Send, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { removeSmsTestAction } from "../../app/(dashboard)/routes/actions";
+import { explainSuccess, LOCAL_FORMULAS } from "../../lib/explain";
 import { formatDateTime } from "../../lib/format";
 import { type RoutesQuery, routesQueryString } from "../../lib/routes-params";
 import { eur, int, pct } from "../dashboard/format";
@@ -172,7 +174,9 @@ export function Testing({
                         <th className="py-1">Month</th>
                         <th className="py-1 text-right">Tests</th>
                         <th className="py-1 text-right">SMS</th>
-                        <th className="py-1 text-right">Cost</th>
+                        <th className="py-1 text-right">
+                          <Explained formula={LOCAL_FORMULAS.testMonthCost}>Cost</Explained>
+                        </th>
                       </tr>
                     </thead>
                     <tbody>
@@ -181,7 +185,14 @@ export function Testing({
                           <td className="py-0.5">{m.month}</td>
                           <td className="py-0.5 text-right tabular-nums">{m.tests}</td>
                           <td className="py-0.5 text-right tabular-nums">{m.messages}</td>
-                          <td className="py-0.5 text-right tabular-nums">{eur(m.costMicro)}</td>
+                          <td className="py-0.5 text-right tabular-nums">
+                            <Explained
+                              formula={LOCAL_FORMULAS.testMonthCost}
+                              note={LOCAL_FORMULAS.testCost}
+                            >
+                              {eur(m.costMicro)}
+                            </Explained>
+                          </td>
                         </tr>
                       ))}
                     </tbody>
@@ -217,14 +228,18 @@ export function Testing({
             <TableRow className="hover:bg-transparent">
               <TableHead>ID</TableHead>
               <TableHead className="text-right">Tests Ran</TableHead>
-              <TableHead className="text-right">Success Rate</TableHead>
+              <TableHead className="text-right">
+                <Explained formula={LOCAL_FORMULAS.successRate}>Success Rate</Explained>
+              </TableHead>
               <TableHead>Country</TableHead>
               <TableHead>Routes</TableHead>
               <TableHead>Sender ID (From)</TableHead>
               <TableHead>Recipient (To)</TableHead>
               <TableHead>Text Preset</TableHead>
               <TableHead>Created / Last Sent</TableHead>
-              <TableHead className="text-right">Cost</TableHead>
+              <TableHead className="text-right">
+                <Explained formula={LOCAL_FORMULAS.testCost}>Cost</Explained>
+              </TableHead>
               <TableHead>Queue Status</TableHead>
               <TableHead>Actions</TableHead>
             </TableRow>
@@ -250,7 +265,15 @@ export function Testing({
                     {int(r.testsRan)}
                   </TableCell>
                   <TableCell className="text-right font-mono tabular-nums">
-                    {r.testsRan > 0 ? pct(r.successCount / r.testsRan, 0) : "—"}
+                    <Explained
+                      {...explainSuccess(
+                        r.successCount,
+                        r.testsRan,
+                        r.testsRan > 0 ? pct(r.successCount / r.testsRan, 0) : "—",
+                      )}
+                    >
+                      {r.testsRan > 0 ? pct(r.successCount / r.testsRan, 0) : "—"}
+                    </Explained>
                   </TableCell>
                   <TableCell>
                     <span aria-hidden="true">{flagEmoji(r.country)}</span> {countryName(r.country)}
@@ -271,7 +294,7 @@ export function Testing({
                     {r.lastSentAt ? formatDateTime(r.lastSentAt) : "—"}
                   </TableCell>
                   <TableCell className="text-right font-mono tabular-nums">
-                    {eur(r.costMicro)}
+                    <Explained formula={LOCAL_FORMULAS.testCost}>{eur(r.costMicro)}</Explained>
                   </TableCell>
                   <TableCell>
                     <Badge variant={STATUS_VARIANT[r.queueStatus] ?? "secondary"}>

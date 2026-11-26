@@ -3,7 +3,6 @@
 import {
   type PivotDimension,
   type PivotMetricKey,
-  type PivotMetrics,
   type PivotNode,
   type PivotRow,
   pivotTree,
@@ -15,6 +14,7 @@ import {
   ChartTable,
   Checkbox,
   cn,
+  Explained,
   Lines,
   Popover,
   PopoverContent,
@@ -31,7 +31,15 @@ import {
   X,
 } from "lucide-react";
 import { useMemo, useState } from "react";
-import { eur, monthLabel, pct } from "./format";
+import {
+  cpsChartFigures,
+  ROI_HEADER_FORMULAS,
+  roiCell,
+  roiFigure,
+  roiTotalFigure,
+} from "./explain";
+import { FigureText } from "./figure";
+import { monthLabel } from "./format";
 
 /** A pivot row as it crosses the server boundary (bigints as strings). */
 export interface RoiRowView {
@@ -48,6 +56,9 @@ export interface RoiRowView {
 
 export interface CpsPointView {
   month: string;
+  /** The month's cost and sales, for the hover working (D5-20). */
+  costMicro: number;
+  sales: number;
   monthlyCpsMicro: number | null;
   cumulativeCpsMicro: number | null;
 }
@@ -64,35 +75,6 @@ const DIMENSIONS: ReadonlyArray<{ value: PivotDimension; label: string }> = [
   { value: "list", label: "List" },
   { value: "date", label: "Date" },
 ];
-
-function cell(m: PivotMetrics, key: PivotMetricKey): { text: string; negative: boolean } {
-  switch (key) {
-    case "cost":
-      return { text: eur(Number(m.cost)), negative: false };
-    case "clicks":
-      return { text: m.clicks.toLocaleString("en-GB"), negative: false };
-    case "leads":
-      return { text: m.leads.toLocaleString("en-GB"), negative: false };
-    case "sales":
-      return { text: m.sales.toLocaleString("en-GB"), negative: false };
-    case "cpc":
-      return { text: m.cpcMicro === null ? "—" : eur(Number(m.cpcMicro)), negative: false };
-    case "cpl":
-      return { text: m.cplMicro === null ? "—" : eur(Number(m.cplMicro)), negative: false };
-    case "cps":
-      return { text: m.cpsMicro === null ? "—" : eur(Number(m.cpsMicro)), negative: false };
-    case "ctl":
-      return { text: pct(m.ctl), negative: false };
-    case "cts":
-      return { text: pct(m.cts), negative: false };
-    case "lts":
-      return { text: pct(m.lts), negative: false };
-    case "profit":
-      return { text: eur(Number(m.profitMicro)), negative: m.profitMicro < 0n };
-    case "roi":
-      return { text: m.roi === null ? "—" : pct(m.roi, 0), negative: m.roi !== null && m.roi < 0 };
-  }
-}
 
 function toPivotRows(rows: readonly RoiRowView[]): PivotRow[] {
   return rows.map((r) => ({ ...r, cost: BigInt(r.cost), revenue: BigInt(r.revenue) }));
@@ -166,9 +148,9 @@ export function RoiTab({ rows, cps, windowLabel }: RoiTabProps) {
       header,
       ...flatten(tree.nodes, new Set(allKeys(tree.nodes))).map((n) => [
         n.path.join(" / "),
-        ...shownMetrics.map((m) => cell(n.metrics, m.key).text),
+        ...shownMetrics.map((m) => roiCell(n.metrics, m.key).text),
       ]),
-      ["Grand Total", ...shownMetrics.map((m) => cell(tree.total.metrics, m.key).text)],
+      ["Grand Total", ...shownMetrics.map((m) => roiCell(tree.total.metrics, m.key).text)],
     ];
     const blob = new Blob([lines.map((l) => l.map(csvEscape).join(",")).join("\r\n")], {
       type: "text/csv;charset=utf-8",
@@ -181,6 +163,7 @@ export function RoiTab({ rows, cps, windowLabel }: RoiTabProps) {
     URL.revokeObjectURL(url);
   };
 
+  const cpsFigures = cpsChartFigures(cps);
   const cpsData = cps.map((p) => ({
     month: p.month,
     monthly: p.monthlyCpsMicro === null ? null : p.monthlyCpsMicro / 1_000_000,
@@ -325,7 +308,9 @@ export function RoiTab({ rows, cps, windowLabel }: RoiTabProps) {
                         className="inline-flex items-center gap-1 hover:text-ink"
                         data-testid={`roi-sort-${m.key}`}
                       >
-                        {m.label}
+                        <Explained formula={ROI_HEADER_FORMULAS[m.key]} inButton>
+                          {m.label}
+                        </Explained>
                         {active ? (
                           dir === "asc" ? (
                             <ArrowUp className="h-3 w-3" aria-hidden="true" />
@@ -383,7 +368,8 @@ export function RoiTab({ rows, cps, windowLabel }: RoiTabProps) {
                         )}
                       </td>
                       {shownMetrics.map((m) => {
-                        const c = cell(n.metrics, m.key);
+                        const c = roiCell(n.metrics, m.key);
+                        const f = roiFigure(n.metrics, m.key);
                         return (
                           <td
                             key={m.key}
@@ -392,7 +378,7 @@ export function RoiTab({ rows, cps, windowLabel }: RoiTabProps) {
                               c.negative && "text-signal",
                             )}
                           >
-                            {c.text}
+                            {f ? <FigureText figure={f} /> : c.text}
                           </td>
                         );
                       })}
@@ -403,7 +389,12 @@ export function RoiTab({ rows, cps, windowLabel }: RoiTabProps) {
               <tr className="border-t-2 border-rule bg-page font-semibold" data-testid="roi-total">
                 <td className="px-3 py-2">Grand Total</td>
                 {shownMetrics.map((m) => {
-                  const c = cell(tree.total.metrics, m.key);
+                  const c = roiCell(tree.total.metrics, m.key);
+                  const f = roiTotalFigure(
+                    tree.total.metrics,
+                    dims.length === 0 ? null : tree.nodes.map((x) => x.metrics),
+                    m.key,
+                  );
                   return (
                     <td
                       key={m.key}
@@ -412,7 +403,7 @@ export function RoiTab({ rows, cps, windowLabel }: RoiTabProps) {
                         c.negative && "text-signal",
                       )}
                     >
-                      {c.text}
+                      <FigureText figure={f} />
                     </td>
                   );
                 })}
@@ -429,11 +420,14 @@ export function RoiTab({ rows, cps, windowLabel }: RoiTabProps) {
         table={
           <ChartTable
             columns={["Month", "Monthly", "Cumulative"]}
-            rows={cps.map((p) => [
-              monthLabel(p.month),
-              eur(p.monthlyCpsMicro),
-              eur(p.cumulativeCpsMicro),
-            ])}
+            rows={cps.map((p, i) => {
+              const f = cpsFigures[i];
+              return [
+                monthLabel(p.month),
+                f ? <FigureText key="monthly" figure={f.monthly} /> : null,
+                f ? <FigureText key="cumulative" figure={f.cumulative} /> : null,
+              ];
+            })}
           />
         }
         testId="chart-cps"

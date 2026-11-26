@@ -5,6 +5,7 @@ import {
   Button,
   CountPill,
   cn,
+  Explained,
   Input,
   PageHeader,
   PaginationBar,
@@ -21,6 +22,12 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { type FormEvent, Fragment, useState } from "react";
 import { formatMicro } from "../../../../components/campaigns/format";
+import {
+  explainDealRevenue,
+  explainTiming,
+  explainTrackerAmount,
+  LOCAL_FORMULAS,
+} from "../../../../lib/explain";
 import {
   type PostbackRange,
   type PostbacksQuery,
@@ -250,7 +257,9 @@ export function PostbacksTable({ rows, total, pageSize, query }: PostbacksTableP
             <TableHead>Campaign</TableHead>
             <TableHead>Parameters</TableHead>
             <TableHead>Received</TableHead>
-            <TableHead>Timing</TableHead>
+            <TableHead>
+              <Explained formula={LOCAL_FORMULAS.timing}>Timing</Explained>
+            </TableHead>
             <TableHead className="w-10" />
           </TableRow>
         </TableHeader>
@@ -267,6 +276,8 @@ export function PostbacksTable({ rows, total, pageSize, query }: PostbacksTableP
               const received = splitReceived(row.receivedAt);
               const timing = timingLabel(row.timing, row.daysLater);
               const extra = summariseParams(row.params);
+              const tracker = row.valueMicro === null ? null : formatMicro(row.valueMicro);
+              const revenue = row.revenueMicro === null ? null : formatMicro(row.revenueMicro);
               return (
                 <Fragment key={row.id}>
                   <TableRow
@@ -310,21 +321,25 @@ export function PostbacksTable({ rows, total, pageSize, query }: PostbacksTableP
                       {received.date} <span className="text-muted">{received.time}</span>
                     </TableCell>
                     <TableCell data-testid="postback-timing">
-                      {row.timing === null ? (
-                        <span className="text-muted">—</span>
-                      ) : (
-                        <Badge
-                          variant={row.timing === "late" ? "amber" : "secondary"}
-                          data-timing={row.timing}
-                          title={
-                            row.messageSentAt
-                              ? `SMS sent ${row.messageSentAt.slice(0, 10)} (UTC)`
-                              : undefined
-                          }
-                        >
-                          {timing}
-                        </Badge>
-                      )}
+                      <Explained
+                        {...explainTiming(
+                          row.timing,
+                          row.daysLater,
+                          row.messageSentAt,
+                          row.receivedAt,
+                        )}
+                      >
+                        {row.timing === null ? (
+                          <span className="text-muted">—</span>
+                        ) : (
+                          <Badge
+                            variant={row.timing === "late" ? "amber" : "secondary"}
+                            data-timing={row.timing}
+                          >
+                            {timing}
+                          </Badge>
+                        )}
+                      </Explained>
                     </TableCell>
                     <TableCell>
                       <button
@@ -351,16 +366,30 @@ export function PostbacksTable({ rows, total, pageSize, query }: PostbacksTableP
                           </dt>
                           <dd className="font-mono">{row.dynamicId}</dd>
                           <dt className="font-mono uppercase tracking-[0.06em] text-muted">
-                            Tracker amount
+                            <Explained formula={LOCAL_FORMULAS.trackerAmount}>
+                              Tracker amount
+                            </Explained>
                           </dt>
                           <dd className="tabular-nums">
-                            {row.valueMicro === null ? "—" : formatMicro(row.valueMicro)}
+                            <Explained {...explainTrackerAmount(tracker)}>
+                              {tracker ?? "—"}
+                            </Explained>
                           </dd>
                           <dt className="font-mono uppercase tracking-[0.06em] text-muted">
-                            Revenue (deal)
+                            <Explained formula={LOCAL_FORMULAS.dealRevenue}>
+                              Revenue (deal)
+                            </Explained>
                           </dt>
                           <dd className="tabular-nums">
-                            {row.revenueMicro === null ? "—" : formatMicro(row.revenueMicro)}
+                            <Explained
+                              {...explainDealRevenue({
+                                type: row.type,
+                                attributed: row.messageSentAt !== null,
+                                shown: revenue,
+                              })}
+                            >
+                              {revenue ?? "—"}
+                            </Explained>
                           </dd>
                           <dt className="font-mono uppercase tracking-[0.06em] text-muted">
                             Received

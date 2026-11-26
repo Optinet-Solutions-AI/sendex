@@ -31,8 +31,8 @@ export function KpiStrip({
         gridTemplateColumns: `repeat(auto-fit, minmax(min(100%, ${Math.max(110, Math.floor(760 / Math.max(items.length, 1)))}px), 1fr))`,
       }}
     >
-      {items.map((item) => (
-        <div key={keyOf(item)} className="bg-surface px-4 py-3">
+      {items.map((item, index) => (
+        <div key={keyOf(item, index)} className="bg-surface px-4 py-3">
           <div className="font-mono text-[11px] uppercase tracking-[0.06em] text-muted">
             {item.label}
           </div>
@@ -53,6 +53,10 @@ export function KpiStrip({
   );
 }
 
-function keyOf(item: KpiItem): string {
-  return item.testId ?? (typeof item.label === "string" ? item.label : JSON.stringify(item.label));
+/**
+ * A stable key: the test id, a text label, or the tile's position. An element label (an
+ * explained one, D5-20) is never turned into text: it can refer back to itself.
+ */
+function keyOf(item: KpiItem, index: number): string {
+  return item.testId ?? (typeof item.label === "string" ? item.label : `tile-${index}`);
 }

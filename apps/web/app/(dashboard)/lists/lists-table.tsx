@@ -11,6 +11,7 @@ import {
   CountPill,
   CountryMultiSelect,
   DataTable,
+  Explained,
   Input,
   PageHeader,
   PaginationBar,
@@ -25,6 +26,7 @@ import { Archive, ArchiveRestore, Download, Files, RefreshCw, Trash2, Upload } f
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { type FormEvent, useState } from "react";
+import { LOCAL_FORMULAS } from "../../../lib/explain";
 import { formatDateTime, formatNumber } from "../../../lib/format";
 import { type ListsQuery, listsQueryString } from "../../../lib/lists-params";
 import {
@@ -64,6 +66,10 @@ const COUNTRIES = countriesList.map((c) => ({ code: c.code, name: c.name, flag: 
 
 /** "--" for an empty value, as the spec draws it. */
 const Dash = () => <span className="text-muted">--</span>;
+
+/** The table has no lap clicks or lap sends, so the CTR cell explains itself in words. */
+const LIST_CTR_NOTE =
+  "The clicks and sends behind it are on the list's page. Sent in this table is members sent to since the last flush, not the lap sends this CTR divides by.";
 
 const eur = (micro: number) =>
   `€${(micro / 1_000_000).toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -187,9 +193,16 @@ export function ListsTable({
     },
     {
       id: "ctr",
-      header: "CTR",
-      cell: ({ row }) =>
-        row.original.sent > 0 ? `${(row.original.ctr * 100).toFixed(2)}%` : <Dash />,
+      header: () => (
+        <Explained formula={LOCAL_FORMULAS.listCtr} inButton>
+          CTR
+        </Explained>
+      ),
+      cell: ({ row }) => (
+        <Explained formula={LOCAL_FORMULAS.listCtr} note={LIST_CTR_NOTE}>
+          {row.original.sent > 0 ? `${(row.original.ctr * 100).toFixed(2)}%` : <Dash />}
+        </Explained>
+      ),
       meta: { numeric: true },
     },
     {
@@ -206,8 +219,17 @@ export function ListsTable({
     },
     {
       id: "spend",
-      header: "Spend",
-      cell: ({ row }) => (row.original.spendMicro > 0 ? eur(row.original.spendMicro) : <Dash />),
+      header: () => (
+        <Explained formula={LOCAL_FORMULAS.lapSpend} inButton>
+          Spend
+        </Explained>
+      ),
+      cell: ({ row }) =>
+        row.original.spendMicro > 0 ? (
+          <Explained formula={LOCAL_FORMULAS.lapSpend}>{eur(row.original.spendMicro)}</Explained>
+        ) : (
+          <Dash />
+        ),
       meta: { numeric: true },
     },
     {

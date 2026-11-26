@@ -1,6 +1,8 @@
-import { EmptyState } from "@sendex/ui";
+import { FORMULAS } from "@sendex/core";
+import { EmptyState, Explained } from "@sendex/ui";
 import { Megaphone } from "lucide-react";
 import Link from "next/link";
+import { explainCtr, LOCAL_FORMULAS } from "../../lib/explain";
 import { formatDateTime, formatNumber } from "../../lib/format";
 import { CampaignStatusBadge } from "../campaigns/campaigns-table";
 import type { CampaignStatus } from "../campaigns/types";
@@ -47,8 +49,12 @@ export function CampaignsTab({ rows }: { rows: ListCampaignView[] }) {
             <th className={`${TH} text-right`}>Laps</th>
             <th className={`${TH} text-right`}>Sent</th>
             <th className={`${TH} text-right`}>Clicks</th>
-            <th className={`${TH} text-right`}>CTR</th>
-            <th className={`${TH} text-right`}>Cost</th>
+            <th className={`${TH} text-right`}>
+              <Explained formula={FORMULAS.ctr}>CTR</Explained>
+            </th>
+            <th className={`${TH} text-right`}>
+              <Explained formula={LOCAL_FORMULAS.lapCost}>Cost</Explained>
+            </th>
             <th className={TH}>Period</th>
           </tr>
         </thead>
@@ -66,8 +72,14 @@ export function CampaignsTab({ rows }: { rows: ListCampaignView[] }) {
               <td className={NUM}>{formatNumber(row.laps)}</td>
               <td className={NUM}>{formatNumber(row.sent)}</td>
               <td className={NUM}>{formatNumber(row.clicks)}</td>
-              <td className={NUM}>{(row.ctr * 100).toFixed(2)}%</td>
-              <td className={NUM}>{eur(row.costMicro)}</td>
+              <td className={NUM}>
+                <Explained {...explainCtr(row.clicks, row.sent, `${(row.ctr * 100).toFixed(2)}%`)}>
+                  {(row.ctr * 100).toFixed(2)}%
+                </Explained>
+              </td>
+              <td className={NUM}>
+                <Explained formula={LOCAL_FORMULAS.lapCost}>{eur(row.costMicro)}</Explained>
+              </td>
               <td className={`${TD} whitespace-nowrap text-muted`}>
                 {row.firstLapAt ? formatDateTime(row.firstLapAt) : "--"}
                 {row.lastLapAt ? ` → ${formatDateTime(row.lastLapAt)}` : ""}

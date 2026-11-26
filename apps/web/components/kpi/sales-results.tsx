@@ -1,11 +1,12 @@
 "use client";
 
-import { countryName, flagEmoji, type SalesResultSort } from "@sendex/core";
+import { countryName, FORMULAS, flagEmoji, type SalesResultSort } from "@sendex/core";
 import {
   Badge,
   Card,
   CountPill,
   cn,
+  Explained,
   KpiStrip,
   PageHeader,
   Table,
@@ -23,6 +24,7 @@ import {
   type SalesResultsQuery,
   salesResultsQueryString,
 } from "../../lib/kpi-params";
+import { explainLeadToSale, explainRevenue, KPI_FORMULAS } from "./explain";
 import { eur, percent, shortDay } from "./format";
 import { PeriodFilter } from "./period-filter";
 
@@ -87,10 +89,28 @@ export function SalesResults({
       <KpiStrip
         label="Totals"
         items={[
-          { label: "Leads", value: formatNumber(totals.leads), testId: "results-leads" },
-          { label: "Sales (FTD)", value: formatNumber(totals.sales), testId: "results-sales" },
-          { label: "Lead → sale", value: percent(totals.leadToSale), testId: "results-conversion" },
-          { label: "Revenue", value: eur(totals.revenueMicro), testId: "results-revenue" },
+          {
+            label: <Explained formula={KPI_FORMULAS.leads}>Leads</Explained>,
+            value: formatNumber(totals.leads),
+            testId: "results-leads",
+          },
+          {
+            label: <Explained formula={FORMULAS.sales}>Sales (FTD)</Explained>,
+            value: formatNumber(totals.sales),
+            testId: "results-sales",
+          },
+          {
+            label: <Explained formula={FORMULAS.lts}>Lead → sale</Explained>,
+            value: (
+              <Explained {...explainLeadToSale(totals)}>{percent(totals.leadToSale)}</Explained>
+            ),
+            testId: "results-conversion",
+          },
+          {
+            label: <Explained formula={FORMULAS.revenue}>Revenue</Explained>,
+            value: <Explained {...explainRevenue(totals)}>{eur(totals.revenueMicro)}</Explained>,
+            testId: "results-revenue",
+          },
         ]}
       />
 
@@ -108,9 +128,30 @@ export function SalesResults({
               <TableHead>Country</TableHead>
               <TableHead>List</TableHead>
               <TableHead>Data provider</TableHead>
-              <SortHead label="Leads" sort="leads" query={query} onSort={navigate} right />
-              <SortHead label="Sales" sort="sales" query={query} onSort={navigate} right />
-              <SortHead label="Revenue" sort="revenue" query={query} onSort={navigate} right />
+              <SortHead
+                label="Leads"
+                formula={KPI_FORMULAS.leads}
+                sort="leads"
+                query={query}
+                onSort={navigate}
+                right
+              />
+              <SortHead
+                label="Sales"
+                formula={FORMULAS.sales}
+                sort="sales"
+                query={query}
+                onSort={navigate}
+                right
+              />
+              <SortHead
+                label="Revenue"
+                formula={FORMULAS.revenue}
+                sort="revenue"
+                query={query}
+                onSort={navigate}
+                right
+              />
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -138,7 +179,7 @@ export function SalesResults({
                   {formatNumber(r.sales)}
                 </TableCell>
                 <TableCell className="text-right font-mono tabular-nums" data-col="revenue">
-                  {eur(r.revenueMicro)}
+                  <Explained {...explainRevenue(r)}>{eur(r.revenueMicro)}</Explained>
                 </TableCell>
               </TableRow>
             ))}
@@ -152,12 +193,15 @@ export function SalesResults({
 /** A column header that orders the table by its column, largest or latest first. */
 function SortHead({
   label,
+  formula,
   sort,
   query,
   onSort,
   right = false,
 }: {
   label: string;
+  /** How the column's figure is worked out (D5-20), shown on hover. */
+  formula?: string;
   sort: SalesResultSort;
   query: SalesResultsQuery;
   onSort: (next: Partial<SalesResultsQuery>) => void;
@@ -175,7 +219,9 @@ function SortHead({
         )}
         data-testid={`sort-${sort}`}
       >
-        {label}
+        <Explained formula={formula} inButton>
+          {label}
+        </Explained>
         {active ? <ArrowDown className="h-3 w-3" aria-hidden="true" /> : null}
       </button>
     </TableHead>

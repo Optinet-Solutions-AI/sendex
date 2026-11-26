@@ -9,6 +9,8 @@ import {
   setCampaignSidGroupAction,
   toggleSenderIdAction,
 } from "../../app/(dashboard)/campaigns/actions";
+import { explainRate } from "./explain";
+import { Figure } from "./figure";
 import { formatPercent } from "./format";
 import type { CampaignView, SidGroupView } from "./types";
 import { ErrorText, Field, inputClass, Modal } from "./ui";
@@ -216,7 +218,16 @@ export function SidPanel({
                       {g.activeCount}/{g.senderIds.length} SIDs active
                     </span>
                     <span className="font-mono text-xs text-muted">
-                      {g.sent.toLocaleString("en-GB")} sent · {formatPercent(ctr)} CTR
+                      {g.sent.toLocaleString("en-GB")} sent ·{" "}
+                      <Figure
+                        explanation={{
+                          ...explainRate("ctr", g.clicks, g.sent, ctr),
+                          note: "Every campaign that sent with a sender id of this group.",
+                        }}
+                      >
+                        {formatPercent(ctr)}
+                      </Figure>{" "}
+                      CTR
                     </span>
                     <div className="ml-auto flex items-center gap-2">
                       <Button

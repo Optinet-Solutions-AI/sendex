@@ -1,9 +1,10 @@
 "use client";
 
-import { countryName, flagEmoji } from "@sendex/core";
+import { countryName, FORMULAS, flagEmoji } from "@sendex/core";
 import {
   Card,
   cn,
+  Explained,
   KpiStrip,
   PageHeader,
   SegmentedControl,
@@ -22,6 +23,19 @@ import {
   insightLabel,
   insightQueryString,
 } from "../../lib/kpi-params";
+import {
+  type Explanation,
+  explainCost,
+  explainCostPerSale,
+  explainLeadToSale,
+  explainProfit,
+  explainProfitPerSale,
+  explainRevenue,
+  explainRevenuePerSale,
+  explainRoi,
+  explainSmsPerSale,
+  KPI_FORMULAS,
+} from "./explain";
 import { eur, percent } from "./format";
 import { PeriodFilter } from "./period-filter";
 
@@ -43,6 +57,8 @@ export interface BarItem {
   label: string;
   value: number;
   display: string;
+  /** How the printed figure was worked out (D5-20), shown on hover. */
+  explanation?: Explanation;
 }
 
 export interface OfferRowView {
@@ -66,6 +82,8 @@ export interface EfficiencyView {
   offer: string;
   smsPerSale: number;
   sales: number;
+  /** SMS the offer sent in the period, for the explanation of its SMS per sale. */
+  sent: number;
 }
 
 const SORTS: ReadonlyArray<{ value: InsightSort; label: string }> = [
@@ -120,12 +138,24 @@ export function Insight({
       <KpiStrip
         label="Totals"
         items={[
-          { label: "Sales (FTD)", value: formatNumber(totals.sales), testId: "insight-sales" },
-          { label: "Revenue", value: eur(totals.revenueMicro), testId: "insight-revenue" },
-          { label: "Cost", value: eur(totals.costMicro), testId: "insight-cost" },
           {
-            label: "Net profit",
-            value: eur(totals.profitMicro),
+            label: <Explained formula={FORMULAS.sales}>Sales (FTD)</Explained>,
+            value: formatNumber(totals.sales),
+            testId: "insight-sales",
+          },
+          {
+            label: <Explained formula={FORMULAS.revenue}>Revenue</Explained>,
+            value: <Explained {...explainRevenue(totals)}>{eur(totals.revenueMicro)}</Explained>,
+            testId: "insight-revenue",
+          },
+          {
+            label: <Explained formula={FORMULAS.cost}>Cost</Explained>,
+            value: <Explained {...explainCost(totals)}>{eur(totals.costMicro)}</Explained>,
+            testId: "insight-cost",
+          },
+          {
+            label: <Explained formula={FORMULAS.profit}>Net profit</Explained>,
+            value: <Explained {...explainProfit(totals)}>{eur(totals.profitMicro)}</Explained>,
             tone: profit < 0n ? "bad" : profit > 0n ? "good" : "default",
             testId: "insight-profit",
           },
@@ -135,24 +165,38 @@ export function Insight({
         label="Per sale"
         items={[
           {
-            label: "Cost per sale",
-            value: eur(totals.costPerSaleMicro),
+            label: <Explained formula={FORMULAS.costPerSale}>Cost per sale</Explained>,
+            value: (
+              <Explained {...explainCostPerSale(totals)}>{eur(totals.costPerSaleMicro)}</Explained>
+            ),
             testId: "insight-cost-per-sale",
           },
           {
-            label: "Revenue per sale",
-            value: eur(totals.revenuePerSaleMicro),
+            label: <Explained formula={FORMULAS.revenuePerSale}>Revenue per sale</Explained>,
+            value: (
+              <Explained {...explainRevenuePerSale(totals)}>
+                {eur(totals.revenuePerSaleMicro)}
+              </Explained>
+            ),
             testId: "insight-revenue-per-sale",
           },
           {
-            label: "SMS per sale",
-            value: totals.smsPerSale === null ? "–" : formatNumber(totals.smsPerSale),
+            label: <Explained formula={FORMULAS.smsPerSale}>SMS per sale</Explained>,
+            value: (
+              <Explained {...explainSmsPerSale(totals)}>
+                {totals.smsPerSale === null ? "–" : formatNumber(totals.smsPerSale)}
+              </Explained>
+            ),
             hint: `${formatNumber(totals.sent)} SMS sent`,
             testId: "insight-sms-per-sale",
           },
           {
-            label: "Profit per sale",
-            value: eur(totals.profitPerSaleMicro),
+            label: <Explained formula={FORMULAS.profitPerSale}>Profit per sale</Explained>,
+            value: (
+              <Explained {...explainProfitPerSale(totals)}>
+                {eur(totals.profitPerSaleMicro)}
+              </Explained>
+            ),
             testId: "insight-profit-per-sale",
           },
         ]}
@@ -170,23 +214,39 @@ export function Insight({
               <BarList
                 className="mt-3"
                 items={[
-                  { label: "Revenue", value: revenue, display: eur(totals.revenueMicro) },
-                  { label: "Cost", value: cost, display: eur(totals.costMicro) },
+                  {
+                    label: "Revenue",
+                    value: revenue,
+                    display: eur(totals.revenueMicro),
+                    explanation: explainRevenue(totals),
+                  },
+                  {
+                    label: "Cost",
+                    value: cost,
+                    display: eur(totals.costMicro),
+                    explanation: explainCost(totals),
+                  },
                 ]}
                 colors={["bg-[#1baf7a]", "bg-[#e0a030]"]}
               />
             </Card>
             <Card className="p-5" data-testid="insight-offers-roi">
-              <h2 className="text-sm font-semibold text-ink">Top offers by ROI</h2>
+              <h2 className="text-sm font-semibold text-ink">
+                Top offers by <Explained formula={FORMULAS.roi}>ROI</Explained>
+              </h2>
               <p className="text-xs text-muted">Profit divided by cost, best first.</p>
               <BarList className="mt-3" items={offersByRoi} />
             </Card>
             <Card className="p-5" data-testid="insight-roi-country">
-              <h2 className="text-sm font-semibold text-ink">ROI by country</h2>
+              <h2 className="text-sm font-semibold text-ink">
+                <Explained formula={FORMULAS.roi}>ROI</Explained> by country
+              </h2>
               <BarList className="mt-3" items={roiByCountry} />
             </Card>
             <Card className="p-5" data-testid="insight-sales-country">
-              <h2 className="text-sm font-semibold text-ink">Sales by country</h2>
+              <h2 className="text-sm font-semibold text-ink">
+                <Explained formula={FORMULAS.sales}>Sales</Explained> by country
+              </h2>
               <BarList className="mt-3" items={salesByCountry} ranked />
             </Card>
           </div>
@@ -225,13 +285,27 @@ export function Insight({
                     <TableHeader>
                       <TableRow className="hover:bg-transparent">
                         <TableHead>Offer</TableHead>
-                        <TableHead className="text-right">Sent</TableHead>
-                        <TableHead className="text-right">Leads</TableHead>
-                        <TableHead className="text-right">Sales</TableHead>
-                        <TableHead className="text-right">Lead → sale</TableHead>
-                        <TableHead className="text-right">Cost</TableHead>
-                        <TableHead className="text-right">Revenue</TableHead>
-                        <TableHead className="text-right">ROI</TableHead>
+                        <TableHead className="text-right">
+                          <Explained formula={FORMULAS.sent}>Sent</Explained>
+                        </TableHead>
+                        <TableHead className="text-right">
+                          <Explained formula={KPI_FORMULAS.leads}>Leads</Explained>
+                        </TableHead>
+                        <TableHead className="text-right">
+                          <Explained formula={FORMULAS.sales}>Sales</Explained>
+                        </TableHead>
+                        <TableHead className="text-right">
+                          <Explained formula={FORMULAS.lts}>Lead → sale</Explained>
+                        </TableHead>
+                        <TableHead className="text-right">
+                          <Explained formula={FORMULAS.cost}>Cost</Explained>
+                        </TableHead>
+                        <TableHead className="text-right">
+                          <Explained formula={FORMULAS.revenue}>Revenue</Explained>
+                        </TableHead>
+                        <TableHead className="text-right">
+                          <Explained formula={FORMULAS.roi}>ROI</Explained>
+                        </TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -241,10 +315,18 @@ export function Insight({
                           <NumCell>{formatNumber(o.sent)}</NumCell>
                           <NumCell>{formatNumber(o.leads)}</NumCell>
                           <NumCell>{formatNumber(o.sales)}</NumCell>
-                          <NumCell>{percent(o.leadToSale)}</NumCell>
-                          <NumCell>{eur(o.costMicro)}</NumCell>
-                          <NumCell>{eur(o.revenueMicro)}</NumCell>
-                          <NumCell bad={o.roi !== null && o.roi < 0}>{percent(o.roi)}</NumCell>
+                          <NumCell>
+                            <Explained {...explainLeadToSale(o)}>{percent(o.leadToSale)}</Explained>
+                          </NumCell>
+                          <NumCell>
+                            <Explained {...explainCost(o)}>{eur(o.costMicro)}</Explained>
+                          </NumCell>
+                          <NumCell>
+                            <Explained {...explainRevenue(o)}>{eur(o.revenueMicro)}</Explained>
+                          </NumCell>
+                          <NumCell bad={o.roi !== null && o.roi < 0}>
+                            <Explained {...explainRoi(o)}>{percent(o.roi)}</Explained>
+                          </NumCell>
                         </TableRow>
                       ))}
                     </TableBody>
@@ -255,7 +337,9 @@ export function Insight({
           </Card>
 
           <Card className="p-5" data-testid="insight-efficiency">
-            <h2 className="text-sm font-semibold text-ink">SMS per sale</h2>
+            <h2 className="text-sm font-semibold text-ink">
+              <Explained formula={FORMULAS.smsPerSale}>SMS per sale</Explained>
+            </h2>
             <p className="text-xs text-muted">
               The offers that need the fewest SMS to get one sale. Recalculated every time the page
               loads, so it follows the latest results.
@@ -275,7 +359,7 @@ export function Insight({
                     </span>
                     <span className="min-w-0 flex-1 truncate text-sm text-ink">{e.offer}</span>
                     <span className="font-mono text-sm font-medium tabular-nums text-ink">
-                      {formatNumber(e.smsPerSale)}
+                      <Explained {...explainSmsPerSale(e)}>{formatNumber(e.smsPerSale)}</Explained>
                     </span>
                   </li>
                 ))}
@@ -326,7 +410,15 @@ function BarList({
               ) : null}
               {item.label}
             </span>
-            <span className="font-mono tabular-nums text-ink">{item.display}</span>
+            <span className="font-mono tabular-nums text-ink">
+              <Explained
+                formula={item.explanation?.formula}
+                working={item.explanation?.working}
+                note={item.explanation?.note}
+              >
+                {item.display}
+              </Explained>
+            </span>
           </div>
           <div className="mt-1 h-1.5 rounded-full bg-neutral-100">
             <div

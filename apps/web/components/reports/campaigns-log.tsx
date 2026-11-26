@@ -3,6 +3,8 @@
 import {
   countryName,
   countryOptions,
+  DAY_RULE_NOTE,
+  FORMULAS,
   flagEmoji,
   formatCpc,
   formatLogDay,
@@ -16,6 +18,7 @@ import {
   cn,
   type DateRange,
   DateRangePicker,
+  Explained,
   KpiStrip,
   PageHeader,
   PaginationBar,
@@ -38,6 +41,7 @@ import {
   LOG_PAGE_SIZE,
   type LogPeriod,
 } from "../../lib/campaigns-log-params";
+import { explainCpc, explainCtr, explainLateSplit, LOCAL_FORMULAS } from "../../lib/explain";
 import { formatNumber } from "../../lib/format";
 
 export interface LogRowView {
@@ -111,6 +115,9 @@ export function CampaignsLog({
   const onRange = (range: DateRange) =>
     navigate({ period: "custom", from: range.from, to: range.to });
   const exportHref = `/reports/campaigns-log/export${campaignsLogQueryString({ ...query, page: 1 })}`;
+  const kpiSpend = formatSpend(BigInt(kpis.spendMicro));
+  const kpiCpc = formatCpc(kpis.cpcMicro === null ? null : BigInt(kpis.cpcMicro));
+  const kpiCtr = percent(kpis.ctr);
 
   return (
     <section className="space-y-4" data-testid="campaigns-log">
@@ -168,21 +175,48 @@ export function CampaignsLog({
         items={[
           { label: "Sent", value: formatNumber(kpis.sent), testId: "kpi-sent" },
           { label: "Clicks", value: formatNumber(kpis.clicks), testId: "kpi-clicks" },
-          { label: "CTR", value: percent(kpis.ctr), testId: "kpi-ctr" },
-          { label: "Spend", value: formatSpend(BigInt(kpis.spendMicro)), testId: "kpi-spend" },
           {
-            label: "CPC",
-            value: formatCpc(kpis.cpcMicro === null ? null : BigInt(kpis.cpcMicro)),
+            label: <Explained formula={FORMULAS.ctr}>CTR</Explained>,
+            value: <Explained {...explainCtr(kpis.clicks, kpis.sent, kpiCtr)}>{kpiCtr}</Explained>,
+            testId: "kpi-ctr",
+          },
+          {
+            label: <Explained formula={LOCAL_FORMULAS.logSpend}>Spend</Explained>,
+            value: (
+              <Explained formula={LOCAL_FORMULAS.logSpend} note={DAY_RULE_NOTE}>
+                {kpiSpend}
+              </Explained>
+            ),
+            testId: "kpi-spend",
+          },
+          {
+            label: <Explained formula={FORMULAS.cpc}>CPC</Explained>,
+            value: <Explained {...explainCpc(kpiSpend, kpis.clicks, kpiCpc)}>{kpiCpc}</Explained>,
             testId: "kpi-cpc",
           },
           {
-            label: "Leads / Sales",
-            value: `${formatNumber(kpis.leads)} / ${formatNumber(kpis.sales)}`,
+            label: <Explained formula={LOCAL_FORMULAS.leadsSales}>Leads / Sales</Explained>,
+            value: (
+              <Explained
+                formula={FORMULAS.sales}
+                working={explainLateSplit(kpis.sales, kpis.lateSales)}
+                note={DAY_RULE_NOTE}
+              >
+                {`${formatNumber(kpis.leads)} / ${formatNumber(kpis.sales)}`}
+              </Explained>
+            ),
             testId: "kpi-leads-sales",
           },
           {
-            label: "Late sales",
-            value: formatNumber(kpis.lateSales),
+            label: <Explained formula={LOCAL_FORMULAS.lateSales}>Late sales</Explained>,
+            value: (
+              <Explained
+                formula={LOCAL_FORMULAS.lateSales}
+                working={explainLateSplit(kpis.sales, kpis.lateSales)}
+              >
+                {formatNumber(kpis.lateSales)}
+              </Explained>
+            ),
             testId: "kpi-late-sales",
           },
         ]}
@@ -201,12 +235,22 @@ export function CampaignsLog({
             <TableHead>List</TableHead>
             <TableHead>Route</TableHead>
             <TableHead className="text-right">Sent</TableHead>
-            <TableHead className="text-right">Spend</TableHead>
-            <TableHead className="text-right">CTR</TableHead>
+            <TableHead className="text-right">
+              <Explained formula={LOCAL_FORMULAS.logSpend}>Spend</Explained>
+            </TableHead>
+            <TableHead className="text-right">
+              <Explained formula={FORMULAS.ctr}>CTR</Explained>
+            </TableHead>
             <TableHead className="text-right">Clicks</TableHead>
-            <TableHead className="text-right">CPC</TableHead>
+            <TableHead className="text-right">
+              <Explained formula={FORMULAS.cpc}>CPC</Explained>
+            </TableHead>
             <TableHead className="text-right">Leads</TableHead>
-            <TableHead className="text-right">Sales</TableHead>
+            <TableHead className="text-right">
+              <Explained formula={FORMULAS.sales} note={DAY_RULE_NOTE}>
+                Sales
+              </Explained>
+            </TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -217,69 +261,86 @@ export function CampaignsLog({
               </TableCell>
             </TableRow>
           ) : (
-            rows.map((row) => (
-              <TableRow
-                key={`${row.day}:${row.campaignId ?? "api"}:${row.country}:${row.listName ?? ""}:${row.routeName}`}
-                data-testid="log-row"
-                data-day={row.day}
-              >
-                <TableCell className="tabular-nums text-muted">{formatLogDay(row.day)}</TableCell>
-                <TableCell className="max-w-[16rem]">
-                  {row.campaignId ? (
-                    <Link
-                      href={`/campaigns/${row.campaignId}`}
-                      className="block truncate font-semibold text-ink hover:underline"
-                      title={row.campaignName ?? row.campaignId}
-                      data-testid="log-campaign"
+            rows.map((row) => {
+              const spend = formatSpend(BigInt(row.spendMicro));
+              const ctr = percent(row.ctr);
+              const cpc = formatCpc(row.cpcMicro === null ? null : BigInt(row.cpcMicro));
+              return (
+                <TableRow
+                  key={`${row.day}:${row.campaignId ?? "api"}:${row.country}:${row.listName ?? ""}:${row.routeName}`}
+                  data-testid="log-row"
+                  data-day={row.day}
+                >
+                  <TableCell className="tabular-nums text-muted">{formatLogDay(row.day)}</TableCell>
+                  <TableCell className="max-w-[16rem]">
+                    {row.campaignId ? (
+                      <Link
+                        href={`/campaigns/${row.campaignId}`}
+                        className="block truncate font-semibold text-ink hover:underline"
+                        title={row.campaignName ?? row.campaignId}
+                        data-testid="log-campaign"
+                      >
+                        {row.campaignName ?? row.campaignId}
+                      </Link>
+                    ) : (
+                      <span className="text-muted">(API / no campaign)</span>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    <span aria-hidden="true">{flagEmoji(row.country)}</span>{" "}
+                    {countryName(row.country)}
+                  </TableCell>
+                  <TableCell className="max-w-[14rem]">
+                    {row.listName ? (
+                      <span className="block truncate" title={row.listName}>
+                        {row.listName}
+                      </span>
+                    ) : (
+                      <Dash />
+                    )}
+                  </TableCell>
+                  <TableCell>{row.routeName}</TableCell>
+                  <TableCell className="text-right tabular-nums" data-testid="log-sent">
+                    {formatNumber(row.sent)}
+                  </TableCell>
+                  <TableCell className="text-right tabular-nums">
+                    <Explained formula={LOCAL_FORMULAS.logSpend} note={DAY_RULE_NOTE}>
+                      {spend}
+                    </Explained>
+                  </TableCell>
+                  <TableCell className="text-right tabular-nums">
+                    <Explained {...explainCtr(row.clicks, row.sent, ctr)}>{ctr}</Explained>
+                  </TableCell>
+                  <TableCell className="text-right tabular-nums">
+                    {formatNumber(row.clicks)}
+                  </TableCell>
+                  <TableCell className="text-right tabular-nums" data-testid="log-cpc">
+                    <Explained {...explainCpc(spend, row.clicks, cpc)}>{cpc}</Explained>
+                  </TableCell>
+                  <TableCell className="text-right tabular-nums">
+                    {formatNumber(row.leads)}
+                  </TableCell>
+                  <TableCell className="text-right tabular-nums" data-testid="log-sales">
+                    <Explained
+                      formula={FORMULAS.sales}
+                      working={explainLateSplit(row.sales, row.lateSales)}
+                      note={DAY_RULE_NOTE}
                     >
-                      {row.campaignName ?? row.campaignId}
-                    </Link>
-                  ) : (
-                    <span className="text-muted">(API / no campaign)</span>
-                  )}
-                </TableCell>
-                <TableCell>
-                  <span aria-hidden="true">{flagEmoji(row.country)}</span>{" "}
-                  {countryName(row.country)}
-                </TableCell>
-                <TableCell className="max-w-[14rem]">
-                  {row.listName ? (
-                    <span className="block truncate" title={row.listName}>
-                      {row.listName}
-                    </span>
-                  ) : (
-                    <Dash />
-                  )}
-                </TableCell>
-                <TableCell>{row.routeName}</TableCell>
-                <TableCell className="text-right tabular-nums" data-testid="log-sent">
-                  {formatNumber(row.sent)}
-                </TableCell>
-                <TableCell className="text-right tabular-nums">
-                  {formatSpend(BigInt(row.spendMicro))}
-                </TableCell>
-                <TableCell className="text-right tabular-nums">{percent(row.ctr)}</TableCell>
-                <TableCell className="text-right tabular-nums">
-                  {formatNumber(row.clicks)}
-                </TableCell>
-                <TableCell className="text-right tabular-nums" data-testid="log-cpc">
-                  {formatCpc(row.cpcMicro === null ? null : BigInt(row.cpcMicro))}
-                </TableCell>
-                <TableCell className="text-right tabular-nums">{formatNumber(row.leads)}</TableCell>
-                <TableCell className="text-right tabular-nums" data-testid="log-sales">
-                  {formatNumber(row.sales)}
-                  {row.lateSales > 0 ? (
-                    <span
-                      className="ml-1 text-xs text-amber-700"
-                      data-testid="log-late-sales"
-                      title="First deposits made this day from an SMS sent on an earlier day"
-                    >
-                      ({formatNumber(row.lateSales)} late)
-                    </span>
-                  ) : null}
-                </TableCell>
-              </TableRow>
-            ))
+                      {formatNumber(row.sales)}
+                    </Explained>
+                    {row.lateSales > 0 ? (
+                      <span
+                        className="ml-1 text-xs text-amber-700"
+                        data-testid="log-late-sales"
+                        title="First deposits made this day from an SMS sent on an earlier day"
+                      >
+                        ({formatNumber(row.lateSales)} late)
+                      </span>
+                    ) : null}
+                  </TableCell>
+                </TableRow>
+              );
+            })
           )}
         </TableBody>
       </Table>

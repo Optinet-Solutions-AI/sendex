@@ -5,6 +5,7 @@ import {
   CREATOR_PERIODS,
   type CreatorPeriod,
   countryName,
+  FORMULAS,
   type ListOfferPair,
   type OfferCountryRow,
   rankCountriesForOffer,
@@ -19,6 +20,7 @@ import {
   DialogContent,
   DialogDescription,
   DialogTitle,
+  Explained,
   SimpleSelect,
   useToast,
 } from "@sendex/ui";
@@ -30,7 +32,51 @@ import {
   createPlannedCampaignAction,
 } from "../../app/(dashboard)/kpi/actions";
 import { formatNumber } from "../../lib/format";
+import { explainLeadToSale, explainRoi } from "./explain";
 import { percent, routeChoiceLabel, shortDay } from "./format";
+
+/** The hover formulas of the offer and country tables' columns (D5-20). */
+const RANKING_FORMULAS = [null, FORMULAS.roi, FORMULAS.lts, FORMULAS.sales] as const;
+/** The list tables: only the sales column is worked out. */
+const LIST_FORMULAS = [null, null, null, FORMULAS.sales] as const;
+const NOT_SENT = "Not sent there in this period";
+
+/**
+ * The ROI and lead → sale cells of an offer in a country, with how each was worked out from
+ * that offer's figures in the data period; `row` is missing when it was not sent there then.
+ */
+function ratioCells(
+  row: OfferCountryRow | undefined,
+  figures: { roi: number | null; leadToSale: number | null },
+): React.ReactNode[] {
+  const options = row ? {} : { empty: NOT_SENT };
+  return [
+    <Explained
+      key="roi"
+      inButton
+      {...explainRoi(
+        {
+          costMicro: row?.costMicro ?? 0n,
+          revenueMicro: row?.revenueMicro ?? 0n,
+          roi: figures.roi,
+        },
+        { ...options, digits: 0 },
+      )}
+    >
+      {percent(figures.roi, 0)}
+    </Explained>,
+    <Explained
+      key="lead-to-sale"
+      inButton
+      {...explainLeadToSale(
+        { leads: row?.leads ?? 0, sales: row?.sales ?? 0, leadToSale: figures.leadToSale },
+        options,
+      )}
+    >
+      {percent(figures.leadToSale)}
+    </Explained>,
+  ];
+}
 
 /** What the creator ranks on, as it crosses the server boundary (money and dates as strings). */
 export interface CreatorData {
@@ -152,6 +198,9 @@ export function CampaignCreator({ canCreate }: { canCreate: boolean }) {
     };
   }, [data]);
 
+  /** An offer's figures in a country in the data period, for the hover explanations. */
+  const inPeriodRow = (offer: string, place: string) =>
+    model?.inPeriod.find((r) => r.offerId === offer && r.country === place);
   const offerName = data?.offers.find((o) => o.id === offerId)?.name ?? "";
   const list = data?.lists.find((l) => l.listId === listId);
   const routes = data && country ? (data.routes[country] ?? []) : [];
@@ -291,6 +340,7 @@ export function CampaignCreator({ canCreate }: { canCreate: boolean }) {
                     </p>
                     <ChoiceTable
                       head={["Offer", "ROI", "Lead → sale", "Sales"]}
+                      formulas={RANKING_FORMULAS}
                       rows={rankOffersForCountry(
                         model.inPeriod,
                         model.ever,
@@ -303,8 +353,7 @@ export function CampaignCreator({ canCreate }: { canCreate: boolean }) {
                             {o.offer}{" "}
                             {o.neverSent ? <Badge variant="code">Never sent</Badge> : null}
                           </span>,
-                          percent(o.roi, 0),
-                          percent(o.leadToSale),
+                          ...ratioCells(inPeriodRow(o.offerId, country), o),
                           formatNumber(o.sales),
                         ],
                       }))}
@@ -334,13 +383,13 @@ export function CampaignCreator({ canCreate }: { canCreate: boolean }) {
                     </p>
                     <ChoiceTable
                       head={["Country", "ROI", "Lead → sale", "Sales"]}
+                      formulas={RANKING_FORMULAS}
                       rows={[
                         ...rankCountriesForOffer(model.inPeriod, offerId).map((c) => ({
                           id: c.country,
                           cells: [
                             countryName(c.country),
-                            percent(c.roi, 0),
-                            percent(c.leadToSale),
+                            ...ratioCells(inPeriodRow(offerId, c.country), c),
                             formatNumber(c.sales),
                           ],
                         })),
@@ -356,8 +405,7 @@ export function CampaignCreator({ canCreate }: { canCreate: boolean }) {
                                 {countryName(c)}{" "}
                                 <Badge variant="code">Not sent in this period</Badge>
                               </span>,
-                              "–",
-                              "–",
+                              ...ratioCells(undefined, { roi: null, leadToSale: null }),
                               "0",
                             ],
                           })),
@@ -372,6 +420,7 @@ export function CampaignCreator({ canCreate }: { canCreate: boolean }) {
             ) : step === "first" && flow === "list" ? (
               <ChoiceTable
                 head={["List", "Country", "Last sent", "Sales"]}
+                formulas={LIST_FORMULAS}
                 rows={[...data.lists]
                   .sort((a, b) => b.sales - a.sales || a.name.localeCompare(b.name))
                   .map((l) => ({
@@ -401,6 +450,7 @@ export function CampaignCreator({ canCreate }: { canCreate: boolean }) {
                 </p>
                 <ChoiceTable
                   head={["Offer", "ROI", "Lead → sale", "Sales"]}
+                  formulas={RANKING_FORMULAS}
                   rows={rankOffersForCountry(model.inPeriod, model.ever, data.offers, country).map(
                     (o) => {
                       const sentToList = model.pairsEver.some(
@@ -415,8 +465,7 @@ export function CampaignCreator({ canCreate }: { canCreate: boolean }) {
                               <Badge variant="code">Never sent to this list</Badge>
                             )}
                           </span>,
-                          percent(o.roi, 0),
-                          percent(o.leadToSale),
+                          ...ratioCells(inPeriodRow(o.offerId, country), o),
                           formatNumber(o.sales),
                         ],
                       };
@@ -434,6 +483,7 @@ export function CampaignCreator({ canCreate }: { canCreate: boolean }) {
                 </p>
                 <ChoiceTable
                   head={["List", "Numbers", "Last sent", "Sales"]}
+                  formulas={LIST_FORMULAS}
                   rows={rankListsForOffer(
                     data.lists,
                     model.pairsEver,
@@ -548,12 +598,15 @@ export function CampaignCreator({ canCreate }: { canCreate: boolean }) {
 /** A small table whose rows are picked by clicking them. */
 function ChoiceTable({
   head,
+  formulas = [],
   rows,
   selected,
   onSelect,
   testId,
 }: {
   head: readonly string[];
+  /** The hover formula of each column, by position (D5-20); null for a plain column. */
+  formulas?: ReadonlyArray<string | null>;
   rows: ReadonlyArray<{ id: string; cells: readonly React.ReactNode[] }>;
   selected: string;
   onSelect: (id: string) => void;
@@ -575,7 +628,7 @@ function ChoiceTable({
                 key={h}
                 className={cn("px-3 py-2 font-medium", i === 0 ? "text-left" : "text-right")}
               >
-                {h}
+                <Explained formula={formulas[i]}>{h}</Explained>
               </th>
             ))}
           </tr>

@@ -13,7 +13,7 @@ import {
   type MemberStatusFilter,
   maskRecipient,
 } from "@sendex/db";
-import { KpiStrip, PageHeader } from "@sendex/ui";
+import { Explained, KpiStrip, PageHeader } from "@sendex/ui";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -27,6 +27,7 @@ import { ListTabs } from "../../../../components/lists/list-tabs";
 import { LookupTab } from "../../../../components/lists/lookup-tab";
 import { isListTab } from "../../../../components/lists/tabs";
 import { AuthError, requireAction } from "../../../../lib/auth";
+import { explainCtr, explainGood, LOCAL_FORMULAS } from "../../../../lib/explain";
 import { formatNumber } from "../../../../lib/format";
 import { AuthErrorView } from "../../require-org";
 import { ListName } from "./list-name";
@@ -239,7 +240,16 @@ export default async function ListDetailPage({
         label="List figures"
         items={[
           { label: "Total numbers", value: formatNumber(kpis.total), testId: "count-members" },
-          { label: "Good", value: formatNumber(kpis.good), testId: "count-good", tone: "good" },
+          {
+            label: <Explained formula={LOCAL_FORMULAS.good}>Good</Explained>,
+            value: (
+              <Explained {...explainGood(kpis.total, kpis.bad)}>
+                {formatNumber(kpis.good)}
+              </Explained>
+            ),
+            testId: "count-good",
+            tone: "good",
+          },
           {
             label: "Bad",
             value: formatNumber(kpis.bad),
@@ -249,7 +259,22 @@ export default async function ListDetailPage({
           { label: "Cached", value: formatNumber(kpis.cached), testId: "count-cached" },
           { label: "Sent", value: formatNumber(kpis.sent), testId: "count-sent" },
           { label: "Clicks", value: formatNumber(kpis.clicks), testId: "count-clicks" },
-          { label: "CTR", value: `${(kpis.ctr * 100).toFixed(0)}%`, testId: "count-ctr" },
+          {
+            label: <Explained formula={LOCAL_FORMULAS.listCtr}>CTR</Explained>,
+            value: (
+              <Explained
+                {...explainCtr(
+                  kpis.clicks,
+                  kpis.sent,
+                  `${(kpis.ctr * 100).toFixed(0)}%`,
+                  LOCAL_FORMULAS.listCtr,
+                )}
+              >
+                {`${(kpis.ctr * 100).toFixed(0)}%`}
+              </Explained>
+            ),
+            testId: "count-ctr",
+          },
         ]}
       />
 

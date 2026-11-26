@@ -5,6 +5,7 @@ import {
   Badge,
   Button,
   Card,
+  Explained,
   Input,
   KpiStrip,
   PageHeader,
@@ -24,6 +25,7 @@ import { useState, useTransition } from "react";
 import { setDailyTargetAction } from "../../app/(dashboard)/kpi/actions";
 import { formatNumber } from "../../lib/format";
 import { type DailyPlanQuery, dailyPlanQueryString } from "../../lib/kpi-params";
+import { differenceText, explainDifference, explainPlanContacts, KPI_FORMULAS } from "./explain";
 import { shortDay } from "./format";
 
 export interface PlannedCampaignView {
@@ -150,16 +152,38 @@ export function DailyPlan({
         label="The day"
         items={[
           { label: "Campaigns", value: formatNumber(totals.campaigns), testId: "plan-campaigns" },
-          { label: "Contacts", value: formatNumber(totals.contacts), testId: "plan-contacts" },
+          {
+            label: <Explained formula={KPI_FORMULAS.planContacts}>Contacts</Explained>,
+            value: (
+              <Explained
+                {...explainPlanContacts(
+                  campaigns.map((c) => c.contacts),
+                  totals.contacts,
+                )}
+              >
+                {formatNumber(totals.contacts)}
+              </Explained>
+            ),
+            testId: "plan-contacts",
+          },
           {
             label: "Daily target",
             value: totals.target === null ? "Not set" : formatNumber(totals.target),
             testId: "plan-target",
           },
           {
-            label: "Difference",
-            value:
-              difference === null ? "–" : `${difference > 0 ? "+" : ""}${formatNumber(difference)}`,
+            label: <Explained formula={KPI_FORMULAS.difference}>Difference</Explained>,
+            value: (
+              <Explained
+                {...explainDifference({
+                  contacts: totals.contacts,
+                  target: totals.target,
+                  difference,
+                })}
+              >
+                {differenceText(difference)}
+              </Explained>
+            ),
             tone: difference === null ? "default" : difference < 0 ? "bad" : "good",
             hint:
               difference === null
@@ -233,7 +257,9 @@ export function DailyPlan({
                 <TableRow className="hover:bg-transparent">
                   <TableHead>{dimension?.column}</TableHead>
                   <TableHead className="text-right">Campaigns</TableHead>
-                  <TableHead className="text-right">Contacts</TableHead>
+                  <TableHead className="text-right">
+                    <Explained formula={KPI_FORMULAS.groupContacts}>Contacts</Explained>
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -262,7 +288,9 @@ export function DailyPlan({
                   <TableHead>Offer</TableHead>
                   <TableHead>List</TableHead>
                   <TableHead>Route</TableHead>
-                  <TableHead className="text-right">Contacts</TableHead>
+                  <TableHead className="text-right">
+                    <Explained formula={KPI_FORMULAS.campaignContacts}>Contacts</Explained>
+                  </TableHead>
                   <TableHead className="text-right">Sent</TableHead>
                   <TableHead>Status</TableHead>
                 </TableRow>

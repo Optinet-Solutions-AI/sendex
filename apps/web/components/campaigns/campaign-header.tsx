@@ -1,10 +1,11 @@
 "use client";
 
-import { countryName, flagEmoji } from "@sendex/core";
+import { countryName, FORMULAS, flagEmoji } from "@sendex/core";
 import {
   Button,
   Card,
   ConfirmDialog,
+  Explained,
   IconButton,
   KpiStrip,
   PageHeader,
@@ -19,6 +20,14 @@ import {
   renameCampaignAction,
 } from "../../app/(dashboard)/campaigns/actions";
 import { CampaignStatusBadge } from "./campaigns-table";
+import {
+  explainCostOfLaps,
+  explainCostPer,
+  explainProgress,
+  explainRate,
+  LOCAL_FORMULAS,
+} from "./explain";
+import { Figure } from "./figure";
 import {
   campaignTotals,
   formatDateTime,
@@ -236,18 +245,93 @@ export function CampaignHeader({
           },
           { label: "Failed", value: totals.failed.toLocaleString("en-GB"), testId: "total-failed" },
           {
-            label: "Delivery",
-            value: formatPercent(totals.deliveryRate),
+            label: <Explained formula={FORMULAS.deliveryRate}>Delivery</Explained>,
+            value: (
+              <Figure
+                explanation={explainRate(
+                  "deliveryRate",
+                  totals.delivered,
+                  totals.sent,
+                  totals.deliveryRate,
+                )}
+              >
+                {formatPercent(totals.deliveryRate)}
+              </Figure>
+            ),
             testId: "total-delivery-rate",
           },
-          { label: "Clicks", value: totals.clicks.toLocaleString("en-GB"), testId: "total-clicks" },
-          { label: "CTR", value: formatPercent(totals.ctr), testId: "total-ctr" },
+          {
+            label: <Explained formula={FORMULAS.clicks}>Clicks</Explained>,
+            value: totals.clicks.toLocaleString("en-GB"),
+            testId: "total-clicks",
+          },
+          {
+            label: <Explained formula={FORMULAS.ctr}>CTR</Explained>,
+            value: (
+              <Figure explanation={explainRate("ctr", totals.clicks, totals.sent, totals.ctr)}>
+                {formatPercent(totals.ctr)}
+              </Figure>
+            ),
+            testId: "total-ctr",
+          },
           { label: "Leads", value: totals.leads.toLocaleString("en-GB"), testId: "total-leads" },
-          { label: "Sales", value: totals.sales.toLocaleString("en-GB"), testId: "total-sales" },
-          { label: "Cost", value: formatMicro(totals.costMicro), testId: "total-cost" },
-          { label: "CPC", value: formatPer(totals.cpcMicro), testId: "total-cpc" },
-          { label: "CPL", value: formatPer(totals.cplMicro), testId: "total-cpl" },
-          { label: "CPS", value: formatPer(totals.cpsMicro), testId: "total-cps" },
+          {
+            label: <Explained formula={FORMULAS.sales}>Sales</Explained>,
+            value: totals.sales.toLocaleString("en-GB"),
+            testId: "total-sales",
+          },
+          {
+            label: <Explained formula={LOCAL_FORMULAS.campaignCost}>Cost</Explained>,
+            value: (
+              <Figure
+                explanation={explainCostOfLaps(
+                  campaign.laps.map((l) => l.costMicro),
+                  totals.costMicro,
+                )}
+              >
+                {formatMicro(totals.costMicro)}
+              </Figure>
+            ),
+            testId: "total-cost",
+          },
+          {
+            label: <Explained formula={FORMULAS.cpc}>CPC</Explained>,
+            value: (
+              <Figure
+                explanation={explainCostPer(
+                  "cpc",
+                  totals.costMicro,
+                  totals.clicks,
+                  totals.cpcMicro,
+                )}
+              >
+                {formatPer(totals.cpcMicro)}
+              </Figure>
+            ),
+            testId: "total-cpc",
+          },
+          {
+            label: <Explained formula={FORMULAS.cpl}>CPL</Explained>,
+            value: (
+              <Figure
+                explanation={explainCostPer("cpl", totals.costMicro, totals.leads, totals.cplMicro)}
+              >
+                {formatPer(totals.cplMicro)}
+              </Figure>
+            ),
+            testId: "total-cpl",
+          },
+          {
+            label: <Explained formula={FORMULAS.cps}>CPS</Explained>,
+            value: (
+              <Figure
+                explanation={explainCostPer("cps", totals.costMicro, totals.sales, totals.cpsMicro)}
+              >
+                {formatPer(totals.cpsMicro)}
+              </Figure>
+            ),
+            testId: "total-cps",
+          },
         ]}
       />
       <Card className="px-4 py-3" data-testid="campaign-totals">
@@ -257,7 +341,12 @@ export function CampaignHeader({
           </span>
           <span className="font-mono text-sm" data-testid="sending-progress">
             {totals.sent.toLocaleString("en-GB")} / {target.toLocaleString("en-GB")} contacts
-            <span className="ml-2 text-muted">{progress}%</span>
+            <Figure
+              className="ml-2 text-muted"
+              explanation={explainProgress({ sent: totals.sent, planned, contacts, progress })}
+            >
+              {progress}%
+            </Figure>
           </span>
         </div>
         <div

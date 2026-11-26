@@ -1,12 +1,13 @@
 "use client";
 
-import { countryName, countryStatus, flagEmoji, type SeriesRow } from "@sendex/core";
+import { countryName, DAY_RULE_NOTE, FORMULAS, flagEmoji, type SeriesRow } from "@sendex/core";
 import {
   Badge,
   Card,
   CardHeader,
   ChartFrame,
   ChartTable,
+  Explained,
   StackedArea,
   Table,
   TableBody,
@@ -17,7 +18,17 @@ import {
   UtilisationScatter,
 } from "@sendex/ui";
 import { timeAgo } from "../../lib/format";
-import { countryLabel, eur, int, monthLabel, pct } from "./format";
+import {
+  ctrFigure,
+  DASHBOARD_FORMULAS,
+  economicsFigure,
+  opportunityFigure,
+  perFigure,
+  statusFigure,
+  utilisationFigure,
+} from "./explain";
+import { FigureText } from "./figure";
+import { countryLabel, eur, int, monthLabel } from "./format";
 
 export interface CountryRowView {
   country: string;
@@ -60,7 +71,20 @@ export function CountriesTab({ rows, signups, buyers, insights, now }: Countries
       y: utilisation(r),
       label: countryName(r.country),
       colorValue: r.sales > 0 ? r.costMicro / r.sales : null,
+      utilisation: utilisationFigure(r.sent, r.contacts),
+      costPerSale: perFigure(
+        FORMULAS.costPerSale,
+        r.costMicro,
+        r.sales,
+        "sale",
+        "cost",
+        DAY_RULE_NOTE,
+      ),
     }));
+  const byCountry = new Map(rows.map((r) => [r.country, r]));
+  const opportunityRow = insights.opportunity
+    ? byCountry.get(insights.opportunity.country)
+    : undefined;
   const nowDate = new Date(now);
   return (
     <div className="space-y-4" data-testid="countries-tab">
@@ -71,7 +95,12 @@ export function CountriesTab({ rows, signups, buyers, insights, now }: Countries
         table={
           <ChartTable
             columns={["Country", "Contacts", "Utilisation", "Cost / FTD"]}
-            rows={points.map((p) => [p.label, int(p.x), pct(p.y, 0), eur(p.colorValue)])}
+            rows={points.map((p) => [
+              p.label,
+              int(p.x),
+              <FigureText key="utilisation" figure={p.utilisation} />,
+              <FigureText key="cost" figure={p.costPerSale} />,
+            ])}
           />
         }
         testId="chart-utilisation"
@@ -138,15 +167,31 @@ export function CountriesTab({ rows, signups, buyers, insights, now }: Countries
           <TableHeader>
             <TableRow className="hover:bg-transparent">
               <TableHead>Country</TableHead>
-              <TableHead className="text-right">Contacts</TableHead>
-              <TableHead className="text-right">Sent</TableHead>
-              <TableHead className="text-right">CTR</TableHead>
-              <TableHead className="text-right">Utilisation</TableHead>
-              <TableHead className="text-right">Signups</TableHead>
-              <TableHead className="text-right">Sales</TableHead>
-              <TableHead className="text-right">Cost / sale</TableHead>
+              <TableHead className="text-right">
+                <Explained formula={DASHBOARD_FORMULAS.contactsAllTime}>Contacts</Explained>
+              </TableHead>
+              <TableHead className="text-right">
+                <Explained formula={FORMULAS.sent}>Sent</Explained>
+              </TableHead>
+              <TableHead className="text-right">
+                <Explained formula={FORMULAS.ctr}>CTR</Explained>
+              </TableHead>
+              <TableHead className="text-right">
+                <Explained formula={DASHBOARD_FORMULAS.utilisation}>Utilisation</Explained>
+              </TableHead>
+              <TableHead className="text-right">
+                <Explained formula={DASHBOARD_FORMULAS.signupsUnique}>Signups</Explained>
+              </TableHead>
+              <TableHead className="text-right">
+                <Explained formula={FORMULAS.sales}>Sales</Explained>
+              </TableHead>
+              <TableHead className="text-right">
+                <Explained formula={FORMULAS.costPerSale}>Cost / sale</Explained>
+              </TableHead>
               <TableHead>Last sent</TableHead>
-              <TableHead>Status</TableHead>
+              <TableHead>
+                <Explained formula={DASHBOARD_FORMULAS.status}>Status</Explained>
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -159,7 +204,8 @@ export function CountriesTab({ rows, signups, buyers, insights, now }: Countries
             ) : (
               rows.map((r) => {
                 const u = utilisation(r);
-                const status = countryStatus(u);
+                const status = statusFigure(u);
+                const healthy = status.text === "Healthy";
                 return (
                   <TableRow key={r.country} data-testid="country-row" data-country={r.country}>
                     <TableCell>
@@ -169,27 +215,44 @@ export function CountriesTab({ rows, signups, buyers, insights, now }: Countries
                     <TableCell className="text-right tabular-nums">{int(r.contacts)}</TableCell>
                     <TableCell className="text-right tabular-nums">{int(r.sent)}</TableCell>
                     <TableCell className="text-right tabular-nums">
-                      {pct(r.sent > 0 ? r.clicks / r.sent : 0)}
+                      <FigureText figure={ctrFigure(r.clicks, r.sent)} />
                     </TableCell>
-                    <TableCell className="text-right tabular-nums">{pct(u, 0)}</TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      <FigureText figure={utilisationFigure(r.sent, r.contacts)} />
+                    </TableCell>
                     <TableCell className="text-right tabular-nums">
                       {int(r.uniqueSignups)}
                     </TableCell>
                     <TableCell className="text-right tabular-nums">{int(r.sales)}</TableCell>
                     <TableCell className="text-right tabular-nums">
-                      {r.sales > 0 ? eur(r.costMicro / r.sales) : "—"}
+                      <FigureText
+                        figure={perFigure(
+                          FORMULAS.costPerSale,
+                          r.costMicro,
+                          r.sales,
+                          "sale",
+                          "cost",
+                          DAY_RULE_NOTE,
+                        )}
+                      />
                     </TableCell>
                     <TableCell className="text-muted">{timeAgo(r.lastSentAt, nowDate)}</TableCell>
                     <TableCell>
-                      {status === "healthy" ? (
-                        <Badge variant="active" data-status="healthy">
-                          Healthy
-                        </Badge>
-                      ) : (
-                        <Badge variant="amber" data-status="under-worked">
-                          Under-worked
-                        </Badge>
-                      )}
+                      <Explained
+                        formula={status.formula}
+                        working={status.working}
+                        className="no-underline"
+                      >
+                        {healthy ? (
+                          <Badge variant="active" data-status="healthy">
+                            Healthy
+                          </Badge>
+                        ) : (
+                          <Badge variant="amber" data-status="under-worked">
+                            Under-worked
+                          </Badge>
+                        )}
+                      </Explained>
                     </TableCell>
                   </TableRow>
                 );
@@ -202,14 +265,21 @@ export function CountriesTab({ rows, signups, buyers, insights, now }: Countries
       <div className="grid gap-4 md:grid-cols-2">
         <Card className="p-4" data-testid="insight-opportunity">
           <div className="font-mono text-[11px] uppercase tracking-[0.06em] text-muted">
-            Biggest opportunity — unused pool
+            <Explained formula={DASHBOARD_FORMULAS.opportunity}>
+              Biggest opportunity — unused pool
+            </Explained>
           </div>
           {insights.opportunity ? (
             <p className="mt-2 text-sm text-ink">
               <span className="font-semibold">{countryName(insights.opportunity.country)}</span>:{" "}
-              {int(insights.opportunity.contacts)} contacts,{" "}
-              {pct(insights.opportunity.utilisation, 0)} used. Sending to the rest costs nothing you
-              have not already paid for.
+              <FigureText
+                figure={opportunityFigure(
+                  insights.opportunity.contacts,
+                  opportunityRow?.sent ?? 0,
+                  insights.opportunity.utilisation,
+                )}
+              />
+              . Sending to the rest costs nothing you have not already paid for.
             </p>
           ) : (
             <p className="mt-2 text-sm text-muted">Every country is worked at 50% or more.</p>
@@ -217,7 +287,7 @@ export function CountriesTab({ rows, signups, buyers, insights, now }: Countries
         </Card>
         <Card className="p-4" data-testid="insight-economics">
           <div className="font-mono text-[11px] uppercase tracking-[0.06em] text-muted">
-            Review economics
+            <Explained formula={DASHBOARD_FORMULAS.economics}>Review economics</Explained>
           </div>
           {insights.economics.length === 0 ? (
             <p className="mt-2 text-sm text-muted">No sales yet, so no cost per sale to review.</p>
@@ -228,7 +298,15 @@ export function CountriesTab({ rows, signups, buyers, insights, now }: Countries
                   <span>
                     <span aria-hidden="true">{flagEmoji(e.country)}</span> {countryName(e.country)}
                   </span>
-                  <span className="font-mono tabular-nums">{eur(e.cpsMicro)} per sale</span>
+                  <span className="font-mono tabular-nums">
+                    <FigureText
+                      figure={economicsFigure(
+                        byCountry.get(e.country)?.costMicro ?? 0,
+                        byCountry.get(e.country)?.sales ?? 0,
+                        e.cpsMicro,
+                      )}
+                    />
+                  </span>
                 </li>
               ))}
             </ul>

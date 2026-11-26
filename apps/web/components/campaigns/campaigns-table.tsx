@@ -1,6 +1,6 @@
 "use client";
 
-import { type CampaignSort, countryName, countryOptions, flagEmoji } from "@sendex/core";
+import { type CampaignSort, countryName, countryOptions, FORMULAS, flagEmoji } from "@sendex/core";
 import {
   Badge,
   Button,
@@ -10,6 +10,7 @@ import {
   cn,
   DateRangePicker,
   EmptyState,
+  Explained,
   IconButton,
   PaginationBar,
   useToast,
@@ -23,6 +24,8 @@ import {
   duplicateCampaignAction,
 } from "../../app/(dashboard)/campaigns/actions";
 import { type CampaignsQuery, campaignsQueryString } from "../../lib/campaigns-params";
+import { explainCostOfLaps, explainRate, LOCAL_FORMULAS } from "./explain";
+import { Figure } from "./figure";
 import { formatMicro, formatPercent, formatPeriod, shortId, zoneAbbreviation } from "./format";
 import { campaignStatusLabel } from "./status";
 import type { CampaignStatus, CampaignSummaryView } from "./types";
@@ -88,11 +91,14 @@ function SortTh({
   label,
   filters,
   right,
+  formula,
 }: {
   col: CampaignSort;
   label: string;
   filters: CampaignsQuery;
   right?: boolean;
+  /** The hover explanation of a computed column (D5-20). */
+  formula?: string;
 }) {
   const active = filters.sort === col;
   const firstDir = ASC_FIRST.has(col) ? "asc" : "desc";
@@ -109,7 +115,9 @@ function SortTh({
         data-testid={`sort-${col}`}
         className={cn("inline-flex items-center gap-1 hover:text-ink", active && "text-ink")}
       >
-        {label}
+        <Explained formula={formula} inButton>
+          {label}
+        </Explained>
         <span aria-hidden="true" className={active ? "" : "opacity-40"}>
           {arrow}
         </span>
@@ -303,11 +311,23 @@ export function CampaignsTable({
               <SortTh col="country" label="Country" filters={filters} />
               <SortTh col="laps" label="Laps" filters={filters} right />
               <SortTh col="sent" label="Sent" filters={filters} right />
-              <SortTh col="clicks" label="Clicks" filters={filters} right />
-              <SortTh col="ctr" label="CTR" filters={filters} right />
-              <SortTh col="cost" label="Cost" filters={filters} right />
+              <SortTh
+                col="clicks"
+                label="Clicks"
+                filters={filters}
+                right
+                formula={FORMULAS.clicks}
+              />
+              <SortTh col="ctr" label="CTR" filters={filters} right formula={FORMULAS.ctr} />
+              <SortTh
+                col="cost"
+                label="Cost"
+                filters={filters}
+                right
+                formula={LOCAL_FORMULAS.campaignCost}
+              />
               <SortTh col="leads" label="Leads" filters={filters} right />
-              <SortTh col="sales" label="Sales" filters={filters} right />
+              <SortTh col="sales" label="Sales" filters={filters} right formula={FORMULAS.sales} />
               <SortTh col="period" label="Period" filters={filters} />
               <th className="px-3 py-2.5 text-right">Actions</th>
             </tr>
@@ -361,10 +381,14 @@ export function CampaignsTable({
                   {c.clicks.toLocaleString("en-GB")}
                 </td>
                 <td className="px-3 py-2.5 text-right font-mono tabular-nums">
-                  {formatPercent(c.ctr)}
+                  <Figure explanation={explainRate("ctr", c.clicks, c.sent, c.ctr)}>
+                    {formatPercent(c.ctr)}
+                  </Figure>
                 </td>
                 <td className="px-3 py-2.5 text-right font-mono tabular-nums">
-                  {formatMicro(c.costMicro)}
+                  <Figure explanation={explainCostOfLaps(c.lapsCount, c.costMicro)}>
+                    {formatMicro(c.costMicro)}
+                  </Figure>
                 </td>
                 <td className="px-3 py-2.5 text-right font-mono tabular-nums">
                   {c.leads > 0 ? c.leads : <Dash />}

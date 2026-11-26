@@ -1,6 +1,6 @@
 "use client";
 
-import { countryName, countryOptions, flagEmoji } from "@sendex/core";
+import { countryName, countryOptions, FORMULAS, flagEmoji } from "@sendex/core";
 import {
   Badge,
   Button,
@@ -10,6 +10,7 @@ import {
   type DateRange,
   DateRangePicker,
   EmptyState,
+  Explained,
   Input,
   PageHeader,
   SimpleSelect,
@@ -27,6 +28,13 @@ import { type FormEvent, Fragment, useState } from "react";
 import { formatNumber } from "../../lib/format";
 import { type ListFollowUpQuery, listFollowUpQueryString } from "../../lib/kpi-params";
 import { CampaignCreator } from "./campaign-creator";
+import {
+  explainCost,
+  explainLeadToSale,
+  explainRevenue,
+  explainRoi,
+  KPI_FORMULAS,
+} from "./explain";
 import { eur, percent, shortDay } from "./format";
 
 /** Counters as they cross the server boundary: micro-EUR as strings, ratios worked out. */
@@ -193,13 +201,27 @@ export function ListFollowUp({
               <TableHead>Country / list</TableHead>
               <TableHead className="text-right">Lists</TableHead>
               <TableHead>Last sent</TableHead>
-              <TableHead className="text-right">Sent</TableHead>
-              <TableHead className="text-right">Leads</TableHead>
-              <TableHead className="text-right">Sales</TableHead>
-              <TableHead className="text-right">Lead → sale</TableHead>
-              <TableHead className="text-right">Cost</TableHead>
-              <TableHead className="text-right">Revenue</TableHead>
-              <TableHead className="text-right">ROI</TableHead>
+              <TableHead className="text-right">
+                <Explained formula={FORMULAS.sent}>Sent</Explained>
+              </TableHead>
+              <TableHead className="text-right">
+                <Explained formula={KPI_FORMULAS.leads}>Leads</Explained>
+              </TableHead>
+              <TableHead className="text-right">
+                <Explained formula={FORMULAS.sales}>Sales</Explained>
+              </TableHead>
+              <TableHead className="text-right">
+                <Explained formula={FORMULAS.lts}>Lead → sale</Explained>
+              </TableHead>
+              <TableHead className="text-right">
+                <Explained formula={FORMULAS.cost}>Cost</Explained>
+              </TableHead>
+              <TableHead className="text-right">
+                <Explained formula={FORMULAS.revenue}>Revenue</Explained>
+              </TableHead>
+              <TableHead className="text-right">
+                <Explained formula={FORMULAS.roi}>ROI</Explained>
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -325,19 +347,19 @@ function NumberCells({ numbers }: { numbers: FollowUpNumbers }) {
         {formatNumber(numbers.sales)}
       </TableCell>
       <TableCell className={cell} data-col="lead-to-sale">
-        {percent(numbers.leadToSale)}
+        <Explained {...explainLeadToSale(numbers)}>{percent(numbers.leadToSale)}</Explained>
       </TableCell>
       <TableCell className={cell} data-col="cost">
-        {eur(numbers.costMicro)}
+        <Explained {...explainCost(numbers)}>{eur(numbers.costMicro)}</Explained>
       </TableCell>
       <TableCell className={cell} data-col="revenue">
-        {eur(numbers.revenueMicro)}
+        <Explained {...explainRevenue(numbers)}>{eur(numbers.revenueMicro)}</Explained>
       </TableCell>
       <TableCell
         className={`${cell} ${numbers.roi !== null && numbers.roi < 0 ? "text-signal" : ""}`}
         data-col="roi"
       >
-        {percent(numbers.roi)}
+        <Explained {...explainRoi(numbers)}>{percent(numbers.roi)}</Explained>
       </TableCell>
     </>
   );

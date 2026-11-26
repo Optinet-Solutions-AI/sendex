@@ -6,6 +6,7 @@ export * from "./campaigns.js";
 export * from "./caps.js";
 export * from "./dashboard.js";
 export * from "./deals.js";
+export * from "./formulas.js";
 export * from "./internal-api.js";
 export * from "./kpi.js";
 export * from "./laps.js";

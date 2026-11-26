@@ -92,6 +92,8 @@ name, pick one or more countries in the **Countries** multi-select, and sort by 
 
 ## List details
 
+**Rename a list:** click the pencil next to its name at the top of the list's page, type the new name (1 to 100 characters) and press Enter or the tick; Escape or the cross cancels. Anyone who can upload lists can rename them. The new name shows in the Lists table and the campaign pickers, and the change is in Logs (`list.rename`, old and new name).
+
 Click a list name for its page: the KPI tiles (Total numbers, Good, Bad, Cached, Sent,
 Clicks, CTR) and five tabs.
 

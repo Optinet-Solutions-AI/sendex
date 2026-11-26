@@ -17,6 +17,7 @@ import {
   ListProviderSchema,
   NewListSchema,
   parseCountryCell,
+  RenameListSchema,
   totalDropped,
   UploadSettingsSchema,
   UploadSummarySchema,
@@ -427,5 +428,18 @@ describe("list data provider (D5-01)", () => {
     expect(NewListSchema.parse({ name: "UK_ZEN_9", country: "GB", provider: "ZEN" }).provider).toBe(
       "ZEN",
     );
+  });
+});
+
+describe("RenameListSchema (D4-27)", () => {
+  const listId = "4f1b2c3d-1234-4abc-8def-1234567890ab";
+  it("trims the name and keeps the list rules (1 to 100 characters)", () => {
+    expect(RenameListSchema.parse({ listId, name: "  UK_ZEN_2  " })).toEqual({
+      listId,
+      name: "UK_ZEN_2",
+    });
+    expect(() => RenameListSchema.parse({ listId, name: "   " })).toThrow();
+    expect(() => RenameListSchema.parse({ listId, name: "x".repeat(101) })).toThrow();
+    expect(() => RenameListSchema.parse({ listId: "nope", name: "UK" })).toThrow();
   });
 });

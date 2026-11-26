@@ -29,6 +29,7 @@ import { isListTab } from "../../../../components/lists/tabs";
 import { AuthError, requireAction } from "../../../../lib/auth";
 import { formatNumber } from "../../../../lib/format";
 import { AuthErrorView } from "../../require-org";
+import { ListName } from "./list-name";
 
 export const dynamic = "force-dynamic";
 
@@ -205,7 +206,7 @@ export default async function ListDetailPage({
             <Link href="/lists" aria-label="Back to lists" className="text-muted hover:text-ink">
               <ArrowLeft className="h-5 w-5" aria-hidden="true" />
             </Link>
-            {list.name}
+            <ListName listId={list.id} name={list.name} canEdit={can(ctx.role, "list.upload")} />
           </span>
         }
         meta={

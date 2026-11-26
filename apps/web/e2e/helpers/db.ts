@@ -691,3 +691,20 @@ export async function cleanupE2eBrandDeals(offerPrefix: string): Promise<void> {
     await sql.end();
   }
 }
+
+/** An empty UK list of the seeded "external" organisation (D4-27 spec); returns its id. */
+export async function seedE2eList(name: string): Promise<string> {
+  const url = process.env.DATABASE_URL;
+  if (!url) throw new Error("DATABASE_URL must be set to run the list rename e2e spec");
+  const sql = postgres(url, { max: 1 });
+  try {
+    const [row] = await sql<{ id: string }[]>`
+      insert into lists (organisation_id, name, country)
+      select id, ${name}, 'GB' from organisations where slug = 'external'
+      returning id`;
+    if (!row) throw new Error("list insert returned no row");
+    return row.id;
+  } finally {
+    await sql.end();
+  }
+}

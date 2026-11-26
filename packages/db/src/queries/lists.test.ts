@@ -23,6 +23,7 @@ import {
   listLists,
   listMembersPage,
   listProviders,
+  renameList,
   setListArchived,
   setListProvider,
 } from "./lists.js";
@@ -560,5 +561,17 @@ describe("list data provider (D5-01)", () => {
     await setListProvider(t.db, org, plain.id, "DER");
     expect(await listProviders(t.db, org)).toEqual(["DER", "ZEN"]);
     expect(await listProviders(t.db, other)).toEqual([]);
+  });
+});
+
+describe("renameList (D4-27)", () => {
+  it("renames a list of the organisation only", async () => {
+    const org = await seedOrganisation(t.db, "rename-a");
+    const other = await seedOrganisation(t.db, "rename-b");
+    const list = await createList(t.db, org, { name: "Copy of UK", country: "GB" });
+    expect(await renameList(t.db, other, list.id, "Stolen")).toBeNull();
+    expect((await getList(t.db, org, list.id))?.name).toBe("Copy of UK");
+    expect((await renameList(t.db, org, list.id, "UK_ZEN_2"))?.name).toBe("UK_ZEN_2");
+    expect((await getList(t.db, org, list.id))?.name).toBe("UK_ZEN_2");
   });
 });

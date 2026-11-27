@@ -1,3 +1,4 @@
+import { can, type Role } from "@sendex/core";
 import { describe, expect, it } from "vitest";
 import { activeGroup, activeHref, flattenNav, NAV_TREE, visibleNav } from "./nav";
 
@@ -34,6 +35,14 @@ describe("nav tree", () => {
     expect(settings?.children?.map((c) => c.label)).toEqual(["Billing"]);
     const everything = visibleNav(() => true);
     expect(everything).toEqual(NAV_TREE);
+  });
+
+  it("shows Settings › Members to co-admins only (D5-21)", () => {
+    const pages = (role: Role) =>
+      flattenNav(visibleNav((action) => can(role, action))).map((p) => p.href);
+    expect(pages("owner")).toContain("/settings/members");
+    expect(pages("campaign_manager")).not.toContain("/settings/members");
+    expect(pages("viewer")).not.toContain("/settings/members");
   });
 
   it("hides the groups still in preview unless the organisation has them switched on (D5-09)", () => {

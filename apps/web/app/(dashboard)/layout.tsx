@@ -111,9 +111,13 @@ export default async function DashboardLayout({ children }: { children: ReactNod
               {balance}
               {mode === "dev" ? null : (
                 <>
+                  {/* D5-21: no personal account, and "Manage" opens Sendex's own Members page,
+                      which only co-admins can see; creating organisations is off per user. */}
                   <OrganizationSwitcher
+                    hidePersonal
                     afterSelectOrganizationUrl="/"
-                    afterCreateOrganizationUrl="/"
+                    organizationProfileMode="navigation"
+                    organizationProfileUrl="/settings/members"
                   />
                   <UserButton />
                 </>

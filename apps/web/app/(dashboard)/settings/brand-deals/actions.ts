@@ -1,21 +1,19 @@
 "use server";
 
-import { parseDealSheet, setOfferDealSchema, uploadDealsSchema } from "@sendex/core";
-import { db, recomputeDealRevenue, recordAudit, saveBrandDeals, setOfferDeal } from "@sendex/db";
+import { addDealSchema, dealFromForm, setOfferDealSchema } from "@sendex/core";
+import {
+  db,
+  linkOffersToScaleoDeals,
+  recomputeDealRevenue,
+  recordAudit,
+  saveBrandDeals,
+  setOfferDeal,
+} from "@sendex/db";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { AuthError, requireAction } from "../../../../lib/auth";
 
 export type ActionResult<T> = { ok: true; data: T } | { ok: false; error: string };
-
-export interface UploadSummary {
-  saved: number;
-  priced: number;
-  /** Rows left out, with why (e.g. a date that is not a date). */
-  problems: string[];
-  /** First deposits that earn something after the upload. */
-  earning: number;
-}
 
 function failure(error: unknown, what: string): { ok: false; error: string } {
   if (error instanceof AuthError) return { ok: false, error: error.message };
@@ -27,34 +25,43 @@ function failure(error: unknown, what: string): { ok: false; error: string } {
 }
 
 /**
- * Store the brand deals of a Media Deals export (D5-16), then work out the organisation's
- * deposit revenue again. The browser sends only the deal columns. Needs `settings.manage`.
+ * Add a deal, or a new price for one (D5-23): program, brand, the Scaleo offer it is sold
+ * through, the euro CPA per first deposit and the day it starts. Offers linking to that
+ * Scaleo offer get the deal, and the organisation's deposit revenue is worked out again.
+ * Needs `settings.manage`.
  */
-export async function uploadBrandDealsAction(input: unknown): Promise<ActionResult<UploadSummary>> {
+export async function addBrandDealAction(
+  input: unknown,
+): Promise<ActionResult<{ linked: number; earning: number }>> {
   try {
     const ctx = await requireAction("settings.manage");
-    const { startsOn, fileName, rows } = uploadDealsSchema.parse(input);
-    const sheet = parseDealSheet(rows);
-    if (!sheet.ok) return { ok: false, error: sheet.error };
-    if (sheet.deals.length === 0) return { ok: false, error: "No brands found in the file." };
+    const form = addDealSchema.parse(input);
+    const deal = dealFromForm(form);
     const database = db();
-    const saved = await saveBrandDeals(database, ctx.organisationId, {
-      deals: sheet.deals,
-      startsOn,
+    await saveBrandDeals(database, ctx.organisationId, {
+      deals: [deal],
+      startsOn: form.startsOn,
       uploadedBy: ctx.userId,
     });
+    const linked = await linkOffersToScaleoDeals(database, ctx.organisationId);
     const earning = await recomputeDealRevenue(database, ctx.organisationId);
     await recordAudit(database, ctx.organisationId, {
       actorUserId: ctx.userId,
-      action: "deals.upload",
+      action: "deals.add",
       targetType: "organisation",
       targetId: ctx.organisationId,
-      details: { fileName, startsOn, saved: saved.saved, priced: saved.priced },
+      details: {
+        program: form.program,
+        brand: form.brand,
+        scaleoOfferId: form.scaleoOfferId,
+        cpaEur: form.cpaEur,
+        startsOn: form.startsOn,
+      },
     });
     revalidatePath("/settings/brand-deals");
-    return { ok: true, data: { ...saved, problems: sheet.problems, earning } };
+    return { ok: true, data: { linked, earning } };
   } catch (error) {
-    return failure(error, "brand deals upload");
+    return failure(error, "add brand deal");
   }
 }
 

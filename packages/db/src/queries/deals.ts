@@ -1,5 +1,5 @@
-import type { SheetDeal } from "@sendex/core";
-import { and, asc, desc, eq, lte, sql } from "drizzle-orm";
+import { type SheetDeal, scaleoDealKey, scaleoOfferIdFromUrl } from "@sendex/core";
+import { and, asc, desc, eq, inArray, isNull, lte, sql } from "drizzle-orm";
 import { links } from "../schema/campaigns.js";
 import { brandDeals } from "../schema/deals.js";
 import type { Db } from "../types.js";
@@ -194,4 +194,47 @@ export async function recomputeDealRevenue(db: Db, organisationId: string): Prom
       where l.organisation_id = ${organisationId}`);
     return rowsOf(earned).length;
   });
+}
+
+/**
+ * Give each offer without a deal the deal of the Scaleo offer its link points to (D5-23):
+ * `…/click?o=1234…` earns the deal kept as `scaleo:1234`. A deal chosen by hand is left alone.
+ * Returns how many offers were linked.
+ */
+export async function linkOffersToScaleoDeals(db: Db, organisationId: string): Promise<number> {
+  const [offers, deals] = await Promise.all([
+    db
+      .select({ id: links.id, url: links.url })
+      .from(links)
+      .where(and(eq(links.organisationId, organisationId), isNull(links.dealKey))),
+    db
+      .selectDistinct({ key: brandDeals.dealKey })
+      .from(brandDeals)
+      .where(eq(brandDeals.organisationId, organisationId)),
+  ]);
+  const known = new Set(deals.map((d) => d.key));
+  const byKey = new Map<string, string[]>();
+  for (const offer of offers) {
+    const id = scaleoOfferIdFromUrl(offer.url);
+    if (id === null) continue;
+    const key = scaleoDealKey(id);
+    if (!known.has(key)) continue;
+    byKey.set(key, [...(byKey.get(key) ?? []), offer.id]);
+  }
+  let linked = 0;
+  for (const [key, ids] of byKey) {
+    const updated = await db
+      .update(links)
+      .set({ dealKey: key })
+      .where(
+        and(
+          eq(links.organisationId, organisationId),
+          inArray(links.id, ids),
+          isNull(links.dealKey),
+        ),
+      )
+      .returning({ id: links.id });
+    linked += updated.length;
+  }
+  return linked;
 }

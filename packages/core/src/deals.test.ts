@@ -1,9 +1,13 @@
 import { describe, expect, it } from "vitest";
 import {
+  addDealSchema,
   cpaFromDeal,
+  dealFromForm,
   dealKey,
   dealSheetColumns,
   parseDealSheet,
+  scaleoDealKey,
+  scaleoOfferIdFromUrl,
   setOfferDealSchema,
   suggestDealForOffer,
   uploadDealsSchema,
@@ -49,8 +53,8 @@ describe("cpaFromDeal", () => {
 
 describe("dealKey", () => {
   it("ignores case and extra spaces", () => {
-    expect(dealKey(" Aff  Republic ", "Smash")).toBe(dealKey("aff republic", "SMASH"));
-    expect(dealKey("Aff Republic", "Smash")).not.toBe(dealKey("Cash Hunter", "Smash"));
+    expect(dealKey(" Example  Partners ", "Brand A")).toBe(dealKey("example partners", "BRAND A"));
+    expect(dealKey("Example Partners", "Brand A")).not.toBe(dealKey("Sample Network", "Brand A"));
   });
 });
 
@@ -79,17 +83,17 @@ describe("parseDealSheet", () => {
   it("reads Media Deals' export: one deal per brand, and never the login columns", () => {
     const result = parseDealSheet([
       HEADER,
-      row("Aff Republic", "Smash | Shark", "€220 CPA + 40% rev", "UK, IE"),
-      row("HODL", "Winboost", "$200 CPA"),
+      row("Example Partners", "Brand A | Brand B", "€220 CPA + 40% rev", "UK, IE"),
+      row("Demo Affiliates", "Brand C", "$200 CPA"),
     ]);
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     expect(result.problems).toEqual([]);
     expect(result.deals).toEqual([
       {
-        key: dealKey("Aff Republic", "Smash"),
-        program: "Aff Republic",
-        brand: "Smash",
+        key: dealKey("Example Partners", "Brand A"),
+        program: "Example Partners",
+        brand: "Brand A",
         deal: "€220 CPA + 40% rev",
         topGeos: "UK, IE",
         startsOn: null,
@@ -97,9 +101,9 @@ describe("parseDealSheet", () => {
         reason: null,
       },
       {
-        key: dealKey("Aff Republic", "Shark"),
-        program: "Aff Republic",
-        brand: "Shark",
+        key: dealKey("Example Partners", "Brand B"),
+        program: "Example Partners",
+        brand: "Brand B",
         deal: "€220 CPA + 40% rev",
         topGeos: "UK, IE",
         startsOn: null,
@@ -107,9 +111,9 @@ describe("parseDealSheet", () => {
         reason: null,
       },
       {
-        key: dealKey("HODL", "Winboost"),
-        program: "HODL",
-        brand: "Winboost",
+        key: dealKey("Demo Affiliates", "Brand C"),
+        program: "Demo Affiliates",
+        brand: "Brand C",
         deal: "$200 CPA",
         topGeos: "",
         startsOn: null,
@@ -132,29 +136,29 @@ describe("parseDealSheet", () => {
       ["Media Deals export"],
       [],
       ["affiliate program", "brand", "commercial deal"],
-      ["HODL", "Winboost", "€250 CPA"],
+      ["Demo Affiliates", "Brand C", "€250 CPA"],
     ]);
     expect(result.ok && result.deals.map((d) => [d.brand, d.cpaMicro])).toEqual([
-      ["Winboost", 250_000_000n],
+      ["Brand C", 250_000_000n],
     ]);
   });
 
   it("reads a date column, so a deal can start on the day written in the sheet", () => {
     const result = parseDealSheet([
       ["Affiliate Program Name", "ALL BRANDS", "Deal", "Start Date"],
-      ["HODL", "Winboost", "€250 CPA", "2026-11-01"],
-      ["HODL", "Wintino", "€200 CPA", "15/10/2026"],
-      ["HODL", "Smash", "€210 CPA", "03.09.2026"],
-      ["HODL", "Shark", "€190 CPA", ""],
-      ["HODL", "Roy Boy", "€190 CPA", "next week"],
+      ["Demo Affiliates", "Brand C", "€250 CPA", "2026-11-01"],
+      ["Demo Affiliates", "Brand D", "€200 CPA", "15/10/2026"],
+      ["Demo Affiliates", "Brand A", "€210 CPA", "03.09.2026"],
+      ["Demo Affiliates", "Brand B", "€190 CPA", ""],
+      ["Demo Affiliates", "Roy Boy", "€190 CPA", "next week"],
     ]);
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     expect(result.deals.map((d) => [d.brand, d.startsOn])).toEqual([
-      ["Winboost", "2026-11-01"],
-      ["Wintino", "2026-10-15"],
-      ["Smash", "2026-09-03"],
-      ["Shark", null],
+      ["Brand C", "2026-11-01"],
+      ["Brand D", "2026-10-15"],
+      ["Brand A", "2026-09-03"],
+      ["Brand B", null],
     ]);
     expect(result.problems).toEqual(['Row 6: the date "next week" is not a date (use YYYY-MM-DD)']);
   });
@@ -181,11 +185,11 @@ describe("dealSheetColumns", () => {
     const kept = dealSheetColumns([
       ["Media Deals export"],
       HEADER,
-      row("Aff Republic", "Smash | Shark", "€220 CPA", "UK"),
+      row("Example Partners", "Brand A | Brand B", "€220 CPA", "UK"),
     ]);
     expect(kept).toEqual([
       ["Affiliate Program Name", "ALL BRANDS", "Deal", "Top Geos"],
-      ["Aff Republic", "Smash | Shark", "€220 CPA", "UK"],
+      ["Example Partners", "Brand A | Brand B", "€220 CPA", "UK"],
     ]);
     expect(kept && parseDealSheet(kept)).toMatchObject({ ok: true, problems: [] });
   });
@@ -206,19 +210,19 @@ describe("dealSheetColumns", () => {
 
 describe("suggestDealForOffer", () => {
   const deals = [
-    { key: "a|smash", brand: "Smash" },
-    { key: "a|smash casino", brand: "Smash Casino" },
-    { key: "b|win", brand: "Win" },
-    { key: "c|winboost", brand: "Winboost" },
+    { key: "a|alpha", brand: "Alpha" },
+    { key: "a|alpha casino", brand: "Alpha Casino" },
+    { key: "b|gam", brand: "Gam" },
+    { key: "c|gamma", brand: "Gamma" },
   ];
 
   it("suggests the longest brand whose name is in the offer name", () => {
-    expect(suggestDealForOffer("Smash Casino UK - Nov", deals)).toBe("a|smash casino");
-    expect(suggestDealForOffer("winboost_uk_a35", deals)).toBe("c|winboost");
+    expect(suggestDealForOffer("Alpha Casino UK - Nov", deals)).toBe("a|alpha casino");
+    expect(suggestDealForOffer("gamma_uk_a35", deals)).toBe("c|gamma");
   });
 
   it("matches whole words only and suggests nothing otherwise", () => {
-    expect(suggestDealForOffer("Winners club", deals)).toBeNull();
+    expect(suggestDealForOffer("Gamers club", deals)).toBeNull();
     expect(suggestDealForOffer("Roy Boy", deals)).toBeNull();
   });
 });
@@ -237,5 +241,99 @@ describe("upload and offer schemas", () => {
     const linkId = "4f1b2c3d-1234-4abc-8def-1234567890ab";
     expect(setOfferDealSchema.parse({ linkId, dealKey: null })).toEqual({ linkId, dealKey: null });
     expect(() => setOfferDealSchema.parse({ linkId: "x", dealKey: null })).toThrow();
+  });
+});
+
+describe("deals by Scaleo offer (D5-23)", () => {
+  it("reads the Scaleo offer id from an offer link", () => {
+    expect(
+      scaleoOfferIdFromUrl("https://example.scaletrk.com/click?o=1234&a=42&sub_id1={{dynamic}}"),
+    ).toBe(1234);
+    expect(
+      scaleoOfferIdFromUrl(
+        "https://trk.example-tracker.com/click?o=567&a=42&sub_id1={{{dynamic}}}",
+      ),
+    ).toBe(567);
+    expect(scaleoOfferIdFromUrl("https://example.com/landing?id={{dynamic}}")).toBeNull();
+    expect(scaleoOfferIdFromUrl("not a url")).toBeNull();
+  });
+
+  it("keys a deal by its Scaleo offer, so offers find it by their link", () => {
+    expect(scaleoDealKey(1234)).toBe("scaleo:1234");
+  });
+
+  it("takes a deal typed in Sendex: program, brand, Scaleo offer, euro CPA and start day", () => {
+    expect(
+      addDealSchema.parse({
+        program: " Example Partners ",
+        brand: "Brand A SMS",
+        scaleoOfferId: "1234",
+        cpaEur: "150",
+        startsOn: "2026-11-01",
+      }),
+    ).toEqual({
+      program: "Example Partners",
+      brand: "Brand A SMS",
+      scaleoOfferId: 1234,
+      cpaEur: 150,
+      startsOn: "2026-11-01",
+    });
+    expect(
+      addDealSchema.parse({
+        program: "P",
+        brand: "B",
+        scaleoOfferId: "",
+        cpaEur: "120.5",
+        startsOn: "2026-11-01",
+      }).scaleoOfferId,
+    ).toBeNull();
+    expect(() =>
+      addDealSchema.parse({
+        program: "P",
+        brand: "B",
+        scaleoOfferId: "",
+        cpaEur: "0",
+        startsOn: "2026-11-01",
+      }),
+    ).toThrow();
+    expect(() =>
+      addDealSchema.parse({
+        program: "",
+        brand: "B",
+        scaleoOfferId: "",
+        cpaEur: "10",
+        startsOn: "2026-11-01",
+      }),
+    ).toThrow();
+  });
+
+  it("turns a typed deal into the stored deal", () => {
+    expect(
+      dealFromForm({
+        program: "Example Partners",
+        brand: "Brand A SMS",
+        scaleoOfferId: 1234,
+        cpaEur: 150,
+        startsOn: "2026-11-01",
+      }),
+    ).toEqual({
+      key: "scaleo:1234",
+      program: "Example Partners",
+      brand: "Brand A SMS",
+      deal: "€150 CPA (Scaleo offer 1234)",
+      topGeos: "",
+      startsOn: "2026-11-01",
+      cpaMicro: 150_000_000n,
+      reason: null,
+    });
+    expect(
+      dealFromForm({
+        program: "Example Partners",
+        brand: "Rolling Slots",
+        scaleoOfferId: null,
+        cpaEur: 220.5,
+        startsOn: "2026-11-01",
+      }).key,
+    ).toBe(dealKey("Example Partners", "Rolling Slots"));
   });
 });

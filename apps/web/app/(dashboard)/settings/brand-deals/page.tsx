@@ -19,14 +19,15 @@ import { formatMicro } from "../../../../components/campaigns/format";
 import { AuthError, requireAction } from "../../../../lib/auth";
 import { explainCpaCounted, LOCAL_FORMULAS } from "../../../../lib/explain";
 import { AuthErrorView } from "../../require-org";
-import { DealsUpload } from "./deals-upload";
+import { AddDealForm } from "./add-deal-form";
 import { OfferDeals } from "./offer-deals";
 
 export const dynamic = "force-dynamic";
 
 /**
- * Brand deals (D5-16): what each brand pays us per first deposit, uploaded from the Media
- * Deals export, and which deal each offer earns from. Revenue everywhere in Sendex is the
+ * Brand deals (D5-16, D5-23): what each brand pays us per first deposit, kept per Scaleo offer
+ * (imported from Danny's Media Deals sheet, then added here), and which deal each offer earns
+ * from; an offer whose link points to a Scaleo offer gets that offer's deal by itself. Revenue everywhere in Sendex is the
  * CPA of the offer's deal in force on the day of each first deposit.
  */
 export default async function BrandDealsPage() {
@@ -57,7 +58,7 @@ export default async function BrandDealsPage() {
       <PageHeader
         breadcrumb={[{ label: "Settings", href: "/settings" }, { label: "Brand deals" }]}
         title="Brand deals"
-        subtitle="What each brand pays us per first deposit, from the Media Deals export."
+        subtitle="What each brand pays us per first deposit, from Media Deals."
       />
       <p className="max-w-3xl text-sm text-muted">
         Revenue in Sendex comes only from these deals: each first deposit earns the CPA of its
@@ -66,7 +67,7 @@ export default async function BrandDealsPage() {
         euro CPA earns nothing until it has one.
       </p>
 
-      {canManage ? <DealsUpload today={today} /> : null}
+      {canManage ? <AddDealForm today={today} /> : null}
 
       <Card>
         <CardHeader title="Offers" note="Choose the deal each offer earns from" />
@@ -94,11 +95,7 @@ export default async function BrandDealsPage() {
       <Card>
         <CardHeader title="Deals" note={`${deals.length} brands`} />
         {deals.length === 0 ? (
-          <EmptyState
-            icon={<Handshake />}
-            title="No deals yet"
-            hint="Upload the Media Deals export to add them."
-          />
+          <EmptyState icon={<Handshake />} title="No deals yet" hint="Add a deal above." />
         ) : (
           <div className="overflow-x-auto">
             <Table data-testid="brand-deals-table">
@@ -106,6 +103,7 @@ export default async function BrandDealsPage() {
                 <TableRow>
                   <TableHead>Brand</TableHead>
                   <TableHead>Program</TableHead>
+                  <TableHead>Scaleo offer</TableHead>
                   <TableHead>Deal</TableHead>
                   <TableHead className="text-right">
                     <Explained formula={LOCAL_FORMULAS.cpaCounted}>CPA counted</Explained>
@@ -119,6 +117,9 @@ export default async function BrandDealsPage() {
                   <TableRow key={d.key}>
                     <TableCell className="font-medium">{d.brand}</TableCell>
                     <TableCell>{d.program || "—"}</TableCell>
+                    <TableCell className="tabular-nums">
+                      {d.key.startsWith("scaleo:") ? d.key.slice("scaleo:".length) : "—"}
+                    </TableCell>
                     <TableCell className="max-w-xs whitespace-normal">{d.deal || "—"}</TableCell>
                     <TableCell className="text-right tabular-nums">
                       <Explained

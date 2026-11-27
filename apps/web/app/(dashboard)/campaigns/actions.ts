@@ -31,6 +31,7 @@ import {
   estimateSend,
   flushLap,
   getCampaign,
+  linkOffersToScaleoDeals,
   listSidGroups,
   recordAudit,
   renameCampaign,
@@ -299,6 +300,8 @@ export async function createLinkAction(input: unknown): Promise<ActionResult<{ l
       profitMicro: BigInt(Math.round(profitEur * 1_000_000)),
     });
     await attachLink(database, ctx.organisationId, campaignId, link.id);
+    // A new offer whose link points to a Scaleo offer with a deal earns it straight away (D5-23).
+    await linkOffersToScaleoDeals(database, ctx.organisationId);
     revalidateCampaign(campaignId);
     return { linkId: link.id };
   });

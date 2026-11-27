@@ -214,8 +214,8 @@ export function parseDealSheet(rows: readonly (readonly string[])[]): DealSheetR
 }
 
 /**
- * The deal whose brand appears, as whole words, in the offer's name ("Smash Casino UK" →
- * Smash Casino); the longest brand wins. Null when none does.
+ * The deal whose brand appears, as whole words, in the offer's name ("Alpha Casino UK" →
+ * Alpha Casino); the longest brand wins. Null when none does.
  */
 export function suggestDealForOffer(
   offerName: string,
@@ -250,3 +250,57 @@ export const setOfferDealSchema = z.object({
   dealKey: z.string().min(1).max(500).nullable(),
 });
 export type SetOfferDealInput = z.infer<typeof setOfferDealSchema>;
+
+/**
+ * The Scaleo offer an offer link points to (D5-23): the `o` parameter of a Scaleo click link,
+ * e.g. `…/click?o=1234&a=42&sub_id1=…` → 1234. Null for any other link.
+ */
+export function scaleoOfferIdFromUrl(url: string): number | null {
+  const match = /[?&]o=(\d{1,9})(?:&|$)/.exec(url);
+  return match?.[1] ? Number(match[1]) : null;
+}
+
+/** A deal kept per Scaleo offer: every Sendex offer linking to that offer earns it. */
+export function scaleoDealKey(scaleoOfferId: number): string {
+  return `scaleo:${scaleoOfferId}`;
+}
+
+const optionalOfferId = z
+  .union([z.string(), z.number()])
+  .transform((v) => (typeof v === "number" ? v : v.trim() === "" ? null : Number(v.trim())))
+  .pipe(z.number().int().positive().nullable());
+
+/**
+ * A deal typed in Sendex (D5-23): the brand's program, the brand, the Scaleo offer it is sold
+ * through (optional), what it pays per first deposit in euros, and the day it starts.
+ */
+export const addDealSchema = z.object({
+  program: z.string().trim().min(1, "Program is required").max(120),
+  brand: z.string().trim().min(1, "Brand is required").max(120),
+  scaleoOfferId: optionalOfferId,
+  cpaEur: z.coerce.number().positive("The CPA must be more than €0").max(100_000),
+  startsOn: isoDay,
+});
+export type AddDealInput = z.infer<typeof addDealSchema>;
+
+/** The stored deal for a typed one: keyed by its Scaleo offer when it has one. */
+export function dealFromForm(input: AddDealInput): SheetDeal {
+  const cpaMicro = BigInt(Math.round(input.cpaEur * MICRO));
+  const euros = Number.isInteger(input.cpaEur) ? String(input.cpaEur) : input.cpaEur.toFixed(2);
+  return {
+    key:
+      input.scaleoOfferId === null
+        ? dealKey(input.program, input.brand)
+        : scaleoDealKey(input.scaleoOfferId),
+    program: input.program,
+    brand: input.brand,
+    deal:
+      input.scaleoOfferId === null
+        ? `€${euros} CPA`
+        : `€${euros} CPA (Scaleo offer ${input.scaleoOfferId})`,
+    topGeos: "",
+    startsOn: input.startsOn,
+    cpaMicro,
+    reason: null,
+  };
+}

@@ -14,6 +14,7 @@ import { cache } from "react";
 import { roleFromClerk } from "./clerk-roles";
 import { devOrgContext } from "./dev-auth";
 import { authMode } from "./env";
+import { blockOrganisationCreation } from "./members";
 import type { PreviewView } from "./preview";
 import { previewContext } from "./preview-context";
 
@@ -64,11 +65,17 @@ async function resolveUser(database: Database, clerkUserId: string) {
   if (!user) throw new AuthError(401, "unauthenticated", "Sign in to continue.");
   const primary =
     user.emailAddresses.find((e) => e.id === user.primaryEmailAddressId) ?? user.emailAddresses[0];
-  return ensureUser(database, {
+  const row = await ensureUser(database, {
     clerkUserId,
     email: primary?.emailAddress ?? "",
     name: user.fullName,
   });
+  // People join only by invitation and only the platform creates organisations (D5-21).
+  // Best effort: a Clerk hiccup must not stop the first sign-in.
+  await blockOrganisationCreation(await clerkClient(), clerkUserId).catch((error: unknown) =>
+    console.error("could not switch off organisation creation", clerkUserId, error),
+  );
+  return row;
 }
 
 async function resolveOrganisation(database: Database, clerkOrgId: string) {

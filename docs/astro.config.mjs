@@ -41,6 +41,7 @@ export default defineConfig({
             { label: "Track conversions", slug: "using/track-conversions" },
             { label: "Brand deals", slug: "using/brand-deals" },
             { label: "API tokens", slug: "using/api-tokens" },
+            { label: "Members", slug: "using/members" },
           ],
         },
         {

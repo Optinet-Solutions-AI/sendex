@@ -12,6 +12,7 @@ export * from "./kpi.js";
 export * from "./laps.js";
 export * from "./links.js";
 export * from "./lists.js";
+export * from "./members.js";
 export * from "./open-countries.js";
 export * from "./permissions.js";
 export * from "./phone.js";

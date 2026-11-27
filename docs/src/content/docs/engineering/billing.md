@@ -129,7 +129,7 @@ call inserts the row and an audit entry `alert.raise`, later calls return the st
 low balance, which is what "at most once per hour" means. `listOpenAlerts` feeds the
 dashboard banner (`app/(dashboard)/alerts-banner.tsx`, rendered by the layout for every
 page); `acknowledgeAlert(db, org, { alertId, userId })` is owner-only through
-`acknowledgeAlertAction` (`settings.manage`) and writes `alert.acknowledge` with the actor.
+`acknowledgeAlertsAction` (`settings.manage`, one id or many) and writes `alert.acknowledge` with the actor. The banner groups alerts by kind and words them with `groupAlerts` and `alertSummary` from `@sendex/core` (D5-24); the stored message is unchanged.
 
 **Enforcement** is in the send loop (`sending-engine.md`, "Daily caps"); the `CapsStore`
 (`queries/caps.ts`) gives it the caps, the usage, `recordLapRefusal` (`laps.refused`,

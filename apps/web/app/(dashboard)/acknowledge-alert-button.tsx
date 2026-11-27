@@ -3,10 +3,18 @@
 import { Button, useToast } from "@sendex/ui";
 import { useRouter } from "next/navigation";
 import { useTransition } from "react";
-import { acknowledgeAlertAction } from "./alerts-actions";
+import { acknowledgeAlertsAction } from "./alerts-actions";
 
-/** The owner's "Acknowledge" button on one alert of the dashboard banner. */
-export function AcknowledgeAlertButton({ alertId }: { alertId: string }) {
+/** The owner's button that acknowledges one or more alerts of the dashboard banner. */
+export function AcknowledgeAlertButton({
+  alertIds,
+  label = "Acknowledge",
+  testId = "acknowledge-alert",
+}: {
+  alertIds: string[];
+  label?: string;
+  testId?: string;
+}) {
   const router = useRouter();
   const { toast } = useToast();
   const [pending, startTransition] = useTransition();
@@ -15,20 +23,26 @@ export function AcknowledgeAlertButton({ alertId }: { alertId: string }) {
       variant="outline"
       size="sm"
       disabled={pending}
-      data-testid="acknowledge-alert"
+      data-testid={testId}
       onClick={() =>
         startTransition(async () => {
-          const result = await acknowledgeAlertAction(alertId);
+          const result = await acknowledgeAlertsAction(alertIds);
           if (!result.ok) {
-            toast({ title: "Could not acknowledge the alert", description: result.error });
+            toast({ title: "Could not acknowledge", description: result.error });
           } else {
-            toast({ title: "Alert acknowledged", variant: "success" });
+            toast({
+              title:
+                result.acknowledged === 1
+                  ? "Alert acknowledged"
+                  : `${result.acknowledged} alerts acknowledged`,
+              variant: "success",
+            });
           }
           router.refresh();
         })
       }
     >
-      {pending ? "Acknowledging…" : "Acknowledge"}
+      {pending ? "Acknowledging…" : label}
     </Button>
   );
 }

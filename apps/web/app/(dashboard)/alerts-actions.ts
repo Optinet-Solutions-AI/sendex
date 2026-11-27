@@ -5,31 +5,36 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { AuthError, requireAction } from "../../lib/auth";
 
-export type AlertActionResult = { ok: true } | { ok: false; error: string };
+export type AlertActionResult = { ok: true; acknowledged: number } | { ok: false; error: string };
 
-const alertIdSchema = z.uuid();
+const alertIdsSchema = z.array(z.uuid()).min(1).max(500);
 
 /**
- * Acknowledge an open alert shown in the dashboard banner (D3-11). Owner only
- * (`settings.manage`); the audit row `alert.acknowledge` is written by the query in the same
- * transaction. An alert of another organisation, or one already acknowledged, is reported as
- * gone rather than failing.
+ * Acknowledge open alerts shown in the dashboard banner (D3-11): one alert, every alert of a
+ * kind, or all of them (D5-24). Owner only (`settings.manage`); each `alert.acknowledge`
+ * audit row is written by the query in the same transaction as its alert. Alerts of another
+ * organisation, or already acknowledged, are skipped.
  */
-export async function acknowledgeAlertAction(alertId: string): Promise<AlertActionResult> {
+export async function acknowledgeAlertsAction(alertIds: unknown): Promise<AlertActionResult> {
   try {
     const ctx = await requireAction("settings.manage");
-    const id = alertIdSchema.parse(alertId);
-    const row = await acknowledgeAlert(db(), ctx.organisationId, {
-      alertId: id,
-      userId: ctx.userId,
-    });
+    const ids = alertIdsSchema.parse(alertIds);
+    const database = db();
+    let acknowledged = 0;
+    for (const alertId of new Set(ids)) {
+      const row = await acknowledgeAlert(database, ctx.organisationId, {
+        alertId,
+        userId: ctx.userId,
+      });
+      if (row) acknowledged += 1;
+    }
     revalidatePath("/", "layout");
-    if (!row) return { ok: false, error: "This alert was already acknowledged." };
-    return { ok: true };
+    if (acknowledged === 0) return { ok: false, error: "These alerts were already acknowledged." };
+    return { ok: true, acknowledged };
   } catch (error) {
     if (error instanceof AuthError) return { ok: false, error: error.message };
     if (error instanceof z.ZodError) return { ok: false, error: "Invalid alert." };
-    console.error("acknowledge alert failed", error instanceof Error ? error.message : error);
+    console.error("acknowledge alerts failed", error instanceof Error ? error.message : error);
     return { ok: false, error: "Something went wrong. Please try again." };
   }
 }

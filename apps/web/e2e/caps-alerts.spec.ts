@@ -58,3 +58,40 @@ test.describe("caps and alerts", () => {
     await expect(page.getByTestId("toast")).toContainText("Billing settings saved");
   });
 });
+
+test.describe("alerts banner (D5-24)", () => {
+  test.afterAll(async () => {
+    await cleanupE2eAlerts();
+  });
+
+  test("spikes show as one row in plain words, the earlier ones folded, acknowledged together", async ({
+    page,
+  }) => {
+    await seedE2eAlert({
+      kind: "send_spike",
+      message: "Sending spike: 2,850 messages in the last hour.",
+      details: { lastHour: 2850, sevenDayHourlyAverage: 51.3, ratio: 55.5 },
+    });
+    await seedE2eAlert({
+      kind: "send_spike",
+      message: "Sending spike: 200 messages in the last hour.",
+      details: { lastHour: 200, sevenDayHourlyAverage: 0.02, ratio: 11_200 },
+    });
+
+    await page.goto("/");
+    const row = page.getByTestId("alerts-banner").locator('[data-alert-kind="send_spike"]');
+    await expect(row).toHaveCount(1);
+    await expect(row).toContainText("Sending spike");
+    await expect(row).toContainText("200 SMS in one hour, after an almost quiet week.");
+    await expect(row).not.toContainText("11,200");
+
+    const earlier = row.getByTestId("alert-earlier");
+    await expect(earlier).not.toBeVisible();
+    await row.getByRole("button", { name: /earlier/ }).click();
+    await expect(earlier).toContainText("2,850 SMS in one hour, about 56× the usual 51 an hour.");
+
+    await row.getByTestId("acknowledge-alert").click();
+    await expect(page.getByTestId("toast")).toContainText("alerts acknowledged");
+    await expect(page.locator('[data-alert-kind="send_spike"]')).toHaveCount(0);
+  });
+});

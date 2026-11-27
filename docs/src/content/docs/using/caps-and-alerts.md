@@ -39,6 +39,8 @@ The check is per batch, so two laps of the same organisation sending at the same
 | **Sending spike** | More than five times the organisation's seven-day hourly average was sent in the last hour (and at least 100 messages). Checked every five minutes, raised at most once per hour. |
 | **Low balance** | The balance dropped below the threshold set under **Settings → Billing**. Once per dip: it arms again when a deposit brings the balance back to the threshold. |
 
-Every open alert is shown in the amber banner at the top of each page, with a shortcut to where it is fixed (**Raise the cap**, **Fund the account**). An owner clicks **Acknowledge** to clear it; the acknowledgement is logged as `alert.acknowledge`. Raising an alert is logged as `alert.raise`.
+Open alerts are shown in the amber banner at the top of each page, **one row per kind**: the newest alert in plain words (for example "2,850 SMS in one hour, about 56× the usual 51 an hour"), how many there are, and a shortcut to where it is fixed (**Raise the cap**, **Fund the account**). Older alerts of the same kind are folded under **Show N earlier**. When the week before a spike was almost silent, the banner says so instead of showing a meaningless multiple.
+
+An owner clicks **Acknowledge** on a row to clear every alert of that kind, or **Acknowledge all** at the top of the banner. Each acknowledgement is logged as `alert.acknowledge`. Raising an alert is logged as `alert.raise`.
 
 Email delivery of the alerts (to the addresses under **Low balance alert**) arrives with a later card; today the banner, the audit log and the worker's logs are where they show.

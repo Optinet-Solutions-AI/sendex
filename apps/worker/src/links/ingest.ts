@@ -1,4 +1,4 @@
-import { classifyDevice, isDataCentreNetwork } from "@sendex/core";
+import { clickVerdict, normalisePhone } from "@sendex/core";
 import { type Db, findMessagesByShortCodes, type NewClick, recordClicks } from "@sendex/db";
 import { z } from "zod";
 import { clickSchema } from "../jobs.js";
@@ -36,9 +36,22 @@ function nullable(value: string | undefined): string | null {
   return value === undefined || value === "" || value === "unknown" ? null : value;
 }
 
+function deviceOf(click: IngestClick, e164: string): string {
+  if (click.device === "bot") return "bot";
+  const phone = normalisePhone(e164);
+  const verdict = clickVerdict({
+    userAgent: click.userAgent,
+    network: click.asn,
+    // Only a valid two-letter country is compared; anything else counts as unknown.
+    clickCountry: click.country !== undefined && COUNTRY.test(click.country) ? click.country : null,
+    phoneCountry: phone.ok ? phone.country : null,
+  });
+  return verdict === "other_country" ? "bot" : verdict;
+}
+
 function toRow(
   click: IngestClick,
-  message: { id: string; organisationId: string; campaignId: string; lapId: string },
+  message: { id: string; organisationId: string; campaignId: string; lapId: string; e164: string },
 ): NewClick {
   return {
     organisationId: message.organisationId,
@@ -52,11 +65,10 @@ function toRow(
         ? click.country.toUpperCase()
         : null,
     userAgent: nullable(click.userAgent),
-    // A click from a cloud or hosting network is a link scanner, whatever device the edge
-    // saw (D5-13); it then counts as a preview, like any other bot.
-    device: isDataCentreNetwork(click.asn)
-      ? "bot"
-      : (click.device ?? classifyDevice(click.userAgent)),
+    // Whether a person clicked (D5-13, D5-22): cloud and proxy networks, robot or carrier
+    // spam-filter browsers, desktop Linux / Windows scanners and clicks from another country
+    // than the phone's are stored as bots, so they count as previews, never as clicks.
+    device: deviceOf(click, message.e164),
     operator: nullable(click.asn),
   };
 }

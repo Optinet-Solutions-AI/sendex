@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
+import labels from "./fixtures/smsedge-click-labels.json";
 import {
   classifyClick,
   classifyDevice,
+  clickVerdict,
   generateShortCode,
   isDataCentreNetwork,
   isValidShortCode,
@@ -292,5 +294,91 @@ describe("data-centre networks (D5-13)", () => {
     expect(classifyClick(android, "DigitalOcean, LLC")).toBe("bot");
     expect(classifyClick(android, "Virgin Media Limited")).toBe("mobile");
     expect(classifyClick(linuxChrome, null)).toBe("desktop");
+  });
+});
+
+describe("clickVerdict: carrier scanners and other countries (D5-22)", () => {
+  const phone =
+    "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Mobile Safari/537.36";
+
+  it("takes a carrier's spam filter for a robot", () => {
+    expect(clickVerdict({ userAgent: "antispam/1.0.0", network: "Virgin Media Limited" })).toBe(
+      "bot",
+    );
+  });
+
+  it("takes a desktop Linux or Windows browser opening an SMS link for a scanner", () => {
+    const linux =
+      "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36";
+    const windows =
+      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0 Safari/537.36";
+    expect(clickVerdict({ userAgent: linux, network: "Virgin Media Limited" })).toBe("bot");
+    expect(clickVerdict({ userAgent: windows, network: "BT" })).toBe("bot");
+  });
+
+  it("takes a click from a proxy or hosting network for a robot", () => {
+    expect(clickVerdict({ userAgent: phone, network: "LonConnect Ltd" })).toBe("bot");
+  });
+
+  it("does not count a click from another country than the phone's", () => {
+    expect(
+      clickVerdict({
+        userAgent: phone,
+        network: "Bouygues Telecom SA",
+        clickCountry: "FR",
+        phoneCountry: "GB",
+      }),
+    ).toBe("other_country");
+    expect(
+      clickVerdict({
+        userAgent: phone,
+        network: "EE Limited",
+        clickCountry: "GB",
+        phoneCountry: "GB",
+      }),
+    ).toBe("mobile");
+  });
+
+  it("keeps a phone on a phone network, or with an unknown country", () => {
+    expect(clickVerdict({ userAgent: phone, network: "Hutchison 3G UK Limited" })).toBe("mobile");
+    expect(
+      clickVerdict({ userAgent: phone, network: null, clickCountry: null, phoneCountry: "GB" }),
+    ).toBe("mobile");
+  });
+
+  it("agrees with SMS Edge's own verdicts on its labelled clicks", () => {
+    const { clicks } = labels as {
+      clicks: {
+        ua: string;
+        network: string | null;
+        clickCountry: string | null;
+        phoneCountry: string | null;
+        label: "real" | "bot";
+      }[];
+    };
+    let realKept = 0;
+    let realTotal = 0;
+    let botCaught = 0;
+    let botTotal = 0;
+    for (const c of clicks) {
+      const verdict = clickVerdict({
+        userAgent: c.ua,
+        network: c.network,
+        clickCountry: c.clickCountry,
+        phoneCountry: c.phoneCountry,
+      });
+      const counted = verdict !== "bot" && verdict !== "other_country";
+      if (c.label === "real") {
+        realTotal += 1;
+        if (counted) realKept += 1;
+      } else {
+        botTotal += 1;
+        if (!counted) botCaught += 1;
+      }
+    }
+    // Measured on this set: see the D5-22 PR. Counting rules alone cannot reach SMS Edge's
+    // in-browser check, so the bar is what the rules reach, not 100%.
+    expect(realKept / realTotal).toBeGreaterThanOrEqual(0.75);
+    expect(botCaught / botTotal).toBeGreaterThanOrEqual(0.93);
   });
 });

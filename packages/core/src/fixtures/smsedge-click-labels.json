@@ -1,0 +1,4205 @@
+{
+  "source": "SMS Edge click report (GET /v1/reports/clicks/), 20-27 Nov 2026: 250 of its 1,999 real clicks and 350 of its 40,952 bot or preview clicks, at random. Only browser, network (looked up locally from the click IP with the public ip2asn table), click and phone countries, and SMS Edge's verdict. No numbers or IP addresses.",
+  "clicks": [
+    {
+      "ua": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36",
+      "network": null,
+      "clickCountry": "FR",
+      "phoneCountry": "FR",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:156.0) Gecko/20100101 Firefox/156.0",
+      "network": "TalkTalk Communications Limited",
+      "clickCountry": "GB",
+      "phoneCountry": "GB",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "FR",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36",
+      "network": "Tech Futures Interactive Inc.",
+      "clickCountry": "CA",
+      "phoneCountry": "GB",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "NL",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "NL",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (iPhone; CPU iPhone OS 27_2_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/158.0.8127.35 Mobile/15E148 Safari/604.1",
+      "network": "Hutchison 3G UK Limited",
+      "clickCountry": "GB",
+      "phoneCountry": "GB",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Mobile Safari/537.36",
+      "network": "Bouygues Telecom SA",
+      "clickCountry": "FR",
+      "phoneCountry": "FR",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/31.0 Chrome/148.0.0.0 Mobile Safari/537.36",
+      "network": null,
+      "clickCountry": "GB",
+      "phoneCountry": "GB",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/30.0 Chrome/143.0.0.0 Mobile Safari/537.36",
+      "network": "Bouygues Telecom SA",
+      "clickCountry": "FR",
+      "phoneCountry": "FR",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/158.0.0.0 Mobile Safari/537.36",
+      "network": null,
+      "clickCountry": "GB",
+      "phoneCountry": "GB",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "BE",
+      "phoneCountry": "FR",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "NL",
+      "phoneCountry": "DE",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/30.0 Chrome/143.0.0.0 Mobile Safari/537.36",
+      "network": "Virgin Media Limited",
+      "clickCountry": "GB",
+      "phoneCountry": "GB",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "FI",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/30.0 Chrome/143.0.0.0 Mobile Safari/537.36",
+      "network": "Virgin Media Limited",
+      "clickCountry": "GB",
+      "phoneCountry": "GB",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "FR",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/158.0.0.0 Safari/537.36",
+      "network": "Amazon.com, Inc.",
+      "clickCountry": "US",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/30.0 Chrome/143.0.0.0 Mobile Safari/537.36",
+      "network": "Verizon Business",
+      "clickCountry": "US",
+      "phoneCountry": "GB",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:128.0) Gecko/20100101 Firefox/128.0",
+      "network": "Amazon.com, Inc.",
+      "clickCountry": "US",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/31.0 Chrome/148.0.0.0 Mobile Safari/537.36",
+      "network": "Virgin Media Limited",
+      "clickCountry": "GB",
+      "phoneCountry": "GB",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "FR",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "NL",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:128.0) Gecko/20100101 Firefox/128.0",
+      "network": "Amazon.com, Inc.",
+      "clickCountry": "US",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/30.0 Chrome/143.0.0.0 Mobile Safari/537.36",
+      "network": "Bouygues Telecom SA",
+      "clickCountry": "FR",
+      "phoneCountry": "FR",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/31.0 Chrome/148.0.0.0 Mobile Safari/537.36",
+      "network": "KCOM Group Limited",
+      "clickCountry": "GB",
+      "phoneCountry": "GB",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/158.0.0.0 Mobile Safari/537.36",
+      "network": "IDDQD-AS",
+      "clickCountry": "EG",
+      "phoneCountry": "GB",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/158.0.0.0 Mobile Safari/537.36",
+      "network": null,
+      "clickCountry": "FR",
+      "phoneCountry": "FR",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/30.0 Chrome/143.0.0.0 Mobile Safari/537.36",
+      "network": "Virgin Media Limited",
+      "clickCountry": "GB",
+      "phoneCountry": "GB",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/30.0 Chrome/143.0.0.0 Mobile Safari/537.36",
+      "network": "Virgin Media Limited",
+      "clickCountry": "GB",
+      "phoneCountry": "GB",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "BE",
+      "phoneCountry": "FR",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "BE",
+      "phoneCountry": "FR",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "NL",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "FR",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "NL",
+      "phoneCountry": "FR",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "BE",
+      "phoneCountry": "FR",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/31.0 Chrome/148.0.0.0 Mobile Safari/537.36",
+      "network": null,
+      "clickCountry": "GB",
+      "phoneCountry": "GB",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/30.0 Chrome/143.0.0.0 Mobile Safari/537.36",
+      "network": "Virgin Media Limited",
+      "clickCountry": "GB",
+      "phoneCountry": "GB",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/27.0.1 Mobile/15E148 Safari/604.1",
+      "network": "Wavenet-AS5413 Wavenet Limited",
+      "clickCountry": "GB",
+      "phoneCountry": "GB",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "NL",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "FR",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "NL",
+      "phoneCountry": "FI",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/157.0.0.0 Safari/537.36",
+      "network": "Virgin Media Limited",
+      "clickCountry": "GB",
+      "phoneCountry": "GB",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (iPhone; CPU iPhone OS 27_0_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/158.0.8127.35 Mobile/15E148 Safari/604.1",
+      "network": "SFR SA",
+      "clickCountry": "FR",
+      "phoneCountry": "FR",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "NL",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/30.0 Chrome/143.0.0.0 Mobile Safari/537.36",
+      "network": "Virgin Media Limited",
+      "clickCountry": "GB",
+      "phoneCountry": "GB",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "NL",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "NL",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.6.1 Mobile/15E148 Safari/604.1",
+      "network": null,
+      "clickCountry": "GB",
+      "phoneCountry": "GB",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "BE",
+      "phoneCountry": "DE",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "FR",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/30.0 Chrome/143.0.0.0 Mobile Safari/537.36",
+      "network": "Virgin Media Limited",
+      "clickCountry": "GB",
+      "phoneCountry": "GB",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/31.0 Chrome/148.0.0.0 Mobile Safari/537.36",
+      "network": null,
+      "clickCountry": "GB",
+      "phoneCountry": "GB",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "NL",
+      "phoneCountry": "FR",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/30.0 Chrome/143.0.0.0 Mobile Safari/537.36",
+      "network": "RCN",
+      "clickCountry": "US",
+      "phoneCountry": "GB",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/31.0 Chrome/148.0.0.0 Mobile Safari/537.36",
+      "network": null,
+      "clickCountry": "GB",
+      "phoneCountry": "GB",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/30.0 Chrome/143.0.0.0 Mobile Safari/537.36",
+      "network": "Bouygues Telecom SA",
+      "clickCountry": "FR",
+      "phoneCountry": "FR",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/30.0 Chrome/143.0.0.0 Mobile Safari/537.36",
+      "network": "Virgin Media Limited",
+      "clickCountry": "GB",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/30.0 Chrome/143.0.0.0 Mobile Safari/537.36",
+      "network": "Bouygues Telecom SA",
+      "clickCountry": "FR",
+      "phoneCountry": "FR",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "NL",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "BE",
+      "phoneCountry": "FR",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/27.0.1 Mobile/15E148 Safari/604.1",
+      "network": null,
+      "clickCountry": "DE",
+      "phoneCountry": "DE",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/27.2 Mobile/15E148 Safari/604.1",
+      "network": "Virgin Media Limited",
+      "clickCountry": "GB",
+      "phoneCountry": "GB",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "NL",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/30.0 Chrome/143.0.0.0 Mobile Safari/537.36",
+      "network": "Vodafone Limited",
+      "clickCountry": "GB",
+      "phoneCountry": "GB",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "FR",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.0.0 Mobile Safari/537.36",
+      "network": "Bouygues Telecom SA",
+      "clickCountry": "FR",
+      "phoneCountry": "FR",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.6 Mobile/15E148 Safari/604.1",
+      "network": "Private Layer INC",
+      "clickCountry": "CH",
+      "phoneCountry": "GB",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (iPhone; CPU iPhone OS 27_2_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/158.0.8127.35 Mobile/15E148 Safari/604.1",
+      "network": null,
+      "clickCountry": "GB",
+      "phoneCountry": "GB",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "NL",
+      "phoneCountry": "FI",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.0.0 Mobile Safari/537.36",
+      "network": "Spirit Communications",
+      "clickCountry": "US",
+      "phoneCountry": "FR",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 13; SM-G981B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Mobile Safari/537.36",
+      "network": "Focus Broadband",
+      "clickCountry": "US",
+      "phoneCountry": "GB",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "FR",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "NL",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "NL",
+      "phoneCountry": "FR",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "FR",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.5 Mobile/15E148 Safari/604.1",
+      "network": "Hydra Communications Ltd",
+      "clickCountry": "GB",
+      "phoneCountry": "GB",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "FR",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0.1 Mobile/15E148 Safari/604.1",
+      "network": "TalkTalk Communications Limited",
+      "clickCountry": "GB",
+      "phoneCountry": "GB",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "BE",
+      "phoneCountry": "FR",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/31.0 Chrome/148.0.0.0 Mobile Safari/537.36",
+      "network": "Virgin Media Limited",
+      "clickCountry": "GB",
+      "phoneCountry": "GB",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "NL",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/157.0.0.0 Mobile Safari/537.36",
+      "network": "Bouygues Telecom SA",
+      "clickCountry": "FR",
+      "phoneCountry": "FR",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "FR",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "NL",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "NL",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; SM-G970F) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.7871.189 Mobile Safari/537.36 OPR/76.2.4027.73374",
+      "network": "Bouygues Telecom SA",
+      "clickCountry": "FR",
+      "phoneCountry": "FR",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Mobile Safari/537.36 OPR/103.0.0.0",
+      "network": "Bouygues Telecom SA",
+      "clickCountry": "FR",
+      "phoneCountry": "FR",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/158.0.0.0 Mobile Safari/537.36",
+      "network": null,
+      "clickCountry": "DE",
+      "phoneCountry": "DE",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "BE",
+      "phoneCountry": "FR",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/27.2 Mobile/15E148 Safari/604.1",
+      "network": null,
+      "clickCountry": "GB",
+      "phoneCountry": "GB",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "NL",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/31.0 Chrome/148.0.0.0 Mobile Safari/537.36",
+      "network": null,
+      "clickCountry": "FR",
+      "phoneCountry": "FR",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "NL",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/30.0 Chrome/143.0.0.0 Mobile Safari/537.36",
+      "network": "Virgin Media Limited",
+      "clickCountry": "GB",
+      "phoneCountry": "GB",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (iPhone; CPU iPhone OS 26_5_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/152.0.7977.64 Mobile/15E148 Safari/604.1",
+      "network": null,
+      "clickCountry": "FR",
+      "phoneCountry": "FR",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "NL",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/31.0 Chrome/148.0.0.0 Mobile Safari/537.36",
+      "network": "Virgin Media Limited",
+      "clickCountry": "GB",
+      "phoneCountry": "GB",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "NL",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "NL",
+      "phoneCountry": "FI",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "FR",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.6 Mobile/15E148 Safari/604.1",
+      "network": null,
+      "clickCountry": "FR",
+      "phoneCountry": "FR",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "NL",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Mobile Safari/537.36",
+      "network": "Bouygues Telecom SA",
+      "clickCountry": "FR",
+      "phoneCountry": "FR",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) FxiOS/160.1 Mobile/15E148 Safari/604.1",
+      "network": null,
+      "clickCountry": "FR",
+      "phoneCountry": "FR",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "NL",
+      "phoneCountry": "FR",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "NL",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "DE",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "NL",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/30.0 Chrome/143.0.0.0 Mobile Safari/537.36",
+      "network": "Bouygues Telecom SA",
+      "clickCountry": "FR",
+      "phoneCountry": "FR",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "NL",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "FR",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "NL",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "DE",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "FR",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "FR",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/157.0.0.0 Mobile Safari/537.36",
+      "network": "Bouygues Telecom SA",
+      "clickCountry": "FR",
+      "phoneCountry": "FR",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 14; SM-S921U) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.7827.55 Mobile Safari/537.36",
+      "network": "Deutsche Telekom AG",
+      "clickCountry": "DE",
+      "phoneCountry": "DE",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "DE",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/30.0 Chrome/143.0.0.0 Mobile Safari/537.36",
+      "network": "Virgin Media Limited",
+      "clickCountry": "GB",
+      "phoneCountry": "GB",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.5 Mobile/15E148 Safari/604.1",
+      "network": null,
+      "clickCountry": "GB",
+      "phoneCountry": "GB",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/31.0 Chrome/148.0.0.0 Mobile Safari/537.36",
+      "network": "British Telecommunications Limited",
+      "clickCountry": "GB",
+      "phoneCountry": "GB",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "NL",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "NL",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "BE",
+      "phoneCountry": "FR",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "NL",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/27.2 Mobile/15E148 Safari/604.1",
+      "network": null,
+      "clickCountry": "GB",
+      "phoneCountry": "GB",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "NL",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "NL",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "BE",
+      "phoneCountry": "FR",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "FR",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.0.0 Mobile Safari/537.36",
+      "network": "Bouygues Telecom SA",
+      "clickCountry": "FR",
+      "phoneCountry": "FR",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "BE",
+      "phoneCountry": "FR",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "FR",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (iPhone; CPU iPhone OS 26_6_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 YaBrowser/26.10.0.1738.10 SA/3 Mobile/15E148 Safari/604.1",
+      "network": "SONDATECH S.A.S.",
+      "clickCountry": "AR",
+      "phoneCountry": "GB",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; SM-G970F) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.7871.189 Mobile Safari/537.36 OPR/76.2.4027.73374",
+      "network": "Bouygues Telecom SA",
+      "clickCountry": "FR",
+      "phoneCountry": "FR",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "NL",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36",
+      "network": "HostHatch, LLC",
+      "clickCountry": "CH",
+      "phoneCountry": "GB",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "BE",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/157.0.0.0 Mobile Safari/537.36",
+      "network": null,
+      "clickCountry": "GB",
+      "phoneCountry": "GB",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; SM-G970F) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.7871.189 Mobile Safari/537.36 OPR/76.2.4027.73374",
+      "network": "Bouygues Telecom SA",
+      "clickCountry": "FR",
+      "phoneCountry": "FR",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.4 Mobile/15E148 Safari/604.1",
+      "network": "MEDITELECOM",
+      "clickCountry": "MA",
+      "phoneCountry": "GB",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Mobile Safari/537.36 OPR/103.0.0.0",
+      "network": "Virgin Media Limited",
+      "clickCountry": "GB",
+      "phoneCountry": "GB",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "NL",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "NL",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "antispam/1.0.0",
+      "network": "Lightspeed Networks Ltd",
+      "clickCountry": "GB",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "BE",
+      "phoneCountry": "FR",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "NL",
+      "phoneCountry": "FR",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "BE",
+      "phoneCountry": "FR",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/30.0 Chrome/143.0.0.0 Mobile Safari/537.36",
+      "network": "Vodafone Limited",
+      "clickCountry": "GB",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Mobile Safari/537.36",
+      "network": "Bouygues Telecom SA",
+      "clickCountry": "FR",
+      "phoneCountry": "FR",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/30.0 Chrome/143.0.0.0 Mobile Safari/537.36",
+      "network": "Virgin Media Limited",
+      "clickCountry": "GB",
+      "phoneCountry": "GB",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/27.2 Mobile/15E148 Safari/604.1",
+      "network": null,
+      "clickCountry": "FR",
+      "phoneCountry": "FR",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_3_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 THDConsumer/7.46.1.578 (iPhone;iOS 18.3.2)DID:",
+      "network": "EstNOC-GLOBAL Realcloud OU",
+      "clickCountry": "SI",
+      "phoneCountry": "GB",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "NL",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "FR",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.4 Mobile/15E148 Safari/604.1",
+      "network": "Leaseweb USA, Inc.",
+      "clickCountry": "US",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/30.0 Chrome/143.0.0.0 Mobile Safari/537.36",
+      "network": "Virgin Media Limited",
+      "clickCountry": "GB",
+      "phoneCountry": "GB",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "NL",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.6 Mobile/15E148 Safari/604.1",
+      "network": "Hutchison 3G UK Limited",
+      "clickCountry": "GB",
+      "phoneCountry": "GB",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (iPad; CPU OS 27_2_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/158.0.8127.35 Mobile/15E148 Safari/604.1",
+      "network": "CONVERGENCE (GROUP NETWORKS) LIMITED",
+      "clickCountry": "GB",
+      "phoneCountry": "GB",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "NL",
+      "phoneCountry": "DE",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "BE",
+      "phoneCountry": "FR",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.0.0 Mobile Safari/537.36",
+      "network": "SFR SA",
+      "clickCountry": "FR",
+      "phoneCountry": "FR",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/157.0.0.0 Mobile Safari/537.36",
+      "network": "SFR SA",
+      "clickCountry": "FR",
+      "phoneCountry": "FR",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "FR",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_3_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 THDConsumer/7.46.1.578 (iPhone;iOS 18.3.2)DID:",
+      "network": "Datacamp Limited",
+      "clickCountry": "HK",
+      "phoneCountry": "GB",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "NL",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/27.2 Mobile/15E148 Safari/604.1",
+      "network": null,
+      "clickCountry": "GB",
+      "phoneCountry": "GB",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.0.0 Mobile Safari/537.36",
+      "network": "Bouygues Telecom SA",
+      "clickCountry": "FR",
+      "phoneCountry": "FR",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.5 Mobile/15E148 Safari/604.1",
+      "network": "vodafone_uk_asn Vodafone Limited",
+      "clickCountry": "GB",
+      "phoneCountry": "GB",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "NL",
+      "phoneCountry": "DE",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "BE",
+      "phoneCountry": "FR",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "NL",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (iPod; U; CPU iPhone OS 3_0 like Mac OS X; wo-SN) AppleWebKit/533.3.2 (KHTML, like Gecko) Version/3.0.5 Mobile/8B113 Safari/6533.3.2",
+      "network": "Glesys AB",
+      "clickCountry": "NO",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "BE",
+      "phoneCountry": "FR",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "DE",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "FR",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "NL",
+      "phoneCountry": "FR",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/30.0 Chrome/143.0.0.0 Mobile Safari/537.36",
+      "network": "Bouygues Telecom SA",
+      "clickCountry": "FR",
+      "phoneCountry": "FR",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/30.0 Chrome/143.0.0.0 Mobile Safari/537.36",
+      "network": "Virgin Media Limited",
+      "clickCountry": "GB",
+      "phoneCountry": "GB",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "FR",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Mobile Safari/537.36",
+      "network": "British Telecommunications Limited",
+      "clickCountry": "GB",
+      "phoneCountry": "GB",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/30.0 Chrome/143.0.0.0 Mobile Safari/537.36",
+      "network": "Virgin Media Limited",
+      "clickCountry": "GB",
+      "phoneCountry": "GB",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "BE",
+      "phoneCountry": "DE",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "FR",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "BE",
+      "phoneCountry": "FR",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.6.1 Mobile/15E148 Safari/604.1",
+      "network": null,
+      "clickCountry": "DE",
+      "phoneCountry": "DE",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.4 Mobile/15E148 Safari/604.1",
+      "network": "AltusHost B.V.",
+      "clickCountry": "SE",
+      "phoneCountry": "GB",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/30.0 Chrome/143.0.0.0 Mobile Safari/537.36",
+      "network": "Bouygues Telecom SA",
+      "clickCountry": "FR",
+      "phoneCountry": "FR",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36",
+      "network": "Wave Broadband",
+      "clickCountry": "US",
+      "phoneCountry": "DE",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/31.0 Chrome/148.0.0.0 Mobile Safari/537.36",
+      "network": null,
+      "clickCountry": "FR",
+      "phoneCountry": "FR",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.6 Mobile/15E148 Safari/604.1",
+      "network": null,
+      "clickCountry": "US",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "NL",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "DE",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/116.0",
+      "network": "Google LLC",
+      "clickCountry": "FI",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/157.0.0.0 Mobile Safari/537.36",
+      "network": null,
+      "clickCountry": "GB",
+      "phoneCountry": "GB",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Mobile Safari/537.36 OPR/103.0.0.0",
+      "network": "Bouygues Telecom SA",
+      "clickCountry": "FR",
+      "phoneCountry": "FR",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.5 Mobile/15E148 Safari/604.1",
+      "network": "British Telecommunications Limited",
+      "clickCountry": "GB",
+      "phoneCountry": "GB",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "BE",
+      "phoneCountry": "FR",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.6.1 Mobile/15E148 Safari/604.1",
+      "network": null,
+      "clickCountry": "GB",
+      "phoneCountry": "GB",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Mobile Safari/537.36",
+      "network": "1&1 Versatel GmbH",
+      "clickCountry": "DE",
+      "phoneCountry": "DE",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/158.0.0.0 Mobile Safari/537.36",
+      "network": null,
+      "clickCountry": "GB",
+      "phoneCountry": "GB",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/157.0.0.0 Mobile Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "GB",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Mobile Safari/537.36 OPR/103.0.0.0",
+      "network": "Vodafone Limited",
+      "clickCountry": "GB",
+      "phoneCountry": "GB",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Mobile Safari/537.36",
+      "network": "Bouygues Telecom SA",
+      "clickCountry": "FR",
+      "phoneCountry": "FR",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/157.0.0.0 Mobile Safari/537.36",
+      "network": "Bouygues Telecom SA",
+      "clickCountry": "FR",
+      "phoneCountry": "FR",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "BE",
+      "phoneCountry": "FR",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/30.0 Chrome/143.0.0.0 Mobile Safari/537.36",
+      "network": "Virgin Media Limited",
+      "clickCountry": "GB",
+      "phoneCountry": "GB",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Mobile/15E148 Safari/604.1",
+      "network": "WebSupport s.r.o.",
+      "clickCountry": "SK",
+      "phoneCountry": "GB",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/157.0.0.0 Mobile Safari/537.36",
+      "network": "vodafone_uk_asn Vodafone Limited",
+      "clickCountry": "GB",
+      "phoneCountry": "GB",
+      "label": "real"
+    },
+    {
+      "ua": "GoogleMessages/20.2 facebookexternalhit/1.1 Facebot Twitterbot/1.0",
+      "network": null,
+      "clickCountry": "FR",
+      "phoneCountry": "FR",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/27.2 Mobile/15E148 Safari/604.1",
+      "network": null,
+      "clickCountry": "GB",
+      "phoneCountry": "GB",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.7.5 Mobile/15E148 Safari/604.1",
+      "network": null,
+      "clickCountry": "GB",
+      "phoneCountry": "GB",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:128.0) Gecko/20100101 Firefox/128.0",
+      "network": "Amazon.com, Inc.",
+      "clickCountry": "US",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "BE",
+      "phoneCountry": "FR",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Mobile Safari/537.36",
+      "network": "Bouygues Telecom SA",
+      "clickCountry": "FR",
+      "phoneCountry": "FR",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Mobile Safari/537.36",
+      "network": "Cablevision Systems Corp.",
+      "clickCountry": "US",
+      "phoneCountry": "GB",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "NL",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/27.2 Mobile/15E148 Safari/604.1",
+      "network": null,
+      "clickCountry": "FR",
+      "phoneCountry": "FR",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "NL",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/30.0 Chrome/143.0.0.0 Mobile Safari/537.36",
+      "network": "Virgin Media Limited",
+      "clickCountry": "GB",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "BE",
+      "phoneCountry": "DE",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "FR",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/157.0.0.0 Mobile Safari/537.36",
+      "network": "Bouygues Telecom SA",
+      "clickCountry": "FR",
+      "phoneCountry": "FR",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "DE",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "DE",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "NL",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/158.0.0.0 Mobile Safari/537.36",
+      "network": null,
+      "clickCountry": "FR",
+      "phoneCountry": "FR",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "FR",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "BE",
+      "phoneCountry": "DE",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "BE",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36",
+      "network": "PT. SUITEN INOVASI SUKSES",
+      "clickCountry": "ID",
+      "phoneCountry": "GB",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "DE",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "FR",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "NL",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/158.0.0.0 Mobile Safari/537.36",
+      "network": "Virgin Media Limited",
+      "clickCountry": "GB",
+      "phoneCountry": "GB",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "FR",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/30.0 Chrome/143.0.0.0 Mobile Safari/537.36",
+      "network": "Virgin Media Limited",
+      "clickCountry": "GB",
+      "phoneCountry": "GB",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/30.0 Chrome/143.0.0.0 Mobile Safari/537.36",
+      "network": "Virgin Media Limited",
+      "clickCountry": "GB",
+      "phoneCountry": "GB",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (iPhone; CPU iPhone OS 27_2_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/157.0.8103.37 Mobile/15E148 Safari/604.1",
+      "network": null,
+      "clickCountry": "FR",
+      "phoneCountry": "FR",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "NL",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "NL",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "FR",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; SM-G970F) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.7871.189 Mobile Safari/537.36 OPR/76.2.4027.73374",
+      "network": "T-Mobile USA, Inc.",
+      "clickCountry": "US",
+      "phoneCountry": "DE",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "NL",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Mobile Safari/537.36",
+      "network": "Bouygues Telecom SA",
+      "clickCountry": "FR",
+      "phoneCountry": "FR",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/158.0.0.0 Mobile Safari/537.36",
+      "network": null,
+      "clickCountry": "FR",
+      "phoneCountry": "FR",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "FR",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "NL",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "DE",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "NL",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; SM-G970F) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.7871.189 Mobile Safari/537.36 OPR/76.2.4027.73374",
+      "network": "SFR SA",
+      "clickCountry": "FR",
+      "phoneCountry": "FR",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "NL",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/157.0.0.0 Mobile Safari/537.36",
+      "network": null,
+      "clickCountry": "FR",
+      "phoneCountry": "FR",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/31.0 Chrome/148.0.0.0 Mobile Safari/537.36",
+      "network": "Virgin Media Limited",
+      "clickCountry": "GB",
+      "phoneCountry": "GB",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "FR",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "BE",
+      "phoneCountry": "FR",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "NL",
+      "phoneCountry": "DE",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/30.0 Chrome/143.0.0.0 Mobile Safari/537.36",
+      "network": "Bouygues Telecom SA",
+      "clickCountry": "FR",
+      "phoneCountry": "FR",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_3_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 THDConsumer/7.46.1.578 (iPhone;iOS 18.3.2)DID:",
+      "network": "Trabia SRL",
+      "clickCountry": "MD",
+      "phoneCountry": "GB",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.4 Mobile/15E148 Safari/604.1",
+      "network": "tzulo, inc.",
+      "clickCountry": "US",
+      "phoneCountry": "GB",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Mobile Safari/537.36",
+      "network": "Bouygues Telecom SA",
+      "clickCountry": "FR",
+      "phoneCountry": "FR",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "BE",
+      "phoneCountry": "FR",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "NL",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.0.0 Mobile Safari/537.36",
+      "network": "Bouygues Telecom SA",
+      "clickCountry": "FR",
+      "phoneCountry": "FR",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "FR",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.0.0 Mobile Safari/537.36",
+      "network": "1&1 Versatel GmbH",
+      "clickCountry": "DE",
+      "phoneCountry": "DE",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/30.0 Chrome/143.0.0.0 Mobile Safari/537.36",
+      "network": "1&1 Versatel GmbH",
+      "clickCountry": "DE",
+      "phoneCountry": "DE",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "NL",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36",
+      "network": "1651884 Ontario Inc.",
+      "clickCountry": "CA",
+      "phoneCountry": "GB",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "NL",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "NL",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Mobile Safari/537.36",
+      "network": "Bouygues Telecom SA",
+      "clickCountry": "FR",
+      "phoneCountry": "FR",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "FR",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "NL",
+      "phoneCountry": "FR",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.0.0 Mobile Safari/537.36",
+      "network": "1&1 Versatel GmbH",
+      "clickCountry": "DE",
+      "phoneCountry": "DE",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "NL",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "NL",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "NL",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "NL",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/27.2 Mobile/15E148 Safari/604.1",
+      "network": "TalkTalk Communications Limited",
+      "clickCountry": "GB",
+      "phoneCountry": "GB",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "BE",
+      "phoneCountry": "FR",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "NL",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "NL",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.4 Mobile/15E148 Safari/604.1",
+      "network": "DigitalOcean, LLC",
+      "clickCountry": "CA",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 14; SM-S921B) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/141.0.0.0 Mobile Safari/537.36 GSA/16.40.39.29.arm64",
+      "network": "STRATA NETWORKS",
+      "clickCountry": "US",
+      "phoneCountry": "FR",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_3_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 THDConsumer/7.46.1.578 (iPhone;iOS 18.3.2) DID:",
+      "network": "RADIOGRAFICA COSTARRICENSE",
+      "clickCountry": "CR",
+      "phoneCountry": "GB",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/31.0 Chrome/148.0.0.0 Mobile Safari/537.36",
+      "network": "British Telecommunications Limited",
+      "clickCountry": "GB",
+      "phoneCountry": "GB",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/31.0 Chrome/148.0.0.0 Mobile Safari/537.36",
+      "network": null,
+      "clickCountry": "FR",
+      "phoneCountry": "FR",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/30.0 Chrome/143.0.0.0 Mobile Safari/537.36",
+      "network": "Virgin Media Limited",
+      "clickCountry": "GB",
+      "phoneCountry": "GB",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.0.0 Mobile Safari/537.36",
+      "network": "Bouygues Telecom SA",
+      "clickCountry": "FR",
+      "phoneCountry": "FR",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "FR",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "NL",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "BE",
+      "phoneCountry": "FR",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; SM-G970F) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.7871.189 Mobile Safari/537.36 OPR/76.2.4027.73374",
+      "network": "Bouygues Telecom SA",
+      "clickCountry": "FR",
+      "phoneCountry": "FR",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.0.0 Mobile Safari/537.36",
+      "network": "Cablevision Systems Corp.",
+      "clickCountry": "US",
+      "phoneCountry": "FR",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "NL",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "BE",
+      "phoneCountry": "FR",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Mobile Safari/537.36",
+      "network": "Bouygues Telecom SA",
+      "clickCountry": "FR",
+      "phoneCountry": "FR",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (Linux; Android 10; K) Chrome/156.0.0.0 Mobile Safari/537.36",
+      "network": "Bouygues Telecom SA",
+      "clickCountry": "FR",
+      "phoneCountry": "FR",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "BE",
+      "phoneCountry": "FR",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/27.0.1 Mobile/15E148 Safari/604.1",
+      "network": "Telefonica UK Limited",
+      "clickCountry": "GB",
+      "phoneCountry": "GB",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "NL",
+      "phoneCountry": "FR",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "NL",
+      "phoneCountry": "FR",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "FR",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.7.9 Mobile/15E148 Safari/604.1",
+      "network": null,
+      "clickCountry": "GB",
+      "phoneCountry": "GB",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36",
+      "network": "Glide Glide Student & Residential Limited",
+      "clickCountry": "GB",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "NL",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "NL",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "NL",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/30.0 Chrome/143.0.0.0 Mobile Safari/537.36",
+      "network": "Vodafone Limited",
+      "clickCountry": "GB",
+      "phoneCountry": "GB",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/27.2 Mobile/15E148 Safari/604.1",
+      "network": null,
+      "clickCountry": "GB",
+      "phoneCountry": "GB",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_3_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 THDConsumer/7.46.1.578 (iPhone;iOS 18.3.2) DID:",
+      "network": "Leaseweb USA, Inc.",
+      "clickCountry": "US",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "FR",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "NL",
+      "phoneCountry": "DE",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "FR",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "BE",
+      "phoneCountry": "FR",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "FR",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/30.0 Chrome/143.0.0.0 Mobile Safari/537.36",
+      "network": "British Telecommunications Limited",
+      "clickCountry": "GB",
+      "phoneCountry": "GB",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/158.0.0.0 Mobile Safari/537.36",
+      "network": null,
+      "clickCountry": "GB",
+      "phoneCountry": "GB",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "NL",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.0.0 Mobile Safari/537.36",
+      "network": "T-Mobile USA, Inc.",
+      "clickCountry": "US",
+      "phoneCountry": "GB",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.5 Mobile/15E148 Safari/604.1",
+      "network": "TalkTalk Communications Limited",
+      "clickCountry": "GB",
+      "phoneCountry": "GB",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "NL",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "NL",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/157.0.0.0 Mobile Safari/537.36",
+      "network": "Virgin Media Limited",
+      "clickCountry": "GB",
+      "phoneCountry": "GB",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.7827.55 Mobile Safari/537.36",
+      "network": "Vodafone GmbH",
+      "clickCountry": "DE",
+      "phoneCountry": "DE",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "NL",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; SM-G892A Build/NRD90M; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/60.0.3112.107 Mobile Safari/537.36",
+      "network": "British Telecommunications Limited",
+      "clickCountry": "GB",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Mobile Safari/537.36 OPR/103.0.0.0",
+      "network": "Bouygues Telecom SA",
+      "clickCountry": "FR",
+      "phoneCountry": "FR",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "BE",
+      "phoneCountry": "FR",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 15; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Mobile Safari/537.36",
+      "network": "Paul Bunyan Communications",
+      "clickCountry": "US",
+      "phoneCountry": "GB",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "DE",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.0.0 Mobile Safari/537.36",
+      "network": "Bouygues Telecom SA",
+      "clickCountry": "FR",
+      "phoneCountry": "FR",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "NL",
+      "phoneCountry": "DE",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/31.0 Chrome/148.0.0.0 Mobile Safari/537.36",
+      "network": null,
+      "clickCountry": "FR",
+      "phoneCountry": "FR",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "DE",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "DE",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "NL",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/30.0 Chrome/143.0.0.0 Mobile Safari/537.36",
+      "network": "Virgin Media Limited",
+      "clickCountry": "GB",
+      "phoneCountry": "GB",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "DE",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "NL",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Mobile Safari/537.36",
+      "network": "Bouygues Telecom SA",
+      "clickCountry": "FR",
+      "phoneCountry": "FR",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "FR",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "FR",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "NL",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "NL",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.7.5 Mobile/15E148 Safari/604.1",
+      "network": "British Telecommunications Limited",
+      "clickCountry": "GB",
+      "phoneCountry": "GB",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.5 Mobile/15E148 Safari/604.1",
+      "network": "SuperHosting.BG Ltd.",
+      "clickCountry": "BG",
+      "phoneCountry": "GB",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "NL",
+      "phoneCountry": "DE",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.0.0 Mobile Safari/537.36",
+      "network": "Bouygues Telecom SA",
+      "clickCountry": "FR",
+      "phoneCountry": "FR",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/31.0 Chrome/148.0.0.0 Mobile Safari/537.36",
+      "network": "Bouygues Telecom SA",
+      "clickCountry": "FR",
+      "phoneCountry": "FR",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.0.0 Mobile Safari/537.36",
+      "network": "1&1 Versatel GmbH",
+      "clickCountry": "DE",
+      "phoneCountry": "DE",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "FR",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "NL",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_3_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 THDConsumer/7.46.1.578 (iPhone;iOS 18.3.2) DID:",
+      "network": "ROMARG SRL",
+      "clickCountry": "RO",
+      "phoneCountry": "GB",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/27.0.1 Mobile/15E148 Safari/604.1",
+      "network": "Virgin Media Limited",
+      "clickCountry": "GB",
+      "phoneCountry": "GB",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "NL",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Mobile Safari/537.36",
+      "network": "Bouygues Telecom SA",
+      "clickCountry": "FR",
+      "phoneCountry": "FR",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/27.2 Mobile/15E148 Safari/604.1",
+      "network": null,
+      "clickCountry": "GB",
+      "phoneCountry": "GB",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "BE",
+      "phoneCountry": "FR",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/31.0 Chrome/148.0.0.0 Mobile Safari/537.36",
+      "network": "Virgin Media Limited",
+      "clickCountry": "GB",
+      "phoneCountry": "GB",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/31.0 Chrome/148.0.0.0 Mobile Safari/537.36",
+      "network": "Virgin Media Limited",
+      "clickCountry": "GB",
+      "phoneCountry": "GB",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/158.0.0.0 Mobile Safari/537.36",
+      "network": null,
+      "clickCountry": "FR",
+      "phoneCountry": "FR",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 15; Redmi Note 13 Build/AQ3A.240829.003) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.7049.79 Mobile Safari/537.36 XiaoMi/MiuiBrowser/14.67.2-gn",
+      "network": "Bouygues Telecom SA",
+      "clickCountry": "FR",
+      "phoneCountry": "FR",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_3_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 THDConsumer/7.46.1.578 (iPhone;iOS 18.3.2) DID:",
+      "network": "KDDI CORPORATION",
+      "clickCountry": "JP",
+      "phoneCountry": "GB",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36",
+      "network": "1651884 Ontario Inc.",
+      "clickCountry": "CA",
+      "phoneCountry": "GB",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Mobile Safari/537.36",
+      "network": "BHARTI Airtel Ltd.",
+      "clickCountry": "IN",
+      "phoneCountry": "GB",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 15; SM-A166U Build/AP3A.240905.015.A2; ) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/140.0.7339.119 Mobile Safari/537.36 MetaIAB",
+      "network": "Sonic Telecom LLC",
+      "clickCountry": "US",
+      "phoneCountry": "FR",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "NL",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "DE",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "DE",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/157.0.0.0 Mobile Safari/537.36",
+      "network": "1&1 Versatel GmbH",
+      "clickCountry": "DE",
+      "phoneCountry": "DE",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "NL",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "FR",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "NL",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36",
+      "network": "Hutchison 3G UK Limited",
+      "clickCountry": "GB",
+      "phoneCountry": "GB",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "BE",
+      "phoneCountry": "FR",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "FR",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "DE",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; SM-G970F) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.7871.189 Mobile Safari/537.36 OPR/76.2.4027.73374",
+      "network": "Golden West Telecommunications Coop., Inc.",
+      "clickCountry": "US",
+      "phoneCountry": "GB",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "NL",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.4 Mobile/15E148 Safari/604.1",
+      "network": "Clouvider Clouvider Limited",
+      "clickCountry": "NL",
+      "phoneCountry": "GB",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.6.1 Mobile/15E148 Safari/604.1",
+      "network": null,
+      "clickCountry": "GB",
+      "phoneCountry": "GB",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/30.0 Chrome/143.0.0.0 Mobile Safari/537.36",
+      "network": "Virgin Media Limited",
+      "clickCountry": "GB",
+      "phoneCountry": "GB",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "NL",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/27.2 Mobile/15E148 Safari/604.1",
+      "network": "Free SAS",
+      "clickCountry": "FR",
+      "phoneCountry": "FR",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "BE",
+      "phoneCountry": "DE",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "NL",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "NL",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 7.0; SM-G950U Build/NRD90M) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.7827.55 Mobile Safari/537.36",
+      "network": "Vodafone GmbH",
+      "clickCountry": "DE",
+      "phoneCountry": "DE",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "NL",
+      "phoneCountry": "DE",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "FI",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "FR",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/27.2 Mobile/15E148 Safari/604.1",
+      "network": null,
+      "clickCountry": "GB",
+      "phoneCountry": "GB",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "DE",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "NL",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "NL",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; SM-G970F) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.7871.189 Mobile Safari/537.36 OPR/76.2.4027.73374",
+      "network": "Paul Bunyan Communications",
+      "clickCountry": "US",
+      "phoneCountry": "FR",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "DE",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "FR",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "BE",
+      "phoneCountry": "DE",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "BE",
+      "phoneCountry": "DE",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/31.0 Chrome/148.0.0.0 Mobile Safari/537.36",
+      "network": null,
+      "clickCountry": "GB",
+      "phoneCountry": "GB",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "NL",
+      "phoneCountry": "FR",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (iPhone; CPU iPhone OS 27_0_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/158.0.8127.35 Mobile/15E148 Safari/604.1",
+      "network": "SFR SA",
+      "clickCountry": "FR",
+      "phoneCountry": "FR",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Mobile Safari/537.36 OPR/103.0.0.0",
+      "network": "Bouygues Telecom SA",
+      "clickCountry": "FR",
+      "phoneCountry": "FR",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "NL",
+      "phoneCountry": "FI",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 14; SM-A528B Build/UP1A.231005.007; ) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/140.0.7339.119 Mobile Safari/537.36 MetaIAB",
+      "network": "Bouygues Telecom SA",
+      "clickCountry": "FR",
+      "phoneCountry": "FR",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/30.0 Chrome/143.0.0.0 Mobile Safari/537.36",
+      "network": "Virgin Media Limited",
+      "clickCountry": "GB",
+      "phoneCountry": "GB",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "BE",
+      "phoneCountry": "DE",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "FR",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Mobile Safari/537.36",
+      "network": "Bouygues Telecom SA",
+      "clickCountry": "FR",
+      "phoneCountry": "FR",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/158.0.0.0 Mobile Safari/537.36",
+      "network": "Plusnet British Telecommunications Limited",
+      "clickCountry": "GB",
+      "phoneCountry": "GB",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "NL",
+      "phoneCountry": "DE",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "NL",
+      "phoneCountry": "FR",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/30.0 Chrome/143.0.0.0 Mobile Safari/537.36",
+      "network": "KCOM Group Limited",
+      "clickCountry": "GB",
+      "phoneCountry": "GB",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "DE",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "NL",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/158.0.0.0 Mobile Safari/537.36",
+      "network": null,
+      "clickCountry": "FR",
+      "phoneCountry": "FR",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/158.0.0.0 Mobile Safari/537.36",
+      "network": null,
+      "clickCountry": "FR",
+      "phoneCountry": "FR",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Mobile Safari/537.36 OPR/103.0.0.0",
+      "network": "Bouygues Telecom SA",
+      "clickCountry": "FR",
+      "phoneCountry": "FR",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.5 Mobile/15E148 Safari/604.1",
+      "network": "Datalogistics UAB Delska Lithuania",
+      "clickCountry": "LT",
+      "phoneCountry": "GB",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "DE",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "FI",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.7.5 Mobile/15E148 Safari/604.1",
+      "network": "Virgin Media Limited",
+      "clickCountry": "GB",
+      "phoneCountry": "GB",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 11; Pixel 4a (5G)) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.7827.55 Mobile Safari/537.36",
+      "network": "Deutsche Telekom AG",
+      "clickCountry": "DE",
+      "phoneCountry": "DE",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/31.0 Chrome/148.0.0.0 Mobile Safari/537.36",
+      "network": "Free SAS",
+      "clickCountry": "FR",
+      "phoneCountry": "FR",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "BE",
+      "phoneCountry": "FR",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "NL",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "NL",
+      "phoneCountry": "FI",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.0.0 Mobile Safari/537.36",
+      "network": "Bouygues Telecom SA",
+      "clickCountry": "FR",
+      "phoneCountry": "FR",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/27.0.1 Mobile/15E148 Safari/604.1",
+      "network": "Wavenet-AS5413 Wavenet Limited",
+      "clickCountry": "GB",
+      "phoneCountry": "GB",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "NL",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36",
+      "network": "Nexeon Technologies, Inc.",
+      "clickCountry": "US",
+      "phoneCountry": "GB",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "NL",
+      "phoneCountry": "FR",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "NL",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "BE",
+      "phoneCountry": "DE",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "NL",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "BE",
+      "phoneCountry": "FR",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "BE",
+      "phoneCountry": "FR",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/157.0.0.0 Mobile Safari/537.36",
+      "network": "Bouygues Telecom SA",
+      "clickCountry": "FR",
+      "phoneCountry": "FR",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Mobile Safari/537.36",
+      "network": "Bouygues Telecom SA",
+      "clickCountry": "FR",
+      "phoneCountry": "FR",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "NL",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "NL",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "NL",
+      "phoneCountry": "FR",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "NL",
+      "phoneCountry": "FR",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "FR",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "NL",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "FR",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/27.2 Mobile/15E148 Safari/604.1",
+      "network": null,
+      "clickCountry": "GB",
+      "phoneCountry": "GB",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "NL",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Mobile Safari/537.36",
+      "network": "REV",
+      "clickCountry": "US",
+      "phoneCountry": "FR",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/30.0 Chrome/143.0.0.0 Mobile Safari/537.36",
+      "network": "British Telecommunications Limited",
+      "clickCountry": "GB",
+      "phoneCountry": "GB",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/27.2 Mobile/15E148 Safari/604.1",
+      "network": "Virgin Media Limited",
+      "clickCountry": "GB",
+      "phoneCountry": "GB",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "NL",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "NL",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.0.0 Mobile Safari/537.36",
+      "network": "Webpass Inc.",
+      "clickCountry": "US",
+      "phoneCountry": "GB",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_1) AppleWebKit/601.2.4 (KHTML, like Gecko) Version/9.0.1 Safari/601.2.4 facebookexternalhit/1.1 Facebot Twitterbot/1.0",
+      "network": null,
+      "clickCountry": "GB",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Mobile Safari/537.36 OPR/103.0.0.0",
+      "network": "Bouygues Telecom SA",
+      "clickCountry": "FR",
+      "phoneCountry": "FR",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "FR",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Mobile Safari/537.36",
+      "network": "Verizon Business",
+      "clickCountry": "US",
+      "phoneCountry": "GB",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "FR",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/27.2 Mobile/15E148 Safari/604.1",
+      "network": null,
+      "clickCountry": "GB",
+      "phoneCountry": "GB",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/30.0 Chrome/143.0.0.0 Mobile Safari/537.36",
+      "network": "British Telecommunications Limited",
+      "clickCountry": "GB",
+      "phoneCountry": "GB",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "FR",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "NL",
+      "phoneCountry": "DE",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Mobile Safari/537.36",
+      "network": "OVH SAS",
+      "clickCountry": "GB",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "NL",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/157.0.0.0 Mobile Safari/537.36",
+      "network": "Bouygues Telecom SA",
+      "clickCountry": "FR",
+      "phoneCountry": "FR",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "FR",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Mobile Safari/537.36",
+      "network": "Bouygues Telecom SA",
+      "clickCountry": "FR",
+      "phoneCountry": "FR",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.5 Mobile/15E148 Safari/604.1",
+      "network": "M247 Europe SRL",
+      "clickCountry": "RS",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "FR",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "FR",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "NL",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/30.0 Chrome/143.0.0.0 Mobile Safari/537.36",
+      "network": "Virgin Media Limited",
+      "clickCountry": "GB",
+      "phoneCountry": "GB",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/31.0 Chrome/148.0.0.0 Mobile Safari/537.36",
+      "network": "Vodafone Limited",
+      "clickCountry": "GB",
+      "phoneCountry": "GB",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "NL",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.6.1 Mobile/15E148 Safari/604.1",
+      "network": null,
+      "clickCountry": "GB",
+      "phoneCountry": "GB",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/157.0.0.0 Mobile Safari/537.36",
+      "network": "SFR SA",
+      "clickCountry": "FR",
+      "phoneCountry": "FR",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "BE",
+      "phoneCountry": "FR",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Mobile Safari/537.36",
+      "network": "Bouygues Telecom SA",
+      "clickCountry": "FR",
+      "phoneCountry": "FR",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "NL",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Mobile Safari/537.36",
+      "network": "Bouygues Telecom SA",
+      "clickCountry": "FR",
+      "phoneCountry": "FR",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "BE",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.4 Mobile/15E148 Safari/604.1",
+      "network": "SONDATECH S.A.S.",
+      "clickCountry": "AR",
+      "phoneCountry": "GB",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/157.0.0.0 Mobile Safari/537.36",
+      "network": null,
+      "clickCountry": "FR",
+      "phoneCountry": "FR",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/158.0.0.0 Mobile Safari/537.36",
+      "network": null,
+      "clickCountry": "GB",
+      "phoneCountry": "GB",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.0.0 Mobile Safari/537.36",
+      "network": "Bouygues Telecom SA",
+      "clickCountry": "FR",
+      "phoneCountry": "FR",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36",
+      "network": "LonConnect Ltd",
+      "clickCountry": "GB",
+      "phoneCountry": "GB",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.5 Mobile/15E148 Safari/604.1",
+      "network": "TalkTalk Communications Limited",
+      "clickCountry": "GB",
+      "phoneCountry": "GB",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "NL",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_3_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 THDConsumer/7.46.1.578 (iPhone;iOS 18.3.2)DID:",
+      "network": "ROMARG SRL",
+      "clickCountry": "RO",
+      "phoneCountry": "GB",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.6.1 Mobile/15E148 Safari/604.1",
+      "network": null,
+      "clickCountry": "FR",
+      "phoneCountry": "FR",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/158.0.0.0 Mobile Safari/537.36",
+      "network": "Node4 Limited",
+      "clickCountry": "GB",
+      "phoneCountry": "GB",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "NL",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "NL",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/27.2 Mobile/15E148 Safari/604.1",
+      "network": "Apple Inc.",
+      "clickCountry": "GB",
+      "phoneCountry": "GB",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "FR",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "FR",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36",
+      "network": "Virgin Media Limited",
+      "clickCountry": "GB",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "FR",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Mobile Safari/537.36",
+      "network": "Bouygues Telecom SA",
+      "clickCountry": "FR",
+      "phoneCountry": "FR",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/27.0.1 Mobile/15E148 Safari/604.1",
+      "network": "Virgin Media Limited",
+      "clickCountry": "GB",
+      "phoneCountry": "GB",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 YaBrowser/26.10.0.1738.10 SA/3 Mobile/15E148 Safari/604.1",
+      "network": "Telecom Argentina S.A.",
+      "clickCountry": "AR",
+      "phoneCountry": "GB",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/31.0 Chrome/148.0.0.0 Mobile Safari/537.36",
+      "network": "Virgin Media Limited",
+      "clickCountry": "GB",
+      "phoneCountry": "GB",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Mobile Safari/537.36",
+      "network": "Bouygues Telecom SA",
+      "clickCountry": "FR",
+      "phoneCountry": "FR",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.0.0 Mobile Safari/537.36",
+      "network": null,
+      "clickCountry": "FR",
+      "phoneCountry": "FR",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Mobile Safari/537.36",
+      "network": "Zayo Bandwidth",
+      "clickCountry": "US",
+      "phoneCountry": "DE",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_3_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 THDConsumer/7.46.1.578 (iPhone;iOS 18.3.2) DID:",
+      "network": "ALMOUROLTEC SERVICOS DE INFORMATICA E INTERNET LDA",
+      "clickCountry": "PT",
+      "phoneCountry": "GB",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "FR",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "NL",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/157.0.0.0 Mobile Safari/537.36",
+      "network": "Verizon Business",
+      "clickCountry": "US",
+      "phoneCountry": "FR",
+      "label": "bot"
+    },
+    {
+      "ua": "",
+      "network": "Amazon.com, Inc.",
+      "clickCountry": "IE",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Mobile Safari/537.36",
+      "network": null,
+      "clickCountry": "FR",
+      "phoneCountry": "FR",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/30.0 Chrome/143.0.0.0 Mobile Safari/537.36",
+      "network": "KCOM Group Limited",
+      "clickCountry": "GB",
+      "phoneCountry": "GB",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "NL",
+      "phoneCountry": "FR",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.0.0 Mobile Safari/537.36",
+      "network": "Bouygues Telecom SA",
+      "clickCountry": "FR",
+      "phoneCountry": "FR",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/157.0.0.0 Mobile Safari/537.36",
+      "network": "Verizon Business",
+      "clickCountry": "US",
+      "phoneCountry": "FR",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; arm_64; Android 16; SM-S938B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.7871.40 YaBrowser/26.8.7.40.00 Mobile Safari/537.36",
+      "network": "TalkTalk Communications Limited",
+      "clickCountry": "GB",
+      "phoneCountry": "GB",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/31.0 Chrome/148.0.0.0 Mobile Safari/537.36",
+      "network": "Virgin Media Limited",
+      "clickCountry": "GB",
+      "phoneCountry": "GB",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "BE",
+      "phoneCountry": "FR",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "FR",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_3_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 THDConsumer/7.46.1.578 (iPhone;iOS 18.3.2) DID:",
+      "network": "British Telecommunications Limited",
+      "clickCountry": "GB",
+      "phoneCountry": "GB",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/157.0.0.0 Mobile Safari/537.36",
+      "network": "Bouygues Telecom SA",
+      "clickCountry": "FR",
+      "phoneCountry": "FR",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "NL",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "NL",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 8.0.0; Nexus 5X Build/OPR4.170623.006) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.7827.55 Mobile Safari/537.36",
+      "network": "Telefonica Germany GmbH & Co.OHG",
+      "clickCountry": "DE",
+      "phoneCountry": "DE",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.0.0 Mobile Safari/537.36",
+      "network": "Verizon Business",
+      "clickCountry": "US",
+      "phoneCountry": "FR",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.6.1 Mobile/15E148 Safari/604.1",
+      "network": "Angel Soft OOD",
+      "clickCountry": "BG",
+      "phoneCountry": "GB",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/157.0.0.0 Mobile Safari/537.36",
+      "network": null,
+      "clickCountry": "FR",
+      "phoneCountry": "FR",
+      "label": "real"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "GB",
+      "label": "bot"
+    },
+    {
+      "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "network": "Google LLC",
+      "clickCountry": "US",
+      "phoneCountry": "DE",
+      "label": "bot"
+    }
+  ]
+}

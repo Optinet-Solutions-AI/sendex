@@ -115,7 +115,14 @@ describe("findShortCodeTarget", () => {
 describe("findMessagesByShortCodes", () => {
   it("returns the known codes only and nothing for an empty list", async () => {
     await expect(findMessagesByShortCodes(t.db, [CODE, "zzzzzzzz"])).resolves.toEqual([
-      { id: messageId, shortCode: CODE, organisationId: org, campaignId, lapId },
+      {
+        id: messageId,
+        shortCode: CODE,
+        organisationId: org,
+        campaignId,
+        lapId,
+        e164: "+34600000001",
+      },
     ]);
     await expect(findMessagesByShortCodes(t.db, [])).resolves.toEqual([]);
   });

@@ -64,6 +64,8 @@ export interface ShortCodeMessage {
   organisationId: string;
   campaignId: string;
   lapId: string;
+  /** The number the SMS went to, for the click's country check (D5-22). */
+  e164: string;
 }
 
 /** The messages behind a batch of short codes; unknown codes are simply absent. */
@@ -79,6 +81,7 @@ export async function findMessagesByShortCodes(
       organisationId: messages.organisationId,
       campaignId: messages.campaignId,
       lapId: messages.lapId,
+      e164: messages.e164,
     })
     .from(messages)
     .where(inArray(messages.shortCode, [...codes]));

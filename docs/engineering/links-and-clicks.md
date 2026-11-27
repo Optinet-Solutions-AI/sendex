@@ -117,6 +117,19 @@ that is not two letters becomes null, and a missing `device` is classified on th
   the same companies are deliberately not on the list. Add a provider there when a new scanner
   shows up; check its clicks first (time after send, device, user agent), as a hosting name can
   also be a phone's real route.
+- **Carrier scanners and other countries (D5-22).** The worker's ingest decides with
+  `clickVerdict()` (`packages/core/src/links.ts`), following the rules SMS Edge states for its
+  own counts (carrier and app link scanners, previews and automated systems do not count;
+  clicks from outside the target country are kept apart). On top of the rules above: browser
+  names with `antispam` or `scanner` (Virgin Media's SMS filter sends `antispam/1.0.0` within
+  seconds of each SMS), desktop Linux (`X11; Linux x86_64`) and Windows browsers, more proxy
+  networks (LonConnect), and a click from another country than the phone number's (when both
+  are known) are stored as bots, so they count as previews. Every click is still forwarded to
+  the offer.
+  Checked against SMS Edge's own verdicts (`GET /v1/reports/clicks/`, 20 to 27 November 2026,
+  `packages/core/src/fixtures/smsedge-click-labels.json`, browser, network, countries and verdict
+  only): the rules keep 80% of the clicks SMS Edge calls real and catch 98.6% of its bots. The
+  rest of the gap is SMS Edge's in-browser check, which a click log cannot reproduce.
 - A click whose code matches no message is dropped at ingest (`unknown` in the handler log).
 
 Delivery is at-least-once: a retried batch can insert a click twice. That inflates the

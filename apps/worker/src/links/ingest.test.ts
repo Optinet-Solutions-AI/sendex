@@ -72,7 +72,9 @@ describe("ingestClicks", () => {
           shortCode: seed.shortCode,
           clickedAt: "2026-11-06T10:00:01.000Z",
           ip: "unknown",
-          userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0",
+          // A Mac still counts as a person; Windows and desktop Linux are scanners (D5-22).
+          userAgent:
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_0) AppleWebKit/605.1.15 Safari/605.1.15",
         },
         {
           shortCode: "zzzzzzzz",
@@ -199,9 +201,10 @@ describe("clicks from data-centre networks (D5-13)", () => {
           clickedAt: "2026-11-20T16:00:00.000Z",
           ip: "203.0.113.201",
           userAgent: IPHONE,
-          country: "GB",
+          // The seeded SMS went to a Spanish number: a click from Spain is in its country.
+          country: "ES",
           device: "mobile",
-          asn: "Virgin Media Limited",
+          asn: "Vodafone Spain",
         },
       ],
     });
@@ -210,6 +213,67 @@ describe("clicks from data-centre networks (D5-13)", () => {
       .from(laps)
       .where(eq(laps.id, person.lapId));
     expect(lap).toEqual({ clicks: 1, previews: 0 });
+  });
+});
+
+describe("carrier scanners and other countries (D5-22)", () => {
+  async function previewsAfter(
+    shortCode: string,
+    click: Partial<Parameters<typeof ingestClicks>[1]["clicks"][number]>,
+  ) {
+    const seeded = await seedTrackedMessage(t.db, { shortCode });
+    await ingestClicks(t.db, {
+      clicks: [
+        {
+          shortCode: seeded.shortCode,
+          clickedAt: "2026-11-26T19:00:05.000Z",
+          ip: "203.0.113.210",
+          userAgent: IPHONE,
+          country: "ES",
+          device: "mobile",
+          asn: "Vodafone Spain",
+          ...click,
+        },
+      ],
+    });
+    const [lap] = await t.db
+      .select({ clicks: laps.clicks, previews: laps.previews })
+      .from(laps)
+      .where(eq(laps.id, seeded.lapId));
+    return lap;
+  }
+
+  it("counts a carrier spam filter as a preview, even when the edge called it a phone", async () => {
+    expect(
+      await previewsAfter("efghjkmn", { userAgent: "antispam/1.0.0", device: "mobile" }),
+    ).toEqual({
+      clicks: 0,
+      previews: 1,
+    });
+  });
+
+  it("counts a desktop Linux browser as a preview", async () => {
+    const linux =
+      "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36";
+    expect(
+      await previewsAfter("fghjkmnp", {
+        userAgent: linux,
+        device: "desktop",
+        asn: "Telefonica de Espana",
+      }),
+    ).toEqual({
+      clicks: 0,
+      previews: 1,
+    });
+  });
+
+  it("does not count a click from another country than the phone's", async () => {
+    expect(await previewsAfter("ghjkmnpq", { country: "GB", asn: "Virgin Media Limited" })).toEqual(
+      {
+        clicks: 0,
+        previews: 1,
+      },
+    );
   });
 });
 

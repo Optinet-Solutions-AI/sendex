@@ -34,7 +34,7 @@ export function generateShortCode(random: () => number = Math.random): string {
 export type DeviceClass = "mobile" | "tablet" | "desktop" | "bot" | "unknown";
 
 const BOT_PATTERN =
-  /bot|crawl|spider|slurp|fetch|preview|externalhit|whatsapp|telegram|discord|slack|skype|viber|linkedin|pinterest|embedly|quora|curl\/|wget\/|python-requests|python-urllib|java\/|okhttp|go-http-client|axios|node-fetch|headlesschrome|phantomjs|lighthouse|pingdom|uptimerobot|monitor/i;
+  /bot|crawl|spider|slurp|fetch|preview|externalhit|antispam|scanner|whatsapp|telegram|discord|slack|skype|viber|linkedin|pinterest|embedly|quora|curl\/|wget\/|python-requests|python-urllib|java\/|okhttp|go-http-client|axios|node-fetch|headlesschrome|phantomjs|lighthouse|pingdom|uptimerobot|monitor/i;
 
 const TABLET_PATTERN = /ipad|tablet|kindle|silk|playbook|nexus (7|9|10)|sm-t|sm-x/i;
 
@@ -70,7 +70,7 @@ export function classifyDevice(userAgent: string | null | undefined): DeviceClas
  * consumer networks of the same companies, such as Google Fiber.
  */
 const DATA_CENTRE_NETWORKS =
-  /^(google llc|google cloud|google-cloud|youtube|amazon|aws\b|microsoft corp|microsoft-corp|digitalocean|m247|ovh|hetzner|akamai connected cloud|linode|oracle (corporation|cloud|public cloud)|alibaba|tencent|the constant company|vultr|choopa|contabo|leaseweb|scaleway|online s\.a\.s|hostinger|ionos|1&1 ionos|transip|datacamp|hostroyale|g-core|gcore)/i;
+  /^(google llc|google cloud|google-cloud|youtube|amazon|aws\b|microsoft corp|microsoft-corp|digitalocean|m247|ovh|hetzner|akamai connected cloud|linode|oracle (corporation|cloud|public cloud)|alibaba|tencent|the constant company|vultr|choopa|contabo|leaseweb|scaleway|online s\.a\.s|hostinger|ionos|1&1 ionos|transip|datacamp|hostroyale|g-core|gcore|lonconnect)/i;
 
 /** True when the network that opened a link is a cloud or hosting network (D5-13). */
 export function isDataCentreNetwork(network: string | null | undefined): boolean {
@@ -87,6 +87,47 @@ export function classifyClick(
   network: string | null | undefined,
 ): DeviceClass {
   return isDataCentreNetwork(network) ? "bot" : classifyDevice(userAgent);
+}
+
+/**
+ * A desktop Linux or Windows browser opening a link sent by SMS: link scanners present
+ * themselves this way (37,632 of SMS Edge's 37,634 "X11; Linux x86_64" clicks in a week of
+ * November 2026 were bots, and 583 of 624 Windows ones). Mac stays a person (iPad desktop
+ * mode reads as Macintosh).
+ */
+const SCANNER_DESKTOP_PATTERN = /x11; linux x86_64|windows nt/i;
+
+export type ClickVerdict = DeviceClass | "other_country";
+
+export interface ClickFacts {
+  userAgent: string | null | undefined;
+  /** Network that opened the link (Cloudflare's `asOrganization`). */
+  network: string | null | undefined;
+  /** Country the click came from (Cloudflare), when known. */
+  clickCountry?: string | null | undefined;
+  /** Country of the phone number the SMS went to, when known. */
+  phoneCountry?: string | null | undefined;
+}
+
+/**
+ * Whether a click on an SMS link is a person (D5-22), following the rules SMS Edge states
+ * for its own click counts: carrier and app link scanners, previews and automated systems do
+ * not count, and clicks from outside the target country are kept apart. In order:
+ * - a cloud, hosting or proxy network, a robot or empty user agent (carrier spam filters such
+ *   as `antispam/1.0.0` included), or a desktop Linux / Windows browser: `bot`;
+ * - a click from another country than the phone's, when both are known: `other_country`;
+ * - otherwise the device class of the user agent.
+ * Only the counting changes: every click is still forwarded to the offer.
+ */
+export function clickVerdict(facts: ClickFacts): ClickVerdict {
+  if (isDataCentreNetwork(facts.network)) return "bot";
+  const device = classifyDevice(facts.userAgent);
+  if (device === "bot" || device === "unknown") return "bot";
+  if (device === "desktop" && SCANNER_DESKTOP_PATTERN.test(facts.userAgent ?? "")) return "bot";
+  const click = facts.clickCountry?.trim().toUpperCase();
+  const phone = facts.phoneCountry?.trim().toUpperCase();
+  if (click && phone && click !== phone) return "other_country";
+  return device;
 }
 
 /** Placeholders every tracked link may use, in the order the UI lists them. */
